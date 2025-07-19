@@ -10,17 +10,15 @@ def cli():
 @click.option('--node', required=True, help='EIDA node code (e.g., RESIF, NOA)')
 @click.option('--epochs', default=10, show_default=True, help='Number of random epochs to test')
 @click.option('--duration', default=600, show_default=True, help='Duration of each epoch in seconds')
-@click.option('--channels', default='--', show_default=True, help='Comma-separated list of channels to test')
 @click.option('--seed', type=int, help='Seed for reproducible random selection')
 @click.option('--delete-old', is_flag=True, help='Delete old reports, keep only the most recent N')
-def consistency(node, epochs, duration, channels, seed, delete_old):
+def consistency(node, epochs, duration, seed, delete_old):
     """Run availability + dataselect consistency check."""
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     run_consistency_check(
         node=node,
         epochs=epochs,
         duration=duration,
-        channels=channels,
         seed=seed,
         delete_old=delete_old
     )

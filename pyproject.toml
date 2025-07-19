@@ -3,6 +3,7 @@ name = "eida-consistency"
 version = "0.1.0"
 description = "Check consistency between dataselect and availability"
 authors = [{ name = "Nikos Sokos", email = "nsokos@noa.gr" }]
+requires-python = ">=3.11"
 dependencies = [
     "click>=8.2.1",
     "obspy>=1.4.2",
