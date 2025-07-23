@@ -1,3 +1,4 @@
+"""CLI entry point and orchestration for running consistency checks."""
 import logging
 import random
 import concurrent.futures
@@ -16,17 +17,18 @@ def run_consistency_check(
     duration: int = 60,
     seed: int = None,
     delete_old: bool = False,
-):
+)-> None:
+    """Run the consistency check."""
     if seed is None:
         seed = random.randint(0, 999999)
-        logging.info(f"🎲 Using generated seed: {seed}")
+        logging.info(f" Using generated seed: {seed}")
     else:
-        logging.info(f"🎲 Using provided seed: {seed}")
+        logging.info(f" Using provided seed: {seed}")
 
     random.seed(seed)
     base_url = load_node_url(node)
 
-    logging.info(f"📱 Fetching candidates for node: {node}...")
+    logging.info(f" Fetching candidates for node: {node}...")
     candidates = fetch_candidates(base_url)
 
     if not candidates:
@@ -34,7 +36,7 @@ def run_consistency_check(
         return
 
     logging.info(f"Total candidates fetched: {len(candidates)}")
-    logging.info(f"🎯 Picking {epochs} random candidates...\n")
+    logging.info(f" Picking {epochs} random candidates...\n")
 
     results = check_candidate(base_url, candidates[0], candidates=candidates, epochs=epochs)
 

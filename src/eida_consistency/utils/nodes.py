@@ -1,15 +1,17 @@
+"""Node utilities for managing EIDA node information."""
+from __future__ import annotations
+
 import json
-import logging
-import requests
 from pathlib import Path
 from urllib.parse import urlparse
+
 from appdirs import user_cache_dir
 
-# Constants
-ROUTING_URL = "https://www.orfeus-eu.org/eidaws/routing/1/globalconfig?format=fdsn"
+ROUTING_URL = (
+    "https://www.orfeus-eu.org/eidaws/routing/1/globalconfig?format=fdsn"
+)
 CACHE_FILE = Path(user_cache_dir("eida_consistency")) / "nodes_cache.json"
 
-# Hardcoded fallback list
 DEFAULT_NODES = [
     ("GFZ", "https://geofon.gfz.de/fdsnws/", True),
     ("ODC", "https://orfeus-eu.org/fdsnws/", True),
@@ -26,80 +28,77 @@ DEFAULT_NODES = [
     ("UIB-NORSAR", "https://eida.geo.uib.no/fdsnws/", True),
 ]
 
-def ensure_cache_dir():
+
+def ensure_cache_dir() -> None:
     """Ensure the cache directory exists."""
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-def refresh_cache_from_routing():
-    """Try to refresh nodes from the routing service."""
+
+def refresh_cache_from_routing() -> list[tuple[str, str, bool]]:
+    """Fetch node list from routing service and cache it."""
+    import logging
+    import requests
+
     try:
-        print("Fetching node list from routing service...")
         response = requests.get(ROUTING_URL, timeout=30)
         response.raise_for_status()
-        data = response.json()
-        nodes = []
+    except Exception as exc:
+        raise RuntimeError("Failed to fetch routing data") from exc
 
-        for node in data.get("datacenters", []):
-            name = node.get("name")
-            fdsnws_url = None
-            for repo in node.get("repositories", []):
-                for service in repo.get("services", []):
-                    if service["name"] == "fdsnws-station-1":
-                        fdsnws_url = service["url"]
-                        break
-                if fdsnws_url:
+    nodes: list[tuple[str, str, bool]] = []
+    for dc in response.json().get("datacenters", []):
+        name = dc.get("name")
+        for repo in dc.get("repositories", []):
+            for srv in repo.get("services", []):
+                if srv.get("name") == "fdsnws-station-1":
+                    url = srv["url"]
+                    base = f"{urlparse(url).scheme}://{urlparse(url).netloc}/fdsnws/"
+                    nodes.append((name, base, True))
                     break
-            if fdsnws_url:
-                parsed = urlparse(fdsnws_url)
-                base = f"{parsed.scheme}://{parsed.netloc}/fdsnws/"
-                nodes.append((name, base, True))
+            if name and nodes and nodes[-1][0] == name:
+                break
 
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"nodes": nodes}, f)
-        return nodes
+    CACHE_FILE.write_text(json.dumps({"nodes": nodes}), encoding="utf-8")
+    return nodes
 
-    except Exception as e:
-        raise RuntimeError(f"Failed to fetch routing data: {e}")
 
-def load_or_refresh_cache():
-    """Load cached nodes or refresh from routing if unavailable."""
+def load_or_refresh_cache() -> list[tuple[str, str, bool]]:
+    """Return cached nodes or refresh from routing."""
     ensure_cache_dir()
     if CACHE_FILE.exists():
         try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                nodes = json.load(f).get("nodes", [])
-                if all(isinstance(n, list) and len(n) == 3 for n in nodes):
-                    return nodes
-        except Exception:
-            print("Cache invalid or corrupt. Re-fetching...")
+            data = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+            nodes = data.get("nodes", [])
+            if all(isinstance(n, list) and len(n) == 3 for n in nodes):
+                return [(n[0], n[1], n[2]) for n in nodes]
+        except Exception:  # noqa: BLE001
             CACHE_FILE.unlink()
 
     try:
         return refresh_cache_from_routing()
-    except Exception as e:
-        logging.warning(f"Routing failed: {e}")
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.warning("Routing failed: %s", exc)
         return DEFAULT_NODES
 
-def load_node_url(node_name: str) -> str:
-    """Given a short node name (e.g. NOA), return its base URL."""
-    nodes = load_or_refresh_cache()
-    for name, base_url, _ in nodes:
-        if name.upper() == node_name.upper():
-            return base_url
-    raise ValueError(f"Unknown node: {node_name}")
-def get_obspy_url(base_url: str) -> str:
-    """
-    Convert a FDSN base_url (typically from routing service or cache) to a
-    plain HTTP base URL suitable for ObsPy's FDSN Client.
 
-    This:
-    - Ensures HTTP (not HTTPS) since ObsPy defaults are hardcoded to HTTP.
-    - Removes any subpaths (like /fdsnws/ or /fdsnws/dataselect/1).
-    
+def load_node_url(node_name: str) -> str:
+    """Return the FDSN base URL for a given node short name."""
+    for name, url, _ in load_or_refresh_cache():
+        if name.upper() == node_name.upper():
+            return url
+    raise ValueError(f"Unknown node: {node_name}")
+
+
+def get_obspy_url(base_url: str) -> str:
+    """Convert an FDSN base URL to plain HTTP host name for ObsPy.
+
     Example:
-        Input:  https://eida.gein.noa.gr/fdsnws/
-        Output: http://eida.gein.noa.gr
+    -------
+    get_obspy_url("https://eida.gein.noa.gr/fdsnws/")
+    'http://eida.gein.noa.gr'
+
     """
-    parsed = urlparse(base_url)
-    hostname = parsed.hostname
+    hostname = urlparse(base_url).hostname
     return f"http://{hostname}" if hostname else base_url

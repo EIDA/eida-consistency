@@ -8,6 +8,7 @@ dependencies = [
     "click>=8.2.1",
     "obspy>=1.4.2",
     "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
     "requests>=2.32.4",
 ]
 

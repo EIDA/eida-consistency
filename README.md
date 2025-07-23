@@ -1,51 +1,77 @@
 # EIDA Consistency Checker
 
-Tool to evaluate consistency between EIDA `availability` and `dataselect` services.
+A tool to evaluate the consistency between EIDA nodes' **availability** and **dataselect** web services. Designed for use in quality control and monitoring tasks across the European Integrated Data Archive (EIDA).
 
-## 🧠 Purpose
-- Verify if waveform data declared in `/availability` is actually retrievable via `/dataselect`
-- Generate JSON reports
-- Compute consistency scores and failure types
-- Enable reproducible reruns and score comparisons
-- Export reports for further analysis or integration with Oculus
+---
 
-## 🚀 Main Commands
+## 🔍 Features
 
-- `check` → Run random epoch tests and generate report
-- `rerun` → Re-execute exact same tests from a previous report
-- `compare` → Compare two reports (same config only)
-- `export` → Export selected results to CSV/JSON
-- `--delete-old` → Keep only the latest N reports per node
+- Fetch random epochs from the **availability** service
+- Validate if corresponding waveform data is accessible via **dataselect**
+- Save results as:
+  - `JSON` reports (machine-readable)
+  - `Markdown` summaries (human-readable)
+- Compare two reports from the same seed to track changes/improvements
+- Support for `MultiTrace`, `NoData`, `SingleTrace`, etc.
 
-## 📄 Report Format
+---
 
-Each report includes:
-- `node`, timestamp, config
-- list of test results (one per epoch/channel)
-- per-network summary and overall score
+## 📦 Installation
 
-## 📁 Reports
 
-Reports are saved under `reports/` using this format:
-```
-<node_short>_<YYYYMMDD>_<HHMM>.json
-```
-Example:
-```
-noa_20250706_1242.json
+---
+
+## 🚀 Usage
+
+### 1. Run Consistency Check
+
+```bash
+uv run eida-consistency consistency --node RESIF --epochs 10 --duration 60
 ```
 
-## ⚖️ Score
+Options:
+- `--node`: EIDA node code (e.g. `RESIF`, `NOA`, `ETH`)
+- `--epochs`: Number of random epochs to check (default: 10)
+- `--duration`: Duration of each epoch in seconds (default: 600)
+- `--seed`: Optional seed for reproducibility
+- `--delete-old`: Optionally delete old reports
 
+---
+
+### 2. Compare Reports
+
+```bash
+uv run eida-consistency compare reports/RESIF_123456_10.json reports/RESIF_123456_10_v2.json
 ```
-score = ok_matches / availability_claims
+
+Outputs a markdown comparison between the two reports, showing improved or regressed entries.
+
+---
+
+## 📂 Output
+
+Reports are saved in the `./reports/` folder:
+
+- JSON reports: `reports/NOA_123456_10.json`
+- Markdown reports: `reports/NOA_123456_10.md`
+- Comparison summaries: `reports/compare_NOA_123456_10_vs_v2.md`
+
+---
+
+## 🧪 Example
+
+```bash
+uv run eida-consistency consistency --node NOA --epochs 5
+uv run eida-consistency compare reports/NOA_1234_5.json reports/NOA_1234_5_v2.json
 ```
-Only epochs with availability=true are counted.
 
-## 🔄 Reproducibility
+---
 
-Each report includes all parameters, filters, so `rerun` can repeat the same test set.
+## 🧠 Notes
 
-## 📌 Notes
+- `MultiTrace` responses from dataselect are considered **successful**, but marked separately.
+- The same seed will always select the same candidate epochs.
+- Comparison only works between reports with the same seed.
 
+---
 

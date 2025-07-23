@@ -1,6 +1,7 @@
+"""Formatter module for logging consistency-check results."""     
+
 def format_result(idx, url, available, ds_result, match):
-    """
-    Format the result of a single consistency check for logging output.
+    """Format the result of a single consistency check for logging output.
 
     Args:
         idx (int): Index number of the result (1, 2, 3...).
@@ -11,6 +12,7 @@ def format_result(idx, url, available, ds_result, match):
 
     Returns:
         str: Multiline string formatted for printing to terminal/log.
+
     """
     net = match["network"]
     sta = match["station"]
@@ -21,15 +23,19 @@ def format_result(idx, url, available, ds_result, match):
     original_end = match.get("endtime", "?")
 
     log = [f"{idx}. {url}"]
-    log.append(f"    📡 Availability: {'✅' if available else '❌'}")
-    log.append(f"    📥 Dataselect:   {'✅' if ds_result['success'] else f'❌ ({ds_result['status']})'}")
+    log.append(f"     Availability: {'✅' if available else '❌'}")
 
-    consistent = (available == ds_result['success'])
-    log.append(f"    🔁 Consistent:   {'✅' if consistent else '❌'}")
-    log.append(f"    Station span:    {original_start} → {original_end}")
+    # Build the Dataselect status string separately to avoid nested f-strings
+    dataselect_status = "✅" if ds_result["success"] else f"❌ ({ds_result['status']})"
+    log.append(f"     Dataselect:   {dataselect_status}")
 
-    # Include debug output from dataselect if available
-    if "debug" in ds_result and ds_result["debug"].strip():
-        log.append(ds_result["debug"].rstrip())
+    consistent = available == ds_result["success"]
+    log.append(f"     Consistent:   {'✅' if consistent else '❌'}")
+    log.append(f"     Station span: {original_start} → {original_end}")
+
+    # Optional debug line
+    debug = ds_result.get("debug", "").strip()
+    if debug:
+        log.append(debug)
 
     return "\n".join(log)

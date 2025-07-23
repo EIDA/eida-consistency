@@ -1,8 +1,20 @@
+"""Report-generation utilities.
+
+Creates JSON and Markdown summaries for the EIDA-consistency
+check results.
+"""
+
 import json
 from pathlib import Path
 from collections import Counter
+from datetime import datetime, timezone
+from typing import List, Dict, Any
 
-def create_report_object(node: str, seed: int, epochs: int, duration: int, records: list):
+
+def create_report_object(
+    node: str, seed: int, epochs: int, duration: int, records: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Build a serialisable dictionary summarising a full run."""
     return {
         "summary": {
             "node": node,
@@ -12,66 +24,85 @@ def create_report_object(node: str, seed: int, epochs: int, duration: int, recor
             "total_checked": len(records),
             "total_consistent": sum(1 for r in records if r["consistent"]),
             "total_inconsistent": sum(1 for r in records if not r["consistent"]),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
         "results": records,
     }
 
-def save_report_json(report: dict, output_dir: str = "."):
+
+def _make_unique_filename(node: str, seed: int, extension: str) -> str:
+    """Create a unique file name for the report.
+
+    The leading underscore marks this as a private helper.
+    """
+    short_time = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    return f"{node.lower()}_{seed}_{short_time}.{extension}"
+
+
+def save_report_json(report: Dict[str, Any], output_dir: str = "reports") -> Path:
+    """Save the full report as pretty-printed JSON."""
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
 
-    filename = f"{report['summary']['node'].lower()}_{report['summary']['seed']}.json"
+    filename = _make_unique_filename(
+        report["summary"]["node"], report["summary"]["seed"], "json"
+    )
     filepath = path / filename
 
-    with open(filepath, "w") as f:
+    with filepath.open("w") as f:
         json.dump(report, f, indent=2)
 
     return filepath
 
-def save_report_markdown(report: dict, output_dir: str = "."):
+
+def save_report_markdown(report: Dict[str, Any], output_dir: str = "reports") -> Path:
+    """Save the report as a human-readable Markdown file."""
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
 
-    filename = f"{report['summary']['node'].lower()}_{report['summary']['seed']}.md"
+    filename = _make_unique_filename(
+        report["summary"]["node"], report["summary"]["seed"], "md"
+    )
     filepath = path / filename
 
     summary = report["summary"]
     results = report["results"]
-
-    # Type distribution (SingleTrace, MultiTrace, etc.)
-    type_counts = Counter(r.get("dataselect_type", "?") for r in results if r.get("dataselect_type"))
+    type_counts = Counter(
+        r.get("dataselect_type", "?") for r in results if r.get("dataselect_type")
+    )
 
     md_lines = [
-        f"# EIDA Consistency Report for `{summary['node']}`",
+        f"# EIDA Consistency Report: `{summary['node']}`",
         "",
-        f"- **Seed**: `{summary['seed']}`",
-        f"- **Epochs**: `{summary['epochs']}`",
-        f"- **Duration**: `{summary['duration']}s`",
-        f"- **Total Checks**: `{summary['total_checked']}`",
-        f"- ✅ Consistent: `{summary['total_consistent']}`",
-        f"- ❌ Inconsistent: `{summary['total_inconsistent']}`",
+        f"- Seed: `{summary['seed']}`",
+        f"- Time: `{summary['timestamp']}`",
+        f"- Epochs: `{summary['epochs']}`",
+        f"- Duration/epoch: `{summary['duration']} s`",
+        f"- Total checks: `{summary['total_checked']}`",
+        f"- Consistent: `{summary['total_consistent']}`",
+        f"- Inconsistent: `{summary['total_inconsistent']}`",
         "",
         "## Dataselect Response Types",
         *(f"- **{key}**: `{value}`" for key, value in sorted(type_counts.items())),
         "",
         "---",
         "",
-        "## Full Entry Report",
+        "## Detailed Results",
     ]
 
     for r in results:
-        md_lines.extend([
-            f"### {r['network']}.{r['station']}.{r['location']}.{r['channel']}",
-            f"- ⏱️ **Time**: `{r['starttime']} → {r['endtime']}`",
-            f"- 🌐 **Availability Web Service**: `{r['available']}`",
-            f"- 📡 **Dataselect Success**: `{r['dataselect_success']}`",
-            f"- 📦 **Dataselect Type**: `{r.get('dataselect_type', '?')}`",
-            f"- 📄 **Dataselect Status**: `{r['dataselect_status']}`",
-            f"- ⚖️ **Consistency**: `{'✔️' if r['consistent'] else '❌'}`",
-            ""
-        ])
+        md_lines.extend(
+            [
+                f"### `{r['network']}.{r['station']}.{r['location']}.{r['channel']}`",
+                f"- Window: `{r['starttime']} → {r['endtime']}`",
+                f"- Availability: `{r['available']}`",
+                f"- Dataselect: `{r['dataselect_success']}`",
+                f"- Type: `{r.get('dataselect_type', '?')}`",
+                f"- Status: `{r['dataselect_status']}`",
+                f"- Consistent: `{'✔️' if r['consistent'] else '❌'}`",
+                "",
+            ]
+        )
 
-    with open(filepath, "w") as f:
-        f.write("\n".join(md_lines))
-
+    filepath.write_text("\n".join(md_lines))
     return filepath

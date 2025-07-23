@@ -1,14 +1,22 @@
+"""EIDA **station** web-service.
+
+Provides `fetch_candidates()` to pull network–station–channel
+metadata from the StationXML endpoint and return a flat list
+of candidate dictionaries.
+"""
 import logging
 import requests
 import xml.etree.ElementTree as ET
 
 def fetch_candidates(base_url: str):
-    """
-    Fetch station-channel candidates from the StationXML.
+    """Fetch station-channel candidates from the StationXML.
+
     Args:
         base_url (str): Base FDSN URL (e.g., https://eida.gein.noa.gr/fdsnws/)
+
     Returns:
         List[dict]: List of candidate dictionaries.
+
     """
     url = f"{base_url}station/1/query?level=channel&format=xml&includerestricted=false&nodata=404"
     

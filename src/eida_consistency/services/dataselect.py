@@ -1,11 +1,15 @@
+"""EIDA **dataselect** web-service.
+
+Provides `dataselect()` to fetch waveform data via ObsPy’s
+FDSN client and return a uniform result dictionary.
+"""
 from obspy.clients.fdsn import Client
 from obspy import UTCDateTime
 import traceback
 from eida_consistency.utils.nodes import get_obspy_url
 
 def dataselect(base_url, net, sta, cha, start, end, loc="", return_stream=False):
-    """
-    Try retrieving waveform data from dataselect service.
+    """Try retrieving waveform data from dataselect service.
 
     Returns:
         dict with:
@@ -15,6 +19,7 @@ def dataselect(base_url, net, sta, cha, start, end, loc="", return_stream=False)
             - error (str or None)
             - debug (str)
             - stream (optional ObsPy Stream)
+
     """
     try:
         loc_used = loc if loc.strip() else "*"
@@ -62,11 +67,12 @@ def dataselect(base_url, net, sta, cha, start, end, loc="", return_stream=False)
 
         return result
 
-    except Exception:
+    except Exception as e:
         return {
             "success": False,
-            "status": "Exception",
+            "status": type(e).__name__,  # e.g. FDSNNoDataException, HTTPError
             "type": "Error",
             "error": traceback.format_exc(),
-            "debug": f"❌ Exception during request.\n{query_url}"
+            "debug": f"❌ {type(e).__name__} during request.\n{query_url}"
         }
+
