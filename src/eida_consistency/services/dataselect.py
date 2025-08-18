@@ -1,78 +1,121 @@
 """EIDA **dataselect** web-service.
 
-Provides `dataselect()` to fetch waveform data via ObsPy’s
-FDSN client and return a uniform result dictionary.
+Robust waveform fetch:
+- Use ObsPy FDSN Client first (HTTPS, exact location, timeout).
+- On AttributeError / client hiccups, fall back to raw HTTP GET and parse with obspy.read().
 """
-from obspy.clients.fdsn import Client
-from obspy import UTCDateTime
+
+from __future__ import annotations
+
 import traceback
-from eida_consistency.utils.nodes import get_obspy_url
+from io import BytesIO
+from urllib.parse import urlparse
 
-def dataselect(base_url, net, sta, cha, start, end, loc="", return_stream=False):
-    """Try retrieving waveform data from dataselect service.
+import requests
+from obspy.clients.fdsn import Client
+from obspy import UTCDateTime, read
 
-    Returns:
-        dict with:
-            - success (bool)
-            - status (str)
-            - type (str): "SingleTrace", "MultiTrace", or "NoData"
-            - error (str or None)
-            - debug (str)
-            - stream (optional ObsPy Stream)
 
+def _endpoint_from_base(base_url: str) -> str:
+    """Preserve scheme/host (e.g. https://ws.resif.fr)."""
+    p = urlparse(base_url)
+    scheme = p.scheme or "https"
+    host = p.hostname or ""
+    return f"{scheme}://{host}".rstrip("/")
+
+
+def _build_query_url(endpoint: str, net: str, sta: str, loc: str, cha: str, start: str, end: str) -> str:
+    return (
+        f"{endpoint}/fdsnws/dataselect/1/query?"
+        f"network={net}&station={sta}&location={loc}&channel={cha}"
+        f"&starttime={start}&endtime={end}&nodata=204"
+    )
+
+
+def dataselect(
+    base_url: str,
+    net: str,
+    sta: str,
+    cha: str,
+    start: str,
+    end: str,
+    loc: str = "",
+    return_stream: bool = False,
+    timeout: int = 20,
+):
     """
+    Returns:
+        dict: {
+          success, status, type, error, debug, [stream]
+        }
+    """
+    endpoint = _endpoint_from_base(base_url)
+    loc_code = (loc or "").strip()  # exact location only, no wildcard
+
+    # Attempt #1 — ObsPy FDSN Client
+    q1 = _build_query_url(endpoint, net, sta, loc_code, cha, start, end)
     try:
-        loc_used = loc if loc.strip() else "*"
-        cleaned_url = get_obspy_url(base_url)
-        query_url = (
-            f"{cleaned_url}/fdsnws/dataselect/1/query?"
-            f"network={net}&station={sta}&location={loc_used}&channel={cha}"
-            f"&starttime={start}&endtime={end}&nodata=204"
-        )
-
-        client = Client(cleaned_url)
+        client = Client(endpoint, timeout=timeout)
         st = client.get_waveforms(
-            network=net,
-            station=sta,
-            location=loc_used,
-            channel=cha,
-            starttime=UTCDateTime(start),
-            endtime=UTCDateTime(end)
+            network=net, station=sta, location=loc_code, channel=cha,
+            starttime=UTCDateTime(start), endtime=UTCDateTime(end)
         )
-
-        trace_count = len(st)
-        trace_info = "\n".join(str(tr) for tr in st)
-
-        if trace_count == 0:
+        n = len(st)
+        if n == 0:
             return {
-                "success": False,
-                "status": "NoData",
-                "type": "NoTrace",
-                "error": None,
-                "debug": f"❌ No waveform data returned.\n{query_url}"
+                "success": False, "status": "NoData", "type": "NoTrace", "error": None,
+                "debug": f"❌ No waveform data (ObsPy client).\n{q1}",
+            }
+        info = "\n".join(str(tr) for tr in st)
+        res = {
+            "success": True, "status": "OK",
+            "type": "MultiTrace" if n > 1 else "SingleTrace",
+            "error": None, "debug": f"✅ Retrieved {n} trace(s) via ObsPy client.\n{info}\n{q1}",
+        }
+        if return_stream:
+            res["stream"] = st
+        return res
+
+    except AttributeError as e_attr:
+        # Known oddity: sometimes ObsPy hits AttributeError in internal path.
+        # Fall back to raw HTTP + obspy.read
+        pass
+    except Exception as e:
+        # Other failures also fall back
+        pass
+
+    # Attempt #2 — raw HTTP GET + obspy.read
+    try:
+        r = requests.get(q1, timeout=timeout)
+        if r.status_code == 204 or not r.content:
+            return {
+                "success": False, "status": "NoData", "type": "NoTrace", "error": None,
+                "debug": f"❌ No waveform bytes (HTTP {r.status_code}).\n{q1}",
             }
 
-        result_type = "MultiTrace" if trace_count > 1 else "SingleTrace"
+        # Try to parse MiniSEED from the raw bytes
+        bio = BytesIO(r.content)
+        st = read(bio, format="MSEED")
+        n = len(st)
+        if n == 0:
+            return {
+                "success": False, "status": "ParseError", "type": "NoTrace", "error": None,
+                "debug": f"❌ Could not parse MiniSEED from HTTP bytes.\n{q1}",
+            }
 
-        result = {
-            "success": True,
-            "status": "OK",
-            "type": result_type,
-            "error": None,
-            "debug": f"✅ Retrieved {trace_count} trace(s).\n{trace_info}\n{query_url}"
+        info = "\n".join(str(tr) for tr in st)
+        res = {
+            "success": True, "status": "OK",
+            "type": "MultiTrace" if n > 1 else "SingleTrace",
+            "error": None, "debug": f"✅ Retrieved {n} trace(s) via raw HTTP+read().\n{info}\n{q1}",
         }
-
         if return_stream:
-            result["stream"] = st
+            res["stream"] = st
+        return res
 
-        return result
-
-    except Exception as e:
+    except Exception as e2:
         return {
-            "success": False,
-            "status": type(e).__name__,  # e.g. FDSNNoDataException, HTTPError
-            "type": "Error",
+            "success": False, "status": type(e2).__name__, "type": "Error",
             "error": traceback.format_exc(),
-            "debug": f"❌ {type(e).__name__} during request.\n{query_url}"
+            "debug": f"❌ Dataselect failed (both client and raw).\n{q1}",
         }
-

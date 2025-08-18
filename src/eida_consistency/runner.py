@@ -1,8 +1,9 @@
 """CLI entry point and orchestration for running consistency checks."""
+from __future__ import annotations
+
 import logging
 import random
 import concurrent.futures
-from datetime import datetime
 
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
@@ -11,16 +12,17 @@ from .utils.nodes import load_node_url
 from .core.formatter import format_result
 from .report.report import create_report_object, save_report_json, save_report_markdown
 
+
 def run_consistency_check(
     node: str,
     epochs: int = 10,
     duration: int = 60,
-    seed: int = None,
+    seed: int | None = None,
     delete_old: bool = False,
-)-> None:
-    """Run the consistency check."""
+    max_workers: int = 10,
+) -> None:
     if seed is None:
-        seed = random.randint(0, 999999)
+        seed = random.randint(0, 999_999)
         logging.info(f" Using generated seed: {seed}")
     else:
         logging.info(f" Using provided seed: {seed}")
@@ -30,7 +32,6 @@ def run_consistency_check(
 
     logging.info(f" Fetching candidates for node: {node}...")
     candidates = fetch_candidates(base_url)
-
     if not candidates:
         logging.warning("No candidates fetched.")
         return
@@ -38,44 +39,38 @@ def run_consistency_check(
     logging.info(f"Total candidates fetched: {len(candidates)}")
     logging.info(f" Picking {epochs} random candidates...\n")
 
+    # each item: (url, available, start, end, loc_exact)
     results = check_candidate(base_url, candidates[0], candidates=candidates, epochs=epochs)
 
     logging.info("▶ Checking availability + dataselect consistency in parallel:\n")
 
-    all_logs = []
-    all_records = []
+    all_logs, all_records = [], []
 
     def worker(args):
-        idx, (url, available, start, end), match = args
+        idx, (url, available, start, end, loc_exact), match = args
+        loc_final = loc_exact or match.get("location", "")  # exact single location
         ds_result = dataselect(
             base_url,
-            match["network"],
-            match["station"],
-            match["channel"],
-            start,
-            end,
-            match.get("location", "")
+            match["network"], match["station"], match["channel"],
+            start, end, loc_final
         )
-        log = format_result(idx, url, available, ds_result, match)
+        log = format_result(idx, url, available, ds_result, {**match, "location": loc_final})
         record = {
-            "index": idx,
-            "url": url,
-            "network": match["network"],
-            "station": match["station"],
-            "channel": match["channel"],
-            "location": match.get("location", ""),
+            "index": idx, "url": url,
+            "network": match["network"], "station": match["station"],
+            "channel": match["channel"], "location": loc_final,
             "available": available,
             "dataselect_success": ds_result["success"],
             "dataselect_status": ds_result["status"],
             "dataselect_type": ds_result.get("type", "?"),
             "consistent": available == ds_result["success"],
-            "starttime": str(start),
-            "endtime": str(end),
+            "starttime": str(start), "endtime": str(end),
+            "debug": ds_result.get("debug", ""),
         }
         return log, record
 
     args_list = []
-    for idx, (url, available, start, end) in enumerate(results, 1):
+    for idx, (url, available, start, end, loc_exact) in enumerate(results, 1):
         try:
             parts = url.split("?")[1].split("&")
             net = next(p.split("=")[1] for p in parts if p.startswith("network="))
@@ -84,25 +79,25 @@ def run_consistency_check(
         except Exception:
             net, sta, cha = "?", "?", "?"
 
-        match = next(
-            (c for c in candidates if c["network"] == net and c["station"] == sta and c["channel"] == cha),
-            None,
-        )
+        match = next((c for c in candidates
+                      if c["network"] == net and c["station"] == sta and c["channel"] == cha),
+                     None)
         if match:
-            args_list.append((idx, (url, available, start, end), match))
+            args_list.append((idx, (url, available, start, end, loc_exact), match))
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        for log, record in executor.map(worker, args_list):
+    pool_size = max(1, min(max_workers, len(args_list)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:
+        futures = [executor.submit(worker, a) for a in args_list]
+        for fut in concurrent.futures.as_completed(futures):
+            log, record = fut.result()
             logging.info(log + "\n")
             all_logs.append(log)
             all_records.append(record)
 
     logging.info(f"✅ Collected {len(all_records)} results.")
 
-    # Save reports (both JSON and Markdown)
     report = create_report_object(node=node, seed=seed, epochs=epochs, duration=duration, records=all_records)
     json_path = save_report_json(report)
     md_path = save_report_markdown(report)
-
     logging.info(f"📁 Report saved to: {json_path}")
     logging.info(f"📜 Markdown saved to: {md_path}")

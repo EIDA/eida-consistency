@@ -1,33 +1,32 @@
 """EIDA **station** web-service.
 
-Provides `fetch_candidates()` to pull network–station–channel
-metadata from the StationXML endpoint and return a flat list
-of candidate dictionaries.
+Fetch StationXML (level=channel) and return flat candidates:
+{network, station, channel, starttime[, endtime][, location]}
 """
 import logging
 import requests
 import xml.etree.ElementTree as ET
 
+
 def fetch_candidates(base_url: str):
-    """Fetch station-channel candidates from the StationXML.
-
-    Args:
-        base_url (str): Base FDSN URL (e.g., https://eida.gein.noa.gr/fdsnws/)
-
-    Returns:
-        List[dict]: List of candidate dictionaries.
-
-    """
     url = f"{base_url}station/1/query?level=channel&format=xml&includerestricted=false&nodata=404"
-    
     logging.debug(f"StationXML URL: {url}")
 
-    response = requests.get(url, timeout=60)
-    response.raise_for_status()
+    try:
+        resp = requests.get(url, timeout=60)
+        resp.raise_for_status()
+    except Exception as e:
+        logging.error(f"Failed to fetch StationXML: {e}")
+        return []
 
-    tree = ET.fromstring(response.content)
+    try:
+        tree = ET.fromstring(resp.content)
+    except Exception as e:
+        logging.error(f"Failed to parse StationXML: {e}")
+        return []
+
     ns = {'': 'http://www.fdsn.org/xml/station/1'}
-    candidates = []
+    candidates, skipped = [], 0
 
     for network in tree.findall('Network', ns):
         net_code = network.attrib.get('code')
@@ -35,19 +34,27 @@ def fetch_candidates(base_url: str):
             sta_code = station.attrib.get('code')
             for channel in station.findall('Channel', ns):
                 chan_code = channel.attrib.get('code')
+                loc_code = channel.attrib.get('locationCode')
                 start = channel.attrib.get('startDate')
                 end = channel.attrib.get('endDate')
 
-                if not all([net_code, sta_code, chan_code, start]):
+                if not (net_code and sta_code and chan_code and start and start.strip()):
+                    skipped += 1
+                    logging.debug(f"Skipping malformed: {net_code}.{sta_code}.{chan_code} start={start}")
                     continue
 
-                candidates.append({
+                entry = {
                     "network": net_code,
                     "station": sta_code,
                     "channel": chan_code,
                     "starttime": start,
-                    "endtime": end or ""
-                })
+                }
+                if end and end.strip():
+                    entry["endtime"] = end
+                if loc_code and loc_code.strip():
+                    entry["location"] = loc_code
 
-    logging.info(f"Total candidates fetched: {len(candidates)}")
+                candidates.append(entry)
+
+    logging.info(f"Total candidates fetched: {len(candidates)} (skipped: {skipped})")
     return candidates
