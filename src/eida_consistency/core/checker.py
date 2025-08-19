@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from eida_consistency.services.availability import check_availability_query
@@ -48,7 +48,7 @@ def check_candidate(
             continue
 
         start = _parse_iso(sample.get("starttime"))
-        end = _parse_iso(sample.get("endtime")) or datetime.utcnow()
+        end = _parse_iso(sample.get("endtime")) or datetime.now(timezone.utc).replace(tzinfo=None)
         if not start or not end:
             continue
         if (end - start).total_seconds() < 600:
