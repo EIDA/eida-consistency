@@ -4,7 +4,8 @@ from __future__ import annotations
 import logging
 import random
 import concurrent.futures
-
+import json
+import sys
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
 from .core.checker import check_candidate
@@ -20,6 +21,7 @@ def run_consistency_check(
     seed: int | None = None,
     delete_old: bool = False,
     max_workers: int = 10,
+    print_stdout: bool = False,
 ) -> None:
     if seed is None:
         seed = random.randint(0, 999_999)
@@ -101,3 +103,7 @@ def run_consistency_check(
     md_path = save_report_markdown(report)
     logging.info(f"📁 Report saved to: {json_path}")
     logging.info(f"📜 Markdown saved to: {md_path}")
+
+    if print_stdout:
+        sys.stdout.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
