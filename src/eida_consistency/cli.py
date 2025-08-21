@@ -72,16 +72,25 @@ def cli(ctx, log_level):
 	is_flag=True,
 	help="(NOT IMPLEMENTED) Remove old reports beyond retention policy.",
 )
-def consistency(node, epochs, duration, seed, delete_old):
-	"""Run availability + dataselect consistency check."""
-	if delete_old:
-		logging.warning("'--delete-old' flag is present but not yet implemented.")
-	run_consistency_check(
-		node=node,
-		epochs=epochs,
-		duration=duration,
-		seed=seed,
-	)
+
+@click.option(
+    "--stdout",
+    "print_stdout",
+    is_flag=True,
+    help="Also print the JSON report to stdout.",
+)
+def consistency(node, epochs, duration, seed, delete_old, print_stdout):
+    """Run availability + dataselect consistency check."""
+    if delete_old:
+        logging.warning("'--delete-old' flag is present but not yet implemented.")
+    run_consistency_check(
+        node=node,
+        epochs=epochs,
+        duration=duration,
+        seed=seed,
+        print_stdout=print_stdout,
+    )
+
 
 
 @cli.command()
