@@ -16,7 +16,7 @@ Return value (list of tuples):
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from eida_consistency.services.availability import check_availability_query
@@ -81,6 +81,7 @@ def check_candidate(
         key = (sample["network"], sample["station"], sample["channel"])
         if key in used:
             continue
+
 
         # Channel lifetime bounds
         ch_start = _parse_iso(sample.get("starttime"))
