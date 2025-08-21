@@ -1,6 +1,7 @@
 # EIDA Consistency Checker
 [![Run Tests](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml/badge.svg)](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml)
 ![Coverage](badges/coverage.svg)
+---
 A tool to evaluate the consistency between EIDA nodes' **availability** and **dataselect** web services. Designed for use in quality control and monitoring tasks across the European Integrated Data Archive (EIDA).
 
 ---
