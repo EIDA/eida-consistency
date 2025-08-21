@@ -2,7 +2,7 @@ import pytest
 import logging
 from unittest.mock import patch
 from eida_consistency import runner
-
+import json
 
 @pytest.fixture(autouse=True)
 def patch_dependencies(tmp_path):
@@ -110,3 +110,13 @@ def test_url_parse_fallback_to_question_marks(patch_dependencies):
     assert records[0]["station"] == "?"
     assert records[0]["channel"] == "?"
 
+def test_run_consistency_check_prints_stdout(patch_dependencies, capsys):
+    """Ensure JSON report is written to stdout when print_stdout=True."""
+    runner.run_consistency_check("NOA", epochs=1, seed=123, print_stdout=True)
+
+    captured = capsys.readouterr().out
+    assert captured.strip()  # not empty
+    data = json.loads(captured)
+    assert "summary" in data
+    assert data["summary"]["node"] == "NOA"
+    assert data["summary"]["seed"] == 123
