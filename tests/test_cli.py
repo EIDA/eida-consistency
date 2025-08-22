@@ -1,4 +1,3 @@
-# tests/test_cli.py
 import json
 import logging
 import runpy
@@ -24,7 +23,6 @@ def assert_called_with_subset(mock, **expected_subset):
 def _find_log_level_normalizer():
     """
     Try common helper names used for log-level normalization.
-    We assume your cli.py defines one of these (private or public).
     """
     import eida_consistency.cli as cli_mod
 
@@ -43,7 +41,7 @@ def _find_log_level_normalizer():
     return None
 
 
-# ---------- CLI tests ----------------------------------------------------------
+# ---------- CLI: consistency ---------------------------------------------------
 
 @patch("eida_consistency.cli.run_consistency_check")
 def test_consistency_prints_json_and_calls_runner(mock_run):
@@ -60,7 +58,7 @@ def test_consistency_prints_json_and_calls_runner(mock_run):
             "consistency",
             "--node", "NOA",
             "--epochs", "2",
-            "--duration", "60",
+            "--duration", "600",
             "--seed", "123",
         ],
     )
@@ -74,10 +72,94 @@ def test_consistency_prints_json_and_calls_runner(mock_run):
         mock_run,
         node="NOA",
         epochs=2,
-        duration=60,
+        duration=600,
         seed=123,
     )
 
+
+@patch("eida_consistency.cli.run_consistency_check")
+def test_consistency_accepts_log_level_option_and_forwards_core_args(mock_run):
+    mock_run.side_effect = lambda **kwargs: None
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["--log-level", "INFO", "consistency", "--node", "RESIF", "--epochs", "1"],
+    )
+
+    assert result.exit_code == 0
+    assert_called_with_subset(
+        mock_run,
+        node="RESIF",
+        epochs=1,
+        duration=600,  # default
+        seed=None,
+    )
+
+
+def test_consistency_requires_node_option():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["consistency", "--epochs", "1"])
+    assert result.exit_code != 0
+    assert "Error" in result.output
+
+
+def test_consistency_requires_epochs_int():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["consistency", "--node", "NOA", "--epochs", "not-an-int"])
+    assert result.exit_code != 0
+    assert "Invalid value" in result.output or "Error" in result.output
+
+
+@patch("eida_consistency.cli.delete_old_reports")
+def test_consistency_delete_old_cleans_reports(mock_cleanup):
+    runner = CliRunner()
+    result = runner.invoke(cli, ["consistency", "--delete-old"])
+    assert result.exit_code == 0
+    mock_cleanup.assert_called_once()
+
+
+@patch("eida_consistency.cli.run_consistency_check")
+def test_consistency_explicit_duration_forwarded(mock_run):
+    mock_run.side_effect = lambda **kwargs: None
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["consistency", "--node", "ETH", "--epochs", "3", "--duration", "900"],
+    )
+    assert result.exit_code == 0
+    assert_called_with_subset(
+        mock_run,
+        node="ETH",
+        epochs=3,
+        duration=900,
+        seed=None,
+    )
+
+
+def test_consistency_rejects_duration_too_small():
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["consistency", "--node", "ETH", "--epochs", "1", "--duration", "300"],
+    )
+    assert result.exit_code != 0
+    assert "Duration must be at least 600" in result.output
+
+
+@patch("eida_consistency.cli.run_consistency_check")
+def test_consistency_runner_exception_propagates_nonzero(mock_run):
+    mock_run.side_effect = RuntimeError("boom")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["consistency", "--node", "NOA", "--epochs", "1"])
+    assert result.exit_code != 0
+    if result.exception is not None:
+        assert isinstance(result.exception, RuntimeError)
+
+
+# ---------- CLI: compare -------------------------------------------------------
 
 @patch("eida_consistency.cli.compare_reports")
 def test_cli_compare_calls_compare_reports(mock_compare, tmp_path):
@@ -91,133 +173,6 @@ def test_cli_compare_calls_compare_reports(mock_compare, tmp_path):
 
     assert result.exit_code == 0
     mock_compare.assert_called_once_with(str(f1), str(f2))
-
-
-@patch("eida_consistency.cli.run_consistency_check")
-def test_cli_accepts_log_level_option_and_forwards_core_args(mock_run):
-    mock_run.side_effect = lambda **kwargs: None
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "--log-level", "INFO",
-            "consistency",
-            "--node", "RESIF",
-            "--epochs", "1",
-        ],
-    )
-
-    assert result.exit_code == 0
-    # Default duration=600, seed=None (as implied by your earlier tests)
-    assert_called_with_subset(
-        mock_run,
-        node="RESIF",
-        epochs=1,
-        duration=600,
-        seed=None,
-    )
-
-
-def test_cli_no_subcommand_shows_usage_and_exits_nonzero():
-    runner = CliRunner()
-    result = runner.invoke(cli, [])
-    assert result.exit_code != 0  # typically 2
-    assert "Usage:" in result.output
-
-
-def test_consistency_requires_node_option():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "consistency",
-            "--epochs", "1",
-        ],
-    )
-    assert result.exit_code != 0
-    assert "Missing option" in result.output or "Error" in result.output
-
-
-def test_consistency_requires_epochs_int():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "consistency",
-            "--node", "NOA",
-            "--epochs", "not-an-int",
-        ],
-    )
-    assert result.exit_code != 0
-    assert "Invalid value for" in result.output or "Error" in result.output
-
-
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_delete_old_flag_is_accepted_but_subset_assert(mock_run):
-    mock_run.side_effect = lambda **kwargs: None
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "consistency",
-            "--node", "NOA",
-            "--epochs", "1",
-            "--delete-old",
-        ],
-    )
-    assert result.exit_code == 0
-    # We only assert on the subset we know is forwarded
-    assert_called_with_subset(
-        mock_run,
-        node="NOA",
-        epochs=1,
-        duration=600,
-        seed=None,
-    )
-
-
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_explicit_duration_forwarded(mock_run):
-    mock_run.side_effect = lambda **kwargs: None
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "consistency",
-            "--node", "ETH",
-            "--epochs", "3",
-            "--duration", "90",
-        ],
-    )
-    assert result.exit_code == 0
-    assert_called_with_subset(
-        mock_run,
-        node="ETH",
-        epochs=3,
-        duration=90,
-        seed=None,
-    )
-
-
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_runner_exception_propagates_nonzero(mock_run):
-    mock_run.side_effect = RuntimeError("boom")
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "consistency",
-            "--node", "NOA",
-            "--epochs", "1",
-        ],
-    )
-    assert result.exit_code != 0
-    if result.exception is not None:
-        assert isinstance(result.exception, RuntimeError)
 
 
 @patch("eida_consistency.cli.compare_reports")
@@ -243,26 +198,26 @@ def test_compare_exception_is_nonzero(mock_compare, tmp_path):
     assert result.exit_code != 0
 
 
+# ---------- CLI: top-level -----------------------------------------------------
+
+def test_cli_no_subcommand_shows_usage_and_exits_nonzero():
+    runner = CliRunner()
+    result = runner.invoke(cli, [])
+    assert result.exit_code != 0
+    assert "Usage:" in result.output
+
+
 # ---------- Direct coverage of log-level normalizer ---------------------------
 
 def test_log_level_normalizer_invalid_raises_badparameter():
-    """
-    Covers: if not isinstance(numeric, int): raise click.BadParameter(...)
-    We call the normalizer directly so Click's Choice validation doesn't intercept.
-    """
     normalizer = _find_log_level_normalizer()
-    assert normalizer is not None, (
-        "Could not find a log-level normalizer helper in eida_consistency.cli "
-        "(expected one of: _normalize_log_level, normalize_log_level, "
-        "_coerce_log_level, coerce_log_level, _parse_log_level, parse_log_level)"
-    )
+    assert normalizer is not None
     with pytest.raises(click.BadParameter) as excinfo:
         normalizer("BANANA")
     assert "Invalid log level" in str(excinfo.value)
 
 
 def test_log_level_normalizer_valid_returns_int():
-    """Positive path: valid levels map to logging.* ints."""
     normalizer = _find_log_level_normalizer()
     assert normalizer is not None
     val = normalizer("INFO")
@@ -270,15 +225,10 @@ def test_log_level_normalizer_valid_returns_int():
     assert val == logging.INFO
 
 
-# ---------- __main__ guard coverage ------------------------------------------
+# ---------- __main__ guard coverage -------------------------------------------
 
 def test_module_runs_via___main__(monkeypatch):
-    """
-    Covers: if __name__ == '__main__': cli()
-    Simulate `python -m eida_consistency.cli --help` (clean exit 0).
-    """
     monkeypatch.setattr(sys, "argv", ["eida_consistency.cli", "--help"])
-    # Ensure we don't have a partially-imported module when running as __main__
     sys.modules.pop("eida_consistency.cli", None)
     with pytest.raises(SystemExit) as excinfo:
         runpy.run_module("eida_consistency.cli", run_name="__main__")
