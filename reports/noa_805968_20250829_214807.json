@@ -1,0 +1,227 @@
+{
+  "summary": {
+    "node": "NOA",
+    "seed": 805968,
+    "epochs": 10,
+    "duration": 600,
+    "total_checked": 10,
+    "total_consistent": 8,
+    "total_inconsistent": 2,
+    "score": 80.0,
+    "availability_yes_dataselect_no": 0,
+    "availability_no_dataselect_yes": 2,
+    "timestamp": "2025-08-29T21:48:07.544816+00:00"
+  },
+  "results": [
+    {
+      "index": 3,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=1Y&station=GR24&location=00&channel=HHE&start=2022-09-28T12:30:00Z&end=2023-01-01T00:00:00Z&format=json",
+      "network": "1Y",
+      "station": "GR24",
+      "channel": "HHE",
+      "location": "00",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2022-11-14T15:20:36",
+      "endtime": "2022-11-14T15:30:36",
+      "debug": "\u274c No waveform bytes (HTTP 204).\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=1Y&station=GR24&location=00&channel=HHE&starttime=2022-11-14T15:20:36&endtime=2022-11-14T15:30:36&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 7,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HT&station=KPRO&location=*&channel=HHE&start=2011-04-01T00:00:00Z&end=2013-01-18T00:00:00Z&format=json",
+      "network": "HT",
+      "station": "KPRO",
+      "channel": "HHE",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2011-06-29T15:18:22",
+      "endtime": "2011-06-29T15:28:22",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nHT.KPRO..HHE | 2011-06-29T15:18:22.000000Z - 2011-06-29T15:28:22.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HT&station=KPRO&location=&channel=HHE&starttime=2011-06-29T15:18:22&endtime=2011-06-29T15:28:22&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 9,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=EG&station=MMAA&location=*&channel=EN1&start=2015-08-05T00:00:00Z&end=2025-08-29T21:48:04.240236&format=json",
+      "network": "EG",
+      "station": "MMAA",
+      "channel": "EN1",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2016-01-09T22:41:18",
+      "endtime": "2016-01-09T22:51:18",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nEG.MMAA..EN1 | 2016-01-09T22:41:18.000000Z - 2016-01-09T22:51:18.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=EG&station=MMAA&location=&channel=EN1&starttime=2016-01-09T22:41:18&endtime=2016-01-09T22:51:18&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 4,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HC&station=THT2&location=*&channel=HHZ&start=2011-11-05T00:00:00Z&end=2015-11-04T00:00:00Z&format=json",
+      "network": "HC",
+      "station": "THT2",
+      "channel": "HHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2013-09-18T20:27:47",
+      "endtime": "2013-09-18T20:37:47",
+      "debug": "\u274c No waveform bytes (HTTP 204).\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HC&station=THT2&location=&channel=HHZ&starttime=2013-09-18T20:27:47&endtime=2013-09-18T20:37:47&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 8,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=1Y&station=GR21&location=00&channel=HHN&start=2022-10-04T13:41:13Z&end=2023-01-01T00:00:00Z&format=json",
+      "network": "1Y",
+      "station": "GR21",
+      "channel": "HHN",
+      "location": "00",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2022-11-02T15:00:15",
+      "endtime": "2022-11-02T15:10:15",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\n1Y.GR21.00.HHN | 2022-11-02T15:00:15.000000Z - 2022-11-02T15:10:15.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=1Y&station=GR21&location=00&channel=HHN&starttime=2022-11-02T15:00:15&endtime=2022-11-02T15:10:15&nodata=204",
+      "matched_span": {
+        "start": "2022-11-02T00:00:00.000000Z",
+        "end": "2022-11-03T00:00:00.000000Z",
+        "location": "00"
+      }
+    },
+    {
+      "index": 2,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=EG&station=MMAA&location=*&channel=EN3&start=2015-08-05T00:00:00Z&end=2025-08-29T21:47:58.574156&format=json",
+      "network": "EG",
+      "station": "MMAA",
+      "channel": "EN3",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2018-04-23T23:02:01",
+      "endtime": "2018-04-23T23:12:01",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nEG.MMAA..EN3 | 2018-04-23T23:02:01.000000Z - 2018-04-23T23:12:01.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=EG&station=MMAA&location=&channel=EN3&starttime=2018-04-23T23:02:01&endtime=2018-04-23T23:12:01&nodata=204",
+      "matched_span": {
+        "start": "2018-04-23T00:00:00.000000Z",
+        "end": "2018-04-24T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 6,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HL&station=NISR&location=00&channel=HNN&start=2019-01-01T00:00:00Z&end=2021-01-15T07:59:00Z&format=json",
+      "network": "HL",
+      "station": "NISR",
+      "channel": "HNN",
+      "location": "00",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2019-07-18T16:46:54",
+      "endtime": "2019-07-18T16:56:54",
+      "debug": "\u274c No waveform bytes (HTTP 204).\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=NISR&location=00&channel=HNN&starttime=2019-07-18T16:46:54&endtime=2019-07-18T16:56:54&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 5,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HL&station=CHNB&location=00&channel=HNE&start=2012-03-26T00:00:00Z&end=2025-08-29T21:48:02.173764&format=json",
+      "network": "HL",
+      "station": "CHNB",
+      "channel": "HNE",
+      "location": "00",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2024-02-12T18:30:19",
+      "endtime": "2024-02-12T18:40:19",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nHL.CHNB.00.HNE | 2024-02-12T18:30:19.000000Z - 2024-02-12T18:40:19.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=CHNB&location=00&channel=HNE&starttime=2024-02-12T18:30:19&endtime=2024-02-12T18:40:19&nodata=204",
+      "matched_span": {
+        "start": "2024-02-12T00:00:00.000000Z",
+        "end": "2024-02-13T00:00:00.000000Z",
+        "location": "00"
+      }
+    },
+    {
+      "index": 10,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HL&station=AMGA&location=*&channel=HHN&start=2025-02-04T00:00:00Z&end=2025-08-29T21:48:05.578216&format=json",
+      "network": "HL",
+      "station": "AMGA",
+      "channel": "HHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-07-27T21:04:34",
+      "endtime": "2025-07-27T21:14:34",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nHL.AMGA..HHN | 2025-07-27T21:04:34.000000Z - 2025-07-27T21:14:34.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=AMGA&location=&channel=HHN&starttime=2025-07-27T21:04:34&endtime=2025-07-27T21:14:34&nodata=204",
+      "matched_span": {
+        "start": "2025-07-27T00:00:00.000000Z",
+        "end": "2025-07-28T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 1,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HP&station=GUR&location=*&channel=HNN&start=2019-04-18T00:00:00Z&end=2022-11-24T10:00:00Z&format=json",
+      "network": "HP",
+      "station": "GUR",
+      "channel": "HNN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2019-05-16T07:08:52",
+      "endtime": "2019-05-16T07:18:52",
+      "debug": "\u2705 Retrieved 1 trace(s) via ObsPy client.\nHP.GUR..HNN | 2019-05-16T07:08:52.000000Z - 2019-05-16T07:18:52.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HP&station=GUR&location=&channel=HNN&starttime=2019-05-16T07:08:52&endtime=2019-05-16T07:18:52&nodata=204",
+      "matched_span": {
+        "start": "2019-05-16T00:00:00.000000Z",
+        "end": "2019-05-17T00:00:00.000000Z",
+        "location": ""
+      }
+    }
+  ]
+}

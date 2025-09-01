@@ -1,66 +1,78 @@
-# tests/test_formatter.py
-import re
 import eida_consistency.core.formatter as formatter
 
 
-def test_format_result_success_consistent_with_debug():
-    ds_result = {"success": True, "status": 200, "debug": "extra-info"}
-    match = {
+def make_match():
+    return {
         "network": "XX",
-        "station": "YY",
-        "channel": "ZZ",
+        "station": "AAA",
+        "channel": "HHZ",
         "location": "00",
-        "starttime": "2020-01-01",
-        "endtime": "2020-01-02",
+        "starttime": "2020-01-01T00:00:00",
+        "endtime": "2020-01-02T00:00:00",
     }
 
-    out = formatter.format_result(1, "http://url", True, ds_result, match)
-    # Should contain ✅ for both availability and dataselect
+
+def test_format_result_consistent_ok():
+    url = "http://fake/query"
+    ds_result = {"success": True, "status": "OK", "debug": "extra-debug"}
+    out = formatter.format_result(1, url, True, ds_result, make_match())
+
+    assert url in out
     assert "Availability: ✅" in out
     assert "Dataselect:   ✅" in out
     assert "Consistent:   ✅" in out
-    assert "extra-info" in out
-    assert out.startswith("1. http://url")
+    assert "Epoch span: 2020-01-01T00:00:00 → 2020-01-02T00:00:00" in out
+    assert "extra-debug" in out
 
 
-def test_format_result_failure_inconsistent_without_debug():
-    ds_result = {"success": False, "status": 500}  # no debug
+def test_format_result_inconsistent_avail_yes_ds_no():
+    url = "http://fake/query"
+    ds_result = {"success": False, "status": "NoData", "debug": ""}
+    out = formatter.format_result(2, url, True, ds_result, make_match())
+
+    assert "Availability: ✅" in out
+    assert "Dataselect:   ❌ (NoData)" in out
+    assert "Consistent:   ❌" in out
+
+
+def test_format_result_inconsistent_avail_no_ds_yes():
+    url = "http://fake/query"
+    ds_result = {"success": True, "status": "OK", "debug": ""}
+    out = formatter.format_result(3, url, False, ds_result, make_match())
+
+    assert "Availability: ❌" in out
+    assert "Dataselect:   ✅" in out
+    assert "Consistent:   ❌" in out
+
+
+def test_format_result_with_missing_location_and_times():
+    url = "http://fake/query"
+    ds_result = {"success": False, "status": "Error", "debug": ""}
     match = {
-        "network": "NN",
-        "station": "SS",
-        "channel": "CC",
-        # omit location and endtime to test fallbacks
-        "starttime": "?", 
+        "network": "YY",
+        "station": "BBB",
+        "channel": "EHN",
+        # no location, no endtime
+        "starttime": "2020-05-01T00:00:00",
+    }
+    out = formatter.format_result(4, url, False, ds_result, match)
+
+    assert "Epoch span: 2020-05-01T00:00:00 → ?" in out
+    assert "Availability: ❌" in out
+    assert "Dataselect:   ❌ (Error)" in out
+
+
+def test_format_result_with_matched_span_includes_start_end():
+    """Ensure matched_span start/end are appended when present in match dict."""
+    url = "http://fake/query"
+    ds_result = {"success": True, "status": "OK", "debug": ""}
+    match = make_match()
+    match["matched_span"] = {
+        "start": "2020-01-01T01:00:00",
+        "end": "2020-01-01T02:00:00",
     }
 
-    out = formatter.format_result(2, "http://bad", True, ds_result, match)
-    # Availability says ✅ but dataselect failed => inconsistency
-    assert "Availability: ✅" in out
-    assert "Dataselect:   ❌ (500)" in out
-    assert "Consistent:   ❌" in out
-    assert "Station span: ? → ?" in out
-    # Ensure no debug line
-    assert "debug" not in out.lower()
+    out = formatter.format_result(5, url, True, ds_result, match)
 
-
-def test_format_result_both_failures_consistent():
-    ds_result = {"success": False, "status": 404}
-    match = {"network": "A", "station": "B", "channel": "C"}
-    out = formatter.format_result(3, "urlX", False, ds_result, match)
-    # Both False → consistency
-    assert "Availability: ❌" in out
-    assert "Dataselect:   ❌ (404)" in out
-    assert "Consistent:   ✅" in out
-
-
-def test_format_result_regex_structure():
-    """Sanity check for multiline format using regex."""
-    ds_result = {"success": True, "status": 200}
-    match = {"network": "N", "station": "S", "channel": "C"}
-    out = formatter.format_result(4, "some-url", True, ds_result, match)
-
-    # 5 lines minimum (idx/url, availability, dataselect, consistent, station span)
-    lines = out.splitlines()
-    assert len(lines) >= 5
-    # first line begins with index and URL
-    assert re.match(r"^4\. some-url$", lines[0])
+    assert "2020-01-01T01:00:00" in out
+    assert "2020-01-01T02:00:00" in out

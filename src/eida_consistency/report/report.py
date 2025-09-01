@@ -19,15 +19,32 @@ def create_report_object(
     node: str, seed: int, epochs: int, duration: int, records: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Build a serialisable dictionary summarising a full run."""
+
+    total_checked = len(records)
+    total_consistent = sum(1 for r in records if r["consistent"])
+    total_inconsistent = total_checked - total_consistent
+    score = (total_consistent / total_checked * 100.0) if total_checked > 0 else 0.0
+
+    # Breakdown by inconsistency type
+    avail_yes_ds_no = sum(
+        1 for r in records if r["available"] and not r["dataselect_success"]
+    )
+    avail_no_ds_yes = sum(
+        1 for r in records if (not r["available"]) and r["dataselect_success"]
+    )
+
     return {
         "summary": {
             "node": node,
             "seed": seed,
             "epochs": epochs,
             "duration": duration,
-            "total_checked": len(records),
-            "total_consistent": sum(1 for r in records if r["consistent"]),
-            "total_inconsistent": sum(1 for r in records if not r["consistent"]),
+            "total_checked": total_checked,
+            "total_consistent": total_consistent,
+            "total_inconsistent": total_inconsistent,
+            "score": round(score, 2),
+            "availability_yes_dataselect_no": avail_yes_ds_no,
+            "availability_no_dataselect_yes": avail_no_ds_yes,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         },
         "results": records,
@@ -35,10 +52,7 @@ def create_report_object(
 
 
 def _make_unique_filename(node: str, seed: int, extension: str) -> str:
-    """Create a unique file name for the report.
-
-    The leading underscore marks this as a private helper.
-    """
+    """Create a unique file name for the report."""
     short_time = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     return f"{node.lower()}_{seed}_{short_time}.{extension}"
 
@@ -85,6 +99,11 @@ def save_report_markdown(report: Dict[str, Any], output_dir: Path = REPORT_DIR) 
         f"- Total checks: `{summary['total_checked']}`",
         f"- Consistent: `{summary['total_consistent']}`",
         f"- Inconsistent: `{summary['total_inconsistent']}`",
+        f"- Score: **{summary['score']} %**",
+        "",
+        "## Inconsistency Breakdown",
+        f"- Availability says YES, Dataselect says NO: `{summary['availability_yes_dataselect_no']}`",
+        f"- Availability says NO, Dataselect says YES: `{summary['availability_no_dataselect_yes']}`",
         "",
         "## Dataselect Response Types",
         *(f"- **{key}**: `{value}`" for key, value in sorted(type_counts.items())),
@@ -113,16 +132,7 @@ def save_report_markdown(report: Dict[str, Any], output_dir: Path = REPORT_DIR) 
 
 
 def delete_old_reports(report_dir: Path = REPORT_DIR, keep: int = 1) -> None:
-    """
-    Keep only the latest `keep` reports (json+md pairs) and delete older ones.
-
-    Parameters
-    ----------
-    report_dir : Path
-        Directory where reports are saved.
-    keep : int
-        Number of report pairs to keep.
-    """
+    """Keep only the latest `keep` reports (json+md pairs) and delete older ones."""
     if not report_dir.exists():
         return
 

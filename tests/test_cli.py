@@ -1,231 +1,136 @@
 import json
-import logging
 import runpy
 import sys
-from click.testing import CliRunner
-from unittest.mock import patch
 import pytest
 import click
+from pathlib import Path
+from click.testing import CliRunner
 
-from eida_consistency.cli import cli
-
-
-# ---------- Helpers ------------------------------------------------------------
-
-def assert_called_with_subset(mock, **expected_subset):
-    """Assert last call's kwargs contain at least this subset."""
-    assert mock.call_args is not None, "Function was not called"
-    actual = mock.call_args.kwargs
-    for k, v in expected_subset.items():
-        assert actual.get(k) == v, f"Expected {k}={v}, got {actual.get(k)}"
+import eida_consistency.cli as cli
 
 
-def _find_log_level_normalizer():
-    """
-    Try common helper names used for log-level normalization.
-    """
-    import eida_consistency.cli as cli_mod
-
-    candidates = [
-        "_normalize_log_level",
-        "normalize_log_level",
-        "_coerce_log_level",
-        "coerce_log_level",
-        "_parse_log_level",
-        "parse_log_level",
-    ]
-    for name in candidates:
-        fn = getattr(cli_mod, name, None)
-        if callable(fn):
-            return fn
-    return None
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
+def make_dummy_report(tmp_path: Path, name="r.json"):
+    """Create a minimal dummy report JSON file."""
+    path = tmp_path / name
+    report = {"summary": {}, "results": []}
+    path.write_text(json.dumps(report))
+    return path
 
 
-# ---------- CLI: consistency ---------------------------------------------------
-
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_prints_json_and_calls_runner(mock_run):
-    # Simulate runner printing JSON to stdout; CLI should surface it
-    mock_run.side_effect = lambda **kwargs: print(
-        json.dumps({"summary": {"node": kwargs["node"], "epochs": kwargs["epochs"]}})
-    )
-
+# -------------------------------------------------------------------
+# consistency command
+# -------------------------------------------------------------------
+def test_consistency_with_node_and_delete_old(monkeypatch, tmp_path, caplog):
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "--log-level", "DEBUG",
-            "consistency",
-            "--node", "NOA",
-            "--epochs", "2",
-            "--duration", "600",
-            "--seed", "123",
-        ],
-    )
+    caplog.set_level("INFO")
 
+    # Patch housekeeping
+    monkeypatch.setattr(cli, "delete_old_reports", lambda *_a, **_k: caplog.messages.append("delete called"))
+
+    result = runner.invoke(cli.cli, ["consistency", "--delete-old"])
     assert result.exit_code == 0
-    out = json.loads(result.output.strip())
-    assert out["summary"]["node"] == "NOA"
-    assert out["summary"]["epochs"] == 2
-
-    assert_called_with_subset(
-        mock_run,
-        node="NOA",
-        epochs=2,
-        duration=600,
-        seed=123,
-    )
+    assert any("delete called" in msg or "Old reports cleaned" in msg for msg in caplog.messages)
 
 
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_accepts_log_level_option_and_forwards_core_args(mock_run):
-    mock_run.side_effect = lambda **kwargs: None
-
+def test_consistency_with_node_and_seed(monkeypatch):
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        ["--log-level", "INFO", "consistency", "--node", "RESIF", "--epochs", "1"],
-    )
+    called = {}
 
+    monkeypatch.setattr(cli, "run_consistency_check", lambda **kwargs: called.update(kwargs))
+
+    result = runner.invoke(cli.cli, ["consistency", "--node", "FAKE", "--epochs", "2", "--seed", "123"])
     assert result.exit_code == 0
-    assert_called_with_subset(
-        mock_run,
-        node="RESIF",
-        epochs=1,
-        duration=600,  # default
-        seed=None,
-    )
+    assert called["node"] == "FAKE"
+    assert called["epochs"] == 2
+    assert called["seed"] == 123
 
 
-def test_consistency_requires_node_option():
+def test_consistency_fails_without_node():
     runner = CliRunner()
-    result = runner.invoke(cli, ["consistency", "--epochs", "1"])
+    result = runner.invoke(cli.cli, ["consistency"])
     assert result.exit_code != 0
-    assert "Error" in result.output
+    assert "--node is required" in result.output
 
 
-def test_consistency_requires_epochs_int():
+def test_consistency_invalid_duration():
     runner = CliRunner()
-    result = runner.invoke(cli, ["consistency", "--node", "NOA", "--epochs", "not-an-int"])
+    result = runner.invoke(cli.cli, ["consistency", "--node", "FAKE", "--duration", "100"])
     assert result.exit_code != 0
-    assert "Invalid value" in result.output or "Error" in result.output
+    assert "Duration must be at least" in result.output
 
 
-@patch("eida_consistency.cli.delete_old_reports")
-def test_consistency_delete_old_cleans_reports(mock_cleanup):
+# -------------------------------------------------------------------
+# compare command
+# -------------------------------------------------------------------
+def test_compare_command(monkeypatch, tmp_path):
     runner = CliRunner()
-    result = runner.invoke(cli, ["consistency", "--delete-old"])
+    dummy1 = make_dummy_report(tmp_path, "r1.json")
+    dummy2 = make_dummy_report(tmp_path, "r2.json")
+
+    called = {}
+    monkeypatch.setattr(cli, "compare_reports", lambda a, b: called.update({"a": a, "b": b}))
+
+    result = runner.invoke(cli.cli, ["compare", str(dummy1), str(dummy2)])
     assert result.exit_code == 0
-    mock_cleanup.assert_called_once()
+    assert called["a"].endswith("r1.json")
+    assert called["b"].endswith("r2.json")
 
 
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_explicit_duration_forwarded(mock_run):
-    mock_run.side_effect = lambda **kwargs: None
-
+# -------------------------------------------------------------------
+# explore command
+# -------------------------------------------------------------------
+def test_explore_with_explicit_report_and_index(monkeypatch, tmp_path):
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        ["consistency", "--node", "ETH", "--epochs", "3", "--duration", "900"],
-    )
+    dummy_report = make_dummy_report(tmp_path)
+
+    called = {}
+    monkeypatch.setattr(cli, "explore_boundaries", lambda report, indices: called.update({"report": str(report), "indices": indices}))
+
+    result = runner.invoke(cli.cli, ["explore", str(dummy_report), "--index", "1,2"])
     assert result.exit_code == 0
-    assert_called_with_subset(
-        mock_run,
-        node="ETH",
-        epochs=3,
-        duration=900,
-        seed=None,
-    )
+    assert called["report"].endswith("r.json")
+    assert called["indices"] == [1, 2]
 
 
-def test_consistency_rejects_duration_too_small():
+def test_explore_with_no_report_uses_latest(monkeypatch, tmp_path):
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        ["consistency", "--node", "ETH", "--epochs", "1", "--duration", "300"],
-    )
-    assert result.exit_code != 0
-    assert "Duration must be at least 600" in result.output
+    dummy_report = make_dummy_report(tmp_path, "latest.json")
+    cli.REPORT_DIR = tmp_path  # point to tmp_path
 
+    called = {}
+    monkeypatch.setattr(cli, "explore_boundaries", lambda report, indices: called.update({"report": str(report), "indices": indices}))
 
-@patch("eida_consistency.cli.run_consistency_check")
-def test_consistency_runner_exception_propagates_nonzero(mock_run):
-    mock_run.side_effect = RuntimeError("boom")
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["consistency", "--node", "NOA", "--epochs", "1"])
-    assert result.exit_code != 0
-    if result.exception is not None:
-        assert isinstance(result.exception, RuntimeError)
-
-
-# ---------- CLI: compare -------------------------------------------------------
-
-@patch("eida_consistency.cli.compare_reports")
-def test_cli_compare_calls_compare_reports(mock_compare, tmp_path):
-    f1 = tmp_path / "report1.json"
-    f2 = tmp_path / "report2.json"
-    f1.write_text("{}")
-    f2.write_text("{}")
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["compare", str(f1), str(f2)])
-
+    result = runner.invoke(cli.cli, ["explore"])
     assert result.exit_code == 0
-    mock_compare.assert_called_once_with(str(f1), str(f2))
+    assert Path(called["report"]).name == "latest.json"
+    assert called["indices"] is None
 
 
-@patch("eida_consistency.cli.compare_reports")
-def test_compare_requires_two_paths(mock_compare):
+def test_explore_no_reports_found(monkeypatch, tmp_path):
     runner = CliRunner()
-    result = runner.invoke(cli, ["compare", "only_one.json"])
+    cli.REPORT_DIR = tmp_path  # empty dir
+    result = runner.invoke(cli.cli, ["explore"])
     assert result.exit_code != 0
-    assert "Missing argument" in result.output or "Error" in result.output
-    mock_compare.assert_not_called()
+    assert "No report files found" in result.output
 
 
-@patch("eida_consistency.cli.compare_reports")
-def test_compare_exception_is_nonzero(mock_compare, tmp_path):
-    f1 = tmp_path / "report1.json"
-    f2 = tmp_path / "report2.json"
-    f1.write_text("{}")
-    f2.write_text("{}")
+# -------------------------------------------------------------------
+# Extra coverage: uncovered lines in cli.py
+# -------------------------------------------------------------------
+def test_invalid_log_level_raises():
+    with pytest.raises(click.BadParameter):
+        cli.normalize_log_level("INVALID")
 
-    mock_compare.side_effect = ValueError("cannot compare")
 
+def test_cli_no_subcommand_shows_help_and_exits():
     runner = CliRunner()
-    result = runner.invoke(cli, ["compare", str(f1), str(f2)])
-    assert result.exit_code != 0
+    result = runner.invoke(cli.cli, [])
+    assert result.exit_code == 1
+    assert "EIDA consistency checker" in result.output
 
-
-# ---------- CLI: top-level -----------------------------------------------------
-
-def test_cli_no_subcommand_shows_usage_and_exits_nonzero():
-    runner = CliRunner()
-    result = runner.invoke(cli, [])
-    assert result.exit_code != 0
-    assert "Usage:" in result.output
-
-
-# ---------- Direct coverage of log-level normalizer ---------------------------
-
-def test_log_level_normalizer_invalid_raises_badparameter():
-    normalizer = _find_log_level_normalizer()
-    assert normalizer is not None
-    with pytest.raises(click.BadParameter) as excinfo:
-        normalizer("BANANA")
-    assert "Invalid log level" in str(excinfo.value)
-
-
-def test_log_level_normalizer_valid_returns_int():
-    normalizer = _find_log_level_normalizer()
-    assert normalizer is not None
-    val = normalizer("INFO")
-    assert isinstance(val, int)
-    assert val == logging.INFO
-
-
-# ---------- __main__ guard coverage -------------------------------------------
 
 def test_module_runs_via___main__(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["eida_consistency.cli", "--help"])

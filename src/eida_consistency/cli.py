@@ -5,8 +5,9 @@ Examples
 $ eida-consistency --log-level DEBUG consistency --node NOA --epochs 5
 $ eida-consistency compare report1.json report2.json
 $ eida-consistency consistency --delete-old
-
+$ eida-consistency explore --latest --index 7 --index 8
 """
+
 import logging
 from pathlib import Path
 
@@ -14,21 +15,11 @@ import click
 from eida_consistency.runner import run_consistency_check
 from eida_consistency.report.compare import compare_reports
 from eida_consistency.report.report import delete_old_reports, REPORT_DIR
+from eida_consistency.explorer import explore_boundaries
 
 
 def normalize_log_level(level: str) -> int:
-    """Normalize a log level string to its numeric value or raise on invalid.
-
-    Parameters
-    ----------
-    level: str
-        Log level name such as "DEBUG", "INFO", "WARNING", "ERROR".
-
-    Returns
-    -------
-    int
-        The numeric logging level (e.g., logging.INFO).
-    """
+    """Normalize a log level string to its numeric value or raise on invalid."""
     numeric = getattr(logging, str(level).upper(), None)
     if not isinstance(numeric, int):
         raise click.BadParameter(f"Invalid log level: {level}")
@@ -108,6 +99,32 @@ def consistency(node, epochs, duration, seed, delete_old, print_stdout):
 def compare(report1, report2):
     """Compare two JSON report files."""
     compare_reports(str(report1), str(report2))
+
+
+@cli.command()
+@click.argument("report", type=click.Path(exists=True, path_type=Path), required=False)
+@click.option(
+    "--index",
+    type=str,
+    callback=lambda _, __, value: [int(x) for x in value.split(",")] if value else None,
+    help="Comma-separated indices of inconsistent tests (e.g. 7,8).",
+)
+@click.option(
+    "--latest",
+    is_flag=True,
+    help="Use the most recent report automatically.",
+)
+def explore(report, index, latest):
+    """Explore day-by-day boundaries of inconsistencies from a report."""
+    if not report:
+        try:
+            report = max(REPORT_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime)
+            logging.info(f"Using latest report: {report}")
+        except ValueError:
+            raise click.UsageError("No report files found in reports/ directory.")
+
+    indices = list(index) if index else None
+    explore_boundaries(report, indices)
 
 
 if __name__ == "__main__":
