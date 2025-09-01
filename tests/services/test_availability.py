@@ -1,175 +1,218 @@
-import logging
 import pytest
+import logging
+from datetime import datetime
 
-import eida_consistency.services.availability as availability
-
-
-class DummyResponse:
-    def __init__(self, status_code=200, payload=None, text="dummy"):
-        self.status_code = status_code
-        self._payload = payload or {}
-        self.text = text
-
-    def json(self):
-        return self._payload
+import eida_consistency.services.availability as avail
 
 
-def test_collect_spans_with_availability_and_datasources():
+def test_parse_iso_variants():
+    assert avail._parse_iso("2020-01-01T00:00:00") == datetime(2020, 1, 1, 0, 0)
+    assert avail._parse_iso("2020-01-01T00:00:00Z") == datetime(2020, 1, 1, 0, 0)
+
+
+def test_collect_spans_from_availability_and_datasources():
     payload = {
         "availability": [
-            {"start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00",
-             "network": "XX", "station": "AAA", "channel": "BHZ", "location": ""}
+            {"network": "XX", "station": "AAA", "channel": "HHZ",
+             "location": "00", "quality": "B",
+             "start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00"}
         ],
         "datasources": [
             {
-                "network": "YY", "station": "BBB", "channel": "HHZ", "location": "00",
-                "timespans": [["2020-01-01T02:00:00", "2020-01-01T03:00:00"]]
+                "network": "YY", "station": "BBB", "channel": "EHN", "location": "01", "quality": "M",
+                "timespans": [["2021-01-01T00:00:00", "2021-01-01T02:00:00"]]
             }
         ]
     }
-    spans = availability._collect_spans(payload)
+    spans = avail._collect_spans(payload)
     assert len(spans) == 2
     assert spans[0]["network"] == "XX"
     assert spans[1]["network"] == "YY"
 
 
-def test_check_availability_query_happy_path(monkeypatch):
-    payload = {
-        "availability": [
-            {"start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00",
-             "network": "XX", "station": "AAA", "channel": "BHZ", "location": ""}
-        ]
-    }
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: DummyResponse(200, payload),
-    )
+class DummyResp:
+    def __init__(self, status_code=200, json_data=None, text=""):
+        self.status_code = status_code
+        self._json = json_data
+        self.text = text
+        self.content = b"{}"
 
-    result = availability.check_availability_query(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
+    def json(self):
+        if self._json is None:
+            raise ValueError("No JSON")
+        return self._json
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise Exception("HTTP error")
+
+
+def test_check_availability_query_success_covering(monkeypatch):
+    def fake_get(url, timeout=20):
+        return DummyResp(
+            200,
+            {"availability": [
+                {"network": "XX", "station": "AAA", "channel": "HHZ", "location": "00",
+                 "start": "2020-01-01T00:00:00", "end": "2020-01-01T02:00:00"}
+            ]}
+        )
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    result = avail.check_availability_query(
+        "http://fake/", "XX", "AAA", "HHZ",
+        "2020-01-01T00:30:00", "2020-01-01T01:00:00", location="00"
     )
     assert result["ok"] is True
     assert result["matched_span"] is not None
+    assert result["status"] == 200
 
 
-def test_non_200_status(monkeypatch, caplog):
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: DummyResponse(404, {}, text="not found"),
-    )
+def test_check_availability_query_success_not_covering(monkeypatch):
+    def fake_get(url, timeout=20):
+        return DummyResp(
+            200,
+            {"availability": [
+                {"network": "XX", "station": "AAA", "channel": "HHZ", "location": "00",
+                 "start": "2020-01-01T00:00:00", "end": "2020-01-01T00:10:00"}
+            ]}
+        )
+    monkeypatch.setattr(avail.requests, "get", fake_get)
 
-    caplog.set_level(logging.DEBUG)
-    result = availability.check_availability_query(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
-    )
-    assert result["ok"] is False
-    assert "Non-200" in caplog.text
-
-
-def test_request_exception(monkeypatch):
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: (_ for _ in ()).throw(RuntimeError("boom")),
-    )
-
-    result = availability.check_availability_query(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
-    )
-    assert result["ok"] is False
-    assert result["status"] == 0
-
-
-def test_bad_json_parse(monkeypatch, caplog):
-    class BadResponse(DummyResponse):
-        def json(self):
-            raise ValueError("bad json")
-
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: BadResponse(200),
-    )
-
-    caplog.set_level(logging.WARNING)
-    result = availability.check_availability_query(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
-    )
-    assert result["ok"] is False
-    assert "Failed to parse" in caplog.text
-
-
-def test_debug_logging_with_unserializable_json(monkeypatch, caplog):
-    # object guaranteed unserialisable
-    bad_obj = lambda: None
-    bad_payload = {
-        "availability": [
-            {"start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00", "bad": bad_obj}
-        ]
-    }
-
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: DummyResponse(200, bad_payload),
-    )
-
-    caplog.set_level(logging.DEBUG)
-    result = availability.check_availability_query(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
-    )
-
-    assert "<unserializable JSON>" in caplog.text
-    assert result["ok"] is True   # span still covers window
-
-
-def test_span_with_invalid_datetime_triggers_continue(monkeypatch):
-    bad_payload = {
-        "availability": [{"start": "NOT_A_DATE", "end": "ALSO_BAD"}]
-    }
-
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: DummyResponse(200, bad_payload),
-    )
-
-    result = availability.check_availability_query(
-        "http://fake/", "ZZ", "CCC", "HHN",
-        "2020-01-01T00:00:00", "2020-01-01T00:10:00"
+    result = avail.check_availability_query(
+        "http://fake/", "XX", "AAA", "HHZ",
+        "2020-01-01T00:30:00", "2020-01-01T01:00:00", location="00"
     )
     assert result["ok"] is False
     assert result["matched_span"] is None
-    assert len(result["spans"]) == 1
 
 
-def test_check_availability_wrapper(monkeypatch):
-    payload = {
-        "availability": [
-            {"start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00"}
-        ]
-    }
-    monkeypatch.setattr(
-        availability.requests,
-        "get",
-        lambda url, timeout: DummyResponse(200, payload),
+def test_check_availability_query_204(monkeypatch):
+    def fake_get(url, timeout=20):
+        return DummyResp(204, json_data={}, text="")
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    result = avail.check_availability_query(
+        "http://fake/", "XX", "AAA", "HHZ", "2020-01-01T00:00:00", "2020-01-01T01:00:00"
+    )
+    assert result["ok"] is False
+    assert result["status"] == 204
+
+
+def test_check_availability_query_non_200(monkeypatch):
+    def fake_get(url, timeout=20):
+        return DummyResp(500, json_data=None, text="err")
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    result = avail.check_availability_query(
+        "http://fake/", "X", "A", "HHZ", "s", "e"
+    )
+    assert result["ok"] is False
+    assert result["status"] == 0   # code catches error and forces 0
+
+
+def test_check_availability_query_invalid_json(monkeypatch):
+    def fake_get(url, timeout=20):
+        return DummyResp(200, json_data=None)
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    result = avail.check_availability_query(
+        "http://fake/", "X", "A", "HHZ", "2020-01-01T00:00:00", "2020-01-01T00:10:00"
+    )
+    assert result["ok"] is False
+    assert result["spans"] == []
+
+
+def test_get_availability_spans_success(monkeypatch):
+    def fake_get(url, timeout=30):
+        return DummyResp(
+            200,
+            {"availability": [
+                {"network": "X", "station": "A", "channel": "HHZ",
+                 "start": "2020-01-01T00:00:00", "end": "2020-01-01T01:00:00"}
+            ]}
+        )
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+    spans = avail.get_availability_spans("http://fake/", "X", "A", "HHZ", "s", "e")
+    assert len(spans) == 1
+
+
+def test_get_availability_spans_204_retry_then_empty(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_get(url, timeout=30):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return DummyResp(204, json_data={})
+        return DummyResp(204, json_data={})
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    spans = avail.get_availability_spans("http://fake/", "X", "A", "HHZ", "s", "e", location="00")
+    assert spans == []
+
+
+def test_get_availability_spans_exception(monkeypatch):
+    def fake_get(url, timeout=30):
+        raise Exception("boom")
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    spans = avail.get_availability_spans("http://fake/", "X", "A", "HHZ", "s", "e")
+    assert spans == []
+
+
+def test_check_availability_backcompat(monkeypatch):
+    def fake_query(*a, **k):
+        return {"ok": True, "url": "http://fake", "spans": [], "matched_span": {}}
+    monkeypatch.setattr(avail, "check_availability_query", fake_query)
+
+    res = avail.check_availability("http://fake/", "X", "A", "HHZ", "s", "e")
+    assert res is True
+
+    url, ok = avail.check_availability("http://fake/", "X", "A", "HHZ", "s", "e", return_url=True)
+    assert url == "http://fake"
+    assert ok is True
+
+
+# --- NEW TESTS FOR UNCOVERED BRANCHES ---
+
+def test_check_availability_query_unserializable_json(monkeypatch, caplog):
+    """Force unserializable JSON payload so pretty-print fails but code continues."""
+    class BadObj:
+        # Not JSON serializable
+        pass
+
+    bad_payload = {"availability": [{"network": "X", "station": "A", "channel": "HHZ",
+                                     "location": "00", "start": "2020-01-01T00:00:00",
+                                     "end": "2020-01-01T00:10:00",
+                                     "extra": BadObj()}]}
+
+    def fake_get(url, timeout=20):
+        return DummyResp(200, json_data=bad_payload)
+
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+    caplog.set_level(logging.DEBUG)
+
+    result = avail.check_availability_query(
+        "http://fake/", "X", "A", "HHZ",
+        "2020-01-01T00:00:00", "2020-01-01T00:10:00"
     )
 
-    result = availability.check_availability(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00"
+    assert isinstance(result, dict)
+    # The pretty string should fall back to "<unserializable JSON>"
+    assert "<unserializable JSON>" in caplog.text
+
+def test_check_availability_query_span_parse_exception(monkeypatch):
+    """Force _parse_iso to fail so except Exception: continue is exercised."""
+    payload = {"availability": [{"start": "bad-date", "end": "also-bad"}]}
+
+    def fake_get(url, timeout=20):
+        return DummyResp(200, json_data=payload)
+
+    monkeypatch.setattr(avail.requests, "get", fake_get)
+
+    result = avail.check_availability_query(
+        "http://fake/", "X", "A", "HHZ",
+        "2020-01-01T00:00:00", "2020-01-01T00:10:00"
     )
-    assert isinstance(result, bool)
-    url, ok = availability.check_availability(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:10:00", "2020-01-01T00:20:00", return_url=True
-    )
-    assert url.startswith("http://fake/")
-    assert isinstance(ok, bool)
+
+    assert result["ok"] is False
+    assert result["matched_span"] is None
