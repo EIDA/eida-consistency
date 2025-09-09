@@ -11,15 +11,16 @@ def format_result(idx, url, available, ds_result, match):
 
     log = [f"{idx}. {url}"]
 
-    # Availability result
+        # Availability result
     if available:
-        line = "     Availability: ✅ (slice covered by spans)"
+        line = "     Availability: ✅ (timespan covered)"
         matched_span = match.get("matched_span")
         if matched_span:
             line += f" → {matched_span['start']} → {matched_span['end']}"
         log.append(line)
     else:
-        log.append("     Availability: ❌ (slice not covered)")
+        log.append("     Availability: ❌ (No availability in this timespan)")
+
 
     # Dataselect result
     dataselect_status = "✅" if ds_result["success"] else f"❌ ({ds_result['status']})"

@@ -1,90 +1,67 @@
-import json
-import sys
 import pytest
+import json
+import logging
 from pathlib import Path
-from eida_consistency.report.compare import compare_reports
+import eida_consistency.report.compare as cmp
 
 
-def make_report(path: Path, seed: int, results: list):
+# -----------------
+# _load_report
+# -----------------
+
+def test_load_report_success(tmp_path):
+    data = {"summary": {"node": "X", "total_checked": 1,
+                        "total_consistent": 1, "total_inconsistent": 0,
+                        "score": 100}}
+    p = tmp_path / "report.json"
+    p.write_text(json.dumps(data))
+    result = cmp._load_report(p)
+    assert result["summary"]["node"] == "X"
+
+def test_load_report_failure(tmp_path):
+    p = tmp_path / "bad.json"
+    p.write_text("{not json}")
+    with pytest.raises(Exception):
+        cmp._load_report(p)
+
+
+# -----------------
+# compare_reports
+# -----------------
+
+def make_report(path: Path, node: str, checked=10, consistent=8, inconsistent=2, score=80):
     data = {
-        "summary": {"seed": seed},
-        "results": results,
+        "summary": {
+            "node": node,
+            "total_checked": checked,
+            "total_consistent": consistent,
+            "total_inconsistent": inconsistent,
+            "score": score,
+        }
     }
-    with open(path, "w") as f:
-        json.dump(data, f)
+    path.write_text(json.dumps(data))
+    return path
 
+def test_compare_reports_logs(tmp_path, caplog):
+    r1 = make_report(tmp_path / "r1.json", "NODE1", 10, 8, 2, 80)
+    r2 = make_report(tmp_path / "r2.json", "NODE2", 12, 9, 3, 75)
 
-def test_different_seeds_exits(tmp_path):
-    r1 = tmp_path / "r1.json"
-    r2 = tmp_path / "r2.json"
-    make_report(r1, seed=1, results=[])
-    make_report(r2, seed=2, results=[])
+    caplog.set_level(logging.INFO)
+    cmp.compare_reports(r1, r2)
 
-    with pytest.raises(SystemExit) as e:
-        compare_reports(r1, r2)
-    assert e.value.code == 1
+    logs = "\n".join(caplog.messages)
+    assert "Report comparison" in logs
+    assert "NODE1" in logs and "NODE2" in logs
+    assert "Total checks" in logs
+    assert "Score" in logs
 
-def test_improved_regressed_missing_and_unchanged(tmp_path, capsys):
-    r1 = tmp_path / "r1.json"
-    r2 = tmp_path / "r2.json"
+def test_compare_reports_with_report_dir(tmp_path, caplog):
+    r1 = make_report(tmp_path / "a.json", "A")
+    r2 = make_report(tmp_path / "b.json", "B")
 
-    base_key = {
-        "network": "XX",
-        "station": "AAA",
-        "location": "00",
-        "starttime": "2020-01-01T00:00:00",
-        "endtime": "2020-01-01T00:10:00",
-    }
+    caplog.set_level(logging.INFO)
+    # pass only filenames, but supply report_dir
+    cmp.compare_reports("a.json", "b.json", report_dir=tmp_path)
 
-    # Report 1 has three entries:
-    res1 = [
-        {**base_key, "channel": "BHZ", "consistent": True},   # will regress
-        {**base_key, "channel": "BHN", "consistent": False},  # will improve
-        {**base_key, "channel": "BHE", "consistent": True},   # will be missing
-    ]
-
-    # Report 2 flips BHN (improved), BHZ (regressed), omits BHE (missing)
-    res2 = [
-        {**base_key, "channel": "BHZ", "consistent": False},  # regression
-        {**base_key, "channel": "BHN", "consistent": True},   # improvement
-    ]
-
-    make_report(r1, seed=123, results=res1)
-    make_report(r2, seed=123, results=res2)
-
-    compare_reports(r1, r2)
-    out = capsys.readouterr().out
-
-    assert "Improvements: 1" in out
-    assert "Regressions: 1" in out
-    assert "Missing in Report 2: 1" in out
-    assert "Unchanged: 0" in out
-    assert "Improved entries" in out
-    assert "Regressed entries" in out
-    assert "Missing entries" in out
-
-
-def test_unchanged_only(tmp_path, capsys):
-    r1 = tmp_path / "r1.json"
-    r2 = tmp_path / "r2.json"
-
-    key = {
-        "network": "YY",
-        "station": "BBB",
-        "location": "00",
-        "channel": "BHZ",
-        "starttime": "2020-01-01T00:00:00",
-        "endtime": "2020-01-01T00:10:00",
-    }
-
-    res = [{**key, "consistent": True}]
-    make_report(r1, seed=42, results=res)
-    make_report(r2, seed=42, results=res)
-
-    compare_reports(r1, r2)
-    out = capsys.readouterr().out
-
-    assert "Improvements: 0" in out
-    assert "Regressions: 0" in out
-    assert "Unchanged: 1" in out
-    assert "Missing in Report 2: 0" in out
+    logs = "\n".join(caplog.messages)
+    assert "A vs B" in logs

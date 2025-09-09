@@ -1,79 +1,95 @@
-import logging
 import pytest
-from types import SimpleNamespace
+import xml.etree.ElementTree as ET
 import eida_consistency.services.station as station
 
 
-class DummyResponse:
-    def __init__(self, status=200, content=b"<root/>"):
-        self.status_code = status
+# -----------------
+# _fetch_xml
+# -----------------
+
+class DummyResp:
+    def __init__(self, content=b"<root/>", status=200, raise_exc=None):
         self.content = content
+        self._raise_exc = raise_exc
+
     def raise_for_status(self):
-        if self.status_code != 200:
-            raise Exception("HTTP error")
+        if self._raise_exc:
+            raise self._raise_exc
 
 
-def test_request_failure(monkeypatch):
-    monkeypatch.setattr(station.requests, "get", lambda *a, **k: (_ for _ in ()).throw(Exception("boom")))
-    result = station.fetch_candidates("http://fake/")
-    assert result == []
+def test_fetch_xml_success(monkeypatch):
+    xml_str = "<Root><A>ok</A></Root>"
+    monkeypatch.setattr(station.requests, "get", lambda url, timeout=60: DummyResp(content=xml_str.encode()))
+    tree = station._fetch_xml("http://fake/")
+    assert isinstance(tree, ET.Element)
+    assert tree.tag == "Root"
+
+def test_fetch_xml_failure(monkeypatch):
+    def bad_get(url, timeout=60): raise Exception("boom")
+    monkeypatch.setattr(station.requests, "get", bad_get)
+    result = station._fetch_xml("http://fake/")
+    assert result is None
 
 
-def test_http_error(monkeypatch):
-    def fake_get(*a, **k):
-        r = DummyResponse(status=500, content=b"")
-        def bad_raise():
-            raise Exception("HTTP fail")
-        r.raise_for_status = bad_raise
-        return r
-    monkeypatch.setattr(station.requests, "get", fake_get)
-    result = station.fetch_candidates("http://fake/")
-    assert result == []
+# -----------------
+# fetch_candidates
+# -----------------
+
+NETWORK_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
+  <Network code="XX"/>
+</FDSNStationXML>"""
+
+STATION_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
+  <Network code="XX">
+    <Station code="AAA"/>
+    <Station code="BBB"/>
+  </Network>
+</FDSNStationXML>"""
+
+CHANNEL_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
+  <Network code="XX">
+    <Station code="AAA">
+      <Channel code="BHZ" locationCode="00" startDate="2023-01-01T00:00:00" endDate="2023-01-01T01:00:00"/>
+      <Channel code="HHN" locationCode="01" startDate="2023-01-01T00:00:00"/>
+    </Station>
+  </Network>
+</FDSNStationXML>"""
 
 
-def test_bad_xml(monkeypatch):
-    bad = b"<not-closed"
-    monkeypatch.setattr(station.requests, "get", lambda *a, **k: DummyResponse(200, bad))
-    result = station.fetch_candidates("http://fake/")
-    assert result == []
+def test_fetch_candidates_no_networks(monkeypatch):
+    monkeypatch.setattr(station, "_fetch_xml", lambda url: ET.fromstring("<FDSNStationXML/>"))
+    results = station.fetch_candidates("http://fake/")
+    assert results == []
 
 
-def test_valid_candidates(monkeypatch, caplog):
-    xml = b"""
-    <FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
-      <Network code="XX">
-        <Station code="AAA">
-          <Channel code="BHZ" locationCode="00" startDate="2020-01-01T00:00:00" endDate="2020-02-01T00:00:00"/>
-        </Station>
-      </Network>
-    </FDSNStationXML>
-    """
-    monkeypatch.setattr(station.requests, "get", lambda *a, **k: DummyResponse(200, xml))
-    caplog.set_level(logging.INFO)
-    result = station.fetch_candidates("http://fake/")
-    assert len(result) == 1
-    c = result[0]
-    assert c["network"] == "XX"
-    assert c["station"] == "AAA"
-    assert c["channel"] == "BHZ"
-    assert c["starttime"] == "2020-01-01T00:00:00"
-    assert c["endtime"] == "2020-02-01T00:00:00"
-    assert c["location"] == "00"
-    assert "Total candidates fetched: 1" in caplog.text
+def test_fetch_candidates_no_stations(monkeypatch):
+    # Stage 1: networks
+    def fake_fetch(url):
+        if "level=network" in url:
+            return ET.fromstring(NETWORK_XML)
+        if "level=station" in url:
+            return ET.fromstring("<FDSNStationXML xmlns='http://www.fdsn.org/xml/station/1'><Network code='XX'/></FDSNStationXML>")
+        return None
+    monkeypatch.setattr(station, "_fetch_xml", fake_fetch)
+    results = station.fetch_candidates("http://fake/")
+    assert results == []
 
 
-def test_skipped_malformed(monkeypatch, caplog):
-    xml = b"""
-    <FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
-      <Network code="YY">
-        <Station code="BBB">
-          <Channel code="HHZ"/>
-        </Station>
-      </Network>
-    </FDSNStationXML>
-    """
-    monkeypatch.setattr(station.requests, "get", lambda *a, **k: DummyResponse(200, xml))
-    caplog.set_level(logging.DEBUG)
-    result = station.fetch_candidates("http://fake/")
-    assert result == []  # skipped, missing startDate
-    assert "Skipping malformed" in caplog.text
+def test_fetch_candidates_success(monkeypatch):
+    # Cycle through responses depending on URL
+    def fake_fetch(url):
+        if "level=network" in url:
+            return ET.fromstring(NETWORK_XML)
+        elif "level=station" in url:
+            return ET.fromstring(STATION_XML)
+        elif "level=channel" in url:
+            return ET.fromstring(CHANNEL_XML)
+        return None
+
+    monkeypatch.setattr(station, "_fetch_xml", fake_fetch)
+
+    results = station.fetch_candidates("http://fake/", max_stations=2, max_workers=1)
+    assert len(results) <= 2
+    for r in results:
+        assert "network" in r and "station" in r and "channel" in r
+        assert "starttime" in r

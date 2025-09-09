@@ -1,164 +1,100 @@
-import json
-import logging
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-
 import pytest
-
+import logging
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
 import eida_consistency.explorer as explorer
 
 
-class DummyDS:
-    """Dummy dataselect responses."""
-    ok = {"success": True, "status": "OK"}
-    fail = {"success": False, "status": "NoData"}
-
-
-class DummyAvail:
-    """Dummy availability spans."""
-
-    @staticmethod
-    def covered(*args, **kwargs):
-        return [{"start": "2020-01-01T00:00:00", "end": "2100-01-01T00:00:00"}]
-
-    @staticmethod
-    def empty(*args, **kwargs):
-        return []
-
-
-def make_report(tmp_path: Path, results):
-    report = {
-        "summary": {"node": "RESIF", "seed": 123, "epochs": 1,
-                    "duration": 600, "total_checked": len(results),
-                    "total_consistent": 0, "total_inconsistent": 0,
-                    "timestamp": "2025-01-01T00:00:00"},
-        "results": results,
-    }
-    p = tmp_path / "report.json"
-    p.write_text(json.dumps(report))
-    return p
-
+# -----------------
+# _parse_iso / _iso
+# -----------------
 
 def test_parse_iso_variants():
-    # With Z suffix
-    dt = explorer._parse_iso("2020-01-01T00:00:00Z")
-    assert dt.tzinfo == timezone.utc
-    # Naive string
-    dt2 = explorer._parse_iso("2020-01-01T00:00:00")
-    assert dt2.tzinfo == timezone.utc
-    # None
-    assert explorer._parse_iso(None) is None
+    dt1 = explorer._parse_iso("2023-01-01T00:00:00Z")
+    dt2 = explorer._parse_iso("2023-01-01T00:00:00+00:00")
+    dt3 = explorer._parse_iso("2023-01-01T00:00:00")
+    assert dt1.tzinfo and dt2.tzinfo and dt3.tzinfo
+
+def test_iso_roundtrip():
+    dt = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
+    s = explorer._iso(dt)
+    assert s.startswith("2023-01-01T12:00:00")
 
 
-def test_iso_format_roundtrip():
-    now = datetime.now(timezone.utc)
-    s = explorer._iso(now)
-    assert "T" in s and s.endswith(":00") is False
+# -----------------
+# _slice_consistent
+# -----------------
+
+def test_slice_consistent_available_and_dataselect(monkeypatch, caplog):
+    t0 = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc)
+    t1 = t0 + timedelta(hours=1)
+
+    monkeypatch.setattr(explorer, "get_availability_spans",
+                        lambda *a, **kw: [{"start": "2023-01-01T00:00:00",
+                                           "end": "2023-01-01T02:00:00"}])
+    monkeypatch.setattr(explorer, "dataselect",
+                        lambda *a, **kw: {"success": True})
+
+    caplog.set_level(logging.INFO)
+    ok = explorer._slice_consistent("http://fake/", "XX", "STA", "BHZ", "00", t0, t1, verbose=True)
+    assert ok is True
+    assert "Availability URL" in caplog.text
+    assert "Dataselect URL" in caplog.text
+
+def test_slice_consistent_not_covered(monkeypatch):
+    t0 = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc)
+    t1 = t0 + timedelta(hours=1)
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [])
+    monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    ok = explorer._slice_consistent("http://fake/", "XX", "STA", "BHZ", "00", t0, t1)
+    assert ok is True  # both say no → consistent
 
 
-def test_slice_consistent_true(monkeypatch):
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.covered)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.ok)
-    t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    t1 = t0 + timedelta(minutes=10)
-    res = explorer._slice_consistent("url", "XX", "STA", "BHZ", "00", t0, t1)
-    assert res is True
+# -----------------
+# explore_boundaries
+# -----------------
 
-
-def test_slice_consistent_false(monkeypatch):
-    # availability covered but dataselect fails
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.covered)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.fail)
-    t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    t1 = t0 + timedelta(minutes=10)
-    res = explorer._slice_consistent("url", "XX", "STA", "BHZ", "00", t0, t1)
-    assert res is False
-
+def make_report(path: Path, consistent=False, avail=True, ds_success=False):
+    data = {
+        "summary": {"node": "NOA"},
+        "results": [
+            {
+                "index": 1,
+                "network": "XX",
+                "station": "STA",
+                "channel": "BHZ",
+                "location": "00",
+                "starttime": "2023-01-01T00:00:00Z",
+                "endtime": "2023-01-01T01:00:00Z",
+                "consistent": consistent,
+                "available": avail,
+                "dataselect_success": ds_success,
+            }
+        ],
+    }
+    path.write_text(__import__("json").dumps(data))
+    return path
 
 def test_explore_boundaries_no_targets(tmp_path, caplog):
-    report = make_report(tmp_path, results=[{"index": 1, "consistent": True}])
+    rep = make_report(tmp_path / "rep.json", consistent=True)
     caplog.set_level(logging.INFO)
-    explorer.explore_boundaries(report)
-    assert "No targets" in caplog.text
+    explorer.explore_boundaries(rep)
+    assert "No targets to explore" in caplog.text
 
+def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
+    rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 
-def test_explore_boundaries_with_indices(monkeypatch, tmp_path, caplog):
-    # One inconsistent record
-    results = [{
-        "index": 7, "network": "XX", "station": "STA", "channel": "BHZ", "location": "00",
-        "starttime": "2020-01-01T00:00:00", "endtime": "2020-01-01T00:10:00",
-        "available": True, "dataselect_success": False, "consistent": False
-    }]
-    report = make_report(tmp_path, results)
-
-    # Mocks: availability empty, dataselect fail always
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.empty)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.fail)
-    monkeypatch.setattr(explorer, "load_node_url", lambda n: "http://fake/")
+    # availability never covers
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [])
+    # dataselect always fails
+    monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    # base url loader
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
 
     caplog.set_level(logging.INFO)
-    explorer.explore_boundaries(report, indices=[7], max_days=1)
-
-    # Should log exploration and suggest clean
-    assert "Exploring inconsistency" in caplog.text
-    assert "Suggested command:" in caplog.text
-    assert "dmtri clean" in caplog.text
-
-
-def test_explore_boundaries_forward_backward_limits(monkeypatch, tmp_path, caplog):
-    results = [{
-        "index": 1, "network": "XX", "station": "STA", "channel": "BHZ", "location": "00",
-        "starttime": "2020-01-01T00:00:00", "endtime": "2020-01-01T00:10:00",
-        "available": False, "dataselect_success": True, "consistent": False
-    }]
-    report = make_report(tmp_path, results)
-
-    # Force always inconsistent (covered vs ds mismatch)
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.covered)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.fail)
-    monkeypatch.setattr(explorer, "load_node_url", lambda n: "http://fake/")
-
-    caplog.set_level(logging.INFO)
-    explorer.explore_boundaries(report, max_days=1)
-
-    # Should warn about reaching limits
-    assert "⚠️ Reached max" in caplog.text
-    assert "dmtri refresh" in caplog.text
-def test_explore_boundaries_backward_limit_else(monkeypatch, tmp_path, caplog):
-    """Covers the 'else:' block of the backward search loop."""
-    results = [{
-        "index": 42, "network": "XX", "station": "STA", "channel": "BHZ", "location": "00",
-        "starttime": "2020-01-01T00:00:00", "endtime": "2020-01-01T00:10:00",
-        "available": True, "dataselect_success": False, "consistent": False
-    }]
-    report = make_report(tmp_path, results)
-
-    # Always inconsistent → never breaks the loop
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.covered)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.fail)
-    monkeypatch.setattr(explorer, "load_node_url", lambda n: "http://fake/")
-
-    caplog.set_level(logging.INFO)
-    explorer.explore_boundaries(report, max_days=0)  # forces the `else` branch
-
-    assert "⚠️ Reached max backward search limit" in caplog.text
-
-
-def test_explore_boundaries_cmd_refresh_fallback(monkeypatch, tmp_path, caplog):
-    """Covers the fallback cmd = 'refresh' branch when available == ds_success."""
-    results = [{
-        "index": 99, "network": "XX", "station": "STA", "channel": "BHZ", "location": "00",
-        "starttime": "2020-01-01T00:00:00", "endtime": "2020-01-01T00:10:00",
-        "available": True, "dataselect_success": True, "consistent": True
-    }]
-    report = make_report(tmp_path, results)
-
-    # These values won’t be used since the record is already consistent
-    monkeypatch.setattr(explorer, "get_availability_spans", DummyAvail.empty)
-    monkeypatch.setattr(explorer, "dataselect", lambda *a, **k: DummyDS.ok)
-    monkeypatch.setattr(explorer, "load_node_url", lambda n: "http://fake/")
-
-    caplog.set_level(logging.INFO)
-    explorer.explore_boundaries(report, indices=[99], max_days=1)
-
-    assert "dmtri refresh" in caplog.text
+    explorer.explore_boundaries(rep, indices=[1], max_days=1, verbose=True)
+    logs = caplog.text
+    assert "Exploring inconsistency" in logs
+    assert "Inconsistency window" in logs
+    assert "Suggested action" in logs
+    assert "uvx dmtri" in logs

@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -26,8 +27,16 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def _slice_consistent(base_url: str, net: str, sta: str, cha: str, loc: str,
-                      t0: datetime, t1: datetime) -> bool:
+def _slice_consistent(
+    base_url: str,
+    net: str,
+    sta: str,
+    cha: str,
+    loc: str,
+    t0: datetime,
+    t1: datetime,
+    verbose: bool = False,
+) -> bool:
     """
     Check if a time slice is consistent between availability and dataselect.
     Returns True if consistent, False if inconsistent.
@@ -41,27 +50,52 @@ def _slice_consistent(base_url: str, net: str, sta: str, cha: str, loc: str,
         for s in spans
     )
 
-    # 2. Fetch dataselect for the same slice
-    ds = dataselect(base_url, net, sta, cha, _iso(t0), _iso(t1), loc)
+    # 2. Pick random 10-min window
+    day_seconds = int((t1 - t0).total_seconds())
+    if day_seconds > 600:
+        offset = random.randint(0, day_seconds - 600)
+        ds_t0 = t0 + timedelta(seconds=offset)
+        ds_t1 = ds_t0 + timedelta(seconds=600)
+    else:
+        ds_t0, ds_t1 = t0, t1
 
-    # 3. Compare
-    return covered == ds["success"]
+    # 3. Run dataselect
+    ds = dataselect(base_url, net, sta, cha, _iso(ds_t0), _iso(ds_t1), loc)
+
+    consistent = covered == ds["success"]
+
+    # 4. Logging
+    if verbose:
+        logging.info(
+            f"  Availability URL: {base_url}availability/1/query?"
+            f"network={net}&station={sta}&location={loc}&channel={cha}"
+            f"&start={_iso(t0)}&end={_iso(t1)}&format=json"
+        )
+        logging.info(
+            f"  Dataselect URL:   {base_url}dataselect/1/query?"
+            f"network={net}&station={sta}&location={loc}&channel={cha}"
+            f"&starttime={_iso(ds_t0)}&endtime={_iso(ds_t1)}&nodata=204"
+        )
+        logging.info(
+            f"  Result → availability covered={covered}, "
+            f"dataselect success={ds['success']}, "
+            f"consistent={consistent}"
+        )
+    else:
+        logging.info(f"  Checked {t0.date()} → consistent={consistent}")
+
+    return consistent
 
 
-def explore_boundaries(report_path: str | Path, indices: Optional[List[int]] = None,
-                       max_days: int = 30) -> None:
+def explore_boundaries(
+    report_path: str | Path,
+    indices: Optional[List[int]] = None,
+    max_days: int = 30,
+    verbose: bool = False,
+) -> None:
     """
     Explore inconsistencies from a report.
     If indices is None, explores all inconsistent entries.
-
-    Parameters
-    ----------
-    report_path : str | Path
-        Path to JSON report file.
-    indices : list[int] | None
-        Indices to explore (default: all inconsistent results).
-    max_days : int
-        Maximum days to explore backward and forward (default: 30).
     """
     report = json.loads(Path(report_path).read_text())
     results = report["results"]
@@ -80,16 +114,22 @@ def explore_boundaries(report_path: str | Path, indices: Optional[List[int]] = N
     base_url = load_node_url(node)
 
     for r in targets:
+        if r.get("consistent", False):
+            logging.info(
+                f"Index {r['index']} is marked consistent in the report → skipping."
+            )
+            continue
+
         net, sta, cha, loc = r["network"], r["station"], r["channel"], r["location"]
         slice_start = _parse_iso(r["starttime"])
         slice_end = _parse_iso(r["endtime"])
 
         logging.info(
-            f"🔍 Exploring inconsistency for {net}.{sta}.{loc}.{cha} "
+            f"Exploring inconsistency for {net}.{sta}.{loc}.{cha} "
             f"(index={r['index']}) around {slice_start} → {slice_end}"
         )
 
-        # --- Walk backward by full days ---
+        # --- Walk backward ---
         back = slice_start.date()
         checked = 0
         while checked < max_days:
@@ -97,16 +137,15 @@ def explore_boundaries(report_path: str | Path, indices: Optional[List[int]] = N
             t0 = datetime.combine(prev_day, datetime.min.time(), tzinfo=timezone.utc)
             t1 = datetime.combine(prev_day, datetime.max.time(), tzinfo=timezone.utc)
 
-            logging.info(f"  ⏳ Checking previous day {prev_day}")
-
-            if _slice_consistent(base_url, net, sta, cha, loc, t0, t1):
+            if _slice_consistent(base_url, net, sta, cha, loc, t0, t1, verbose):
+                logging.info("  Day was consistent, stopping backward search.")
                 break
             back = prev_day
             checked += 1
         else:
-            logging.warning(f"⚠️ Reached max backward search limit ({max_days} days).")
+            logging.warning(f"Reached max backward search limit ({max_days} days).")
 
-        # --- Walk forward by full days ---
+        # --- Walk forward ---
         forward = slice_end.date()
         checked = 0
         while checked < max_days:
@@ -114,28 +153,31 @@ def explore_boundaries(report_path: str | Path, indices: Optional[List[int]] = N
             t0 = datetime.combine(next_day, datetime.min.time(), tzinfo=timezone.utc)
             t1 = datetime.combine(next_day, datetime.max.time(), tzinfo=timezone.utc)
 
-            logging.info(f"  ⏳ Checking next day {next_day}")
-
-            if _slice_consistent(base_url, net, sta, cha, loc, t0, t1):
+            if _slice_consistent(base_url, net, sta, cha, loc, t0, t1, verbose):
+                logging.info("  Day was consistent, stopping forward search.")
                 break
             forward = next_day
             checked += 1
         else:
-            logging.warning(f"⚠️ Reached max forward search limit ({max_days} days).")
+            logging.warning(f"Reached max forward search limit ({max_days} days).")
 
         # Report the expanded window
-        logging.info(f"❌ Inconsistency window: {back} → {forward}")
+        logging.info(f"Inconsistency window: {back} → {forward}")
 
-        # Decide which command to suggest
+        # Suggested action
         if r["available"] and not r["dataselect_success"]:
             cmd = "clean"
+            explanation = "Availability shows data but dataselect failed, cleaning is needed."
         elif not r["available"] and r["dataselect_success"]:
             cmd = "refresh"
+            explanation = "Dataselect has data but availability disagrees, refreshing is needed."
         else:
-            cmd = "refresh"   # fallback
+            cmd = "refresh"
+            explanation = "Inconsistency detected, unclear direction. Defaulting to 'refresh'."
 
+        logging.info(f"Suggested action: {explanation}")
         logging.info(
-            "Suggested command:\n"
+            "Command:\n"
             f"uvx dmtri {cmd} --network={net} --station={sta} --channel={cha} "
             f"--start={back} --end={forward}"
         )

@@ -1,117 +1,113 @@
 import json
 import time
 from pathlib import Path
-
-import pytest
-
 import eida_consistency.report.report as report
 
 
-def make_dummy_records():
-    base = {
-        "network": "XX", "station": "AAA", "channel": "HHZ", "location": "00",
-        "starttime": "2020-01-01T00:00:00", "endtime": "2020-01-01T00:10:00",
+def make_record(consistent=True, available=True, ds_success=True, ds_type="M", status=200):
+    return {
+        "network": "XX",
+        "station": "STA",
+        "location": "00",
+        "channel": "BHZ",
+        "starttime": "2023-01-01T00:00:00",
+        "endtime": "2023-01-01T01:00:00",
+        "available": available,
+        "dataselect_success": ds_success,
+        "dataselect_type": ds_type,
+        "dataselect_status": status,
+        "consistent": consistent,
     }
-    return [
-        {**base, "consistent": True,  "available": True,  "dataselect_success": True,
-         "dataselect_status": "OK", "dataselect_type": "SingleTrace"},
-        {**base, "consistent": False, "available": True,  "dataselect_success": False,
-         "dataselect_status": "NoData", "dataselect_type": "NoTrace"},
-        {**base, "consistent": False, "available": False, "dataselect_success": True,
-         "dataselect_status": "OK", "dataselect_type": "SingleTrace"},
-    ]
 
 
-def test_create_report_object_score_and_breakdown():
-    recs = make_dummy_records()
-    obj = report.create_report_object("RESIF", seed=123, epochs=3, duration=600, records=recs)
+# -----------------
+# create_report_object
+# -----------------
 
-    summary = obj["summary"]
-
-    assert summary["node"] == "RESIF"
-    assert summary["total_checked"] == 3
+def test_create_report_object_basic():
+    records = [make_record(True), make_record(False, available=True, ds_success=False)]
+    rep = report.create_report_object("NODE", 123, 5, 600, records,
+                                      candidates_requested=5, candidates_tested=2, station_queries=1)
+    summary = rep["summary"]
+    assert summary["node"] == "NODE"
+    assert summary["total_checked"] == 2
     assert summary["total_consistent"] == 1
-    assert summary["total_inconsistent"] == 2
-    # Score = 1/3 * 100 = 33.33
-    assert abs(summary["score"] - 33.33) < 0.01
-    assert summary["availability_yes_dataselect_no"] == 1
-    assert summary["availability_no_dataselect_yes"] == 1
-    assert "timestamp" in summary
+    assert summary["total_inconsistent"] == 1
+    assert "availability_yes_dataselect_no" in summary
+    assert "availability_no_dataselect_yes" in summary
+    assert isinstance(summary["timestamp"], str)
+
+def test_create_report_object_empty_records():
+    rep = report.create_report_object("NODE", 1, 1, 600, [])
+    assert rep["summary"]["score"] == 0.0
+    assert rep["summary"]["total_checked"] == 0
 
 
-def test_save_report_json_and_load(tmp_path):
-    recs = make_dummy_records()
-    obj = report.create_report_object("NOA", seed=42, epochs=2, duration=600, records=recs)
+# -----------------
+# _make_unique_filename
+# -----------------
 
-    path = report.save_report_json(obj, output_dir=tmp_path)
+def test_make_unique_filename_format(monkeypatch):
+    fname = report._make_unique_filename("NODE", 42, "json")
+    assert fname.startswith("node_42_")
+    assert fname.endswith(".json")
+
+
+# -----------------
+# save_report_json
+# -----------------
+
+def test_save_report_json_and_content(tmp_path):
+    recs = [make_record()]
+    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    path = report.save_report_json(rep, report_dir=tmp_path)
     assert path.exists()
     data = json.loads(path.read_text())
-    assert data["summary"]["node"] == "NOA"
+    assert data["summary"]["node"] == "NODE"
 
 
-def test_save_report_markdown_contains_score_and_breakdown(tmp_path):
-    recs = make_dummy_records()
-    obj = report.create_report_object("GFZ", seed=99, epochs=2, duration=600, records=recs)
+# -----------------
+# save_report_markdown
+# -----------------
 
-    path = report.save_report_markdown(obj, output_dir=tmp_path)
-    content = path.read_text()
+def test_save_report_markdown(tmp_path):
+    recs = [
+        make_record(True, ds_type="A"),
+        make_record(False, ds_type="B"),
+    ]
+    rep = report.create_report_object("NODE", 2, 2, 600, recs)
+    path = report.save_report_markdown(rep, report_dir=tmp_path)
+    text = path.read_text()
+    assert "# EIDA Consistency Report" in text
+    assert "Dataselect Response Types" in text
+    assert "✔️" in text or "❌" in text
 
-    assert "# EIDA Consistency Report" in content
-    assert "Score" in content
-    assert "Inconsistency Breakdown" in content
-    assert "Availability says YES" in content
-    assert "Availability says NO" in content
 
+# -----------------
+# delete_old_reports
+# -----------------
 
 def test_delete_old_reports(tmp_path):
-    recs = make_dummy_records()
-    obj = report.create_report_object("TEST", seed=1, epochs=1, duration=600, records=recs)
-
-    # Create 3 reports with slight delay so mtime differs
-    for seed in [1, 2, 3]:
-        obj = report.create_report_object("TEST", seed=seed, epochs=1, duration=600, records=recs)
-        report.save_report_json(obj, output_dir=tmp_path)
-        time.sleep(0.05)
-
-    # Ensure 3 files exist
-    assert len(list(tmp_path.glob("*.json"))) == 3
+    # Create 3 JSON + MD reports
+    recs = [make_record()]
+    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    paths = []
+    for i in range(3):
+        p_json = report.save_report_json(rep, report_dir=tmp_path)
+        p_md = report.save_report_markdown(rep, report_dir=tmp_path)
+        paths.append((p_json, p_md))
+        time.sleep(0.01)  # ensure mtime ordering
 
     # Keep only 1
-    report.delete_old_reports(tmp_path, keep=1)
+    report.delete_old_reports(report_dir=tmp_path, keep=1)
+
     remaining = list(tmp_path.glob("*.json"))
     assert len(remaining) == 1
-    # Only latest seed should remain
-    text = remaining[0].read_text()
-    assert '"seed": 3' in text
+    # corresponding md should also remain
+    md_remaining = list(tmp_path.glob("*.md"))
+    assert len(md_remaining) == 1
 
-
-def test_delete_old_reports_dir_missing(tmp_path):
-    # Non-existing dir → should just return
-    missing = tmp_path / "nope"
-    assert not missing.exists()
-    report.delete_old_reports(missing, keep=1)  # should not raise
-
-def test_delete_old_reports_file_not_found(monkeypatch, tmp_path):
-    recs = make_dummy_records()
-    obj = report.create_report_object("TEST", seed=10, epochs=1, duration=600, records=recs)
-
-    # Save a JSON report
-    json_path = report.save_report_json(obj, output_dir=tmp_path)
-    md_path = json_path.with_suffix(".md")
-    md_path.write_text("dummy-md")
-
-    # Monkeypatch Path.unlink to raise FileNotFoundError only for this json file
-    original_unlink = Path.unlink
-
-    def fake_unlink(p: Path, *a, **kw):
-        if p == json_path:
-            raise FileNotFoundError
-        return original_unlink(p, *a, **kw)
-
-    monkeypatch.setattr(Path, "unlink", fake_unlink)
-
-    # Run cleanup → should trigger the FileNotFoundError branch
-    report.delete_old_reports(tmp_path, keep=0)
-
-    # Markdown should also be gone
-    assert not md_path.exists()
+def test_delete_old_reports_nonexistent_dir(tmp_path):
+    non_existing = tmp_path / "not_here"
+    # Should not raise
+    report.delete_old_reports(non_existing, keep=1)

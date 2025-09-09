@@ -5,8 +5,10 @@ candidate pool. For each channel, it queries /availability/1/query?format=json o
 the entire epoch-span (from StationXML). Then, within that span, it picks random test
 epochs of length `duration` seconds.
 
-Return value (list of tuples):
-    [
+Return value:
+    results, stats
+
+results = [
       (
         availability_url,    # the availability request URL (full epoch-span)
         availability_ok,     # True/False depending on slice coverage
@@ -16,12 +18,20 @@ Return value (list of tuples):
         matched_span         # the span dict that covered the slice (or None)
       ),
       ...
-    ]
+]
+
+stats = {
+    "candidates_requested": epochs,
+    "candidates_generated": len(results),
+    "candidates_pool": len(pool),
+    "queries_performed": attempts,
+}
 """
 
 from __future__ import annotations
 
 import random
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -60,29 +70,17 @@ def check_candidate(
     candidates: Optional[List[Dict[str, str]]] = None,
     epochs: int = 10,
     duration: int = 600,
-) -> List[Tuple[str, bool, str, str, str, Dict[str, str] | None]]:
+) -> Tuple[List[Tuple[str, bool, str, str, str, Dict[str, str] | None]], Dict[str, int]]:
     """
     Build up to `epochs` test cases and check availability coverage.
 
-    Parameters
-    ----------
-    base_url : str
-        FDSN base URL, e.g. "https://ws.resif.fr/fdsnws/"
-    candidate : dict
-        A single candidate (ignored if `candidates` provided). Keys: network, station,
-        channel, starttime[, endtime][, location]
-    candidates : list[dict] | None
-        Full pool of candidates. If None, only `candidate` is used.
-    epochs : int
-        Number of test cases to generate.
-    duration : int
-        Duration of each test epoch in seconds (default: 600).
-
     Returns
     -------
-    list of tuples
+    results : list of tuples
         (availability_url, availability_ok, epoch_start_iso, epoch_end_iso,
          location_exact, matched_span)
+    stats : dict
+        {"candidates_requested", "candidates_generated", "candidates_pool", "queries_performed"}
     """
     if duration < 600:
         raise ValueError("Duration must be at least 600 seconds (10 minutes).")
@@ -94,7 +92,12 @@ def check_candidate(
         if all(k in c for k in ("network", "station", "channel", "starttime"))
     ]
     if not pool:
-        return results
+        return results, {
+            "candidates_requested": epochs,
+            "candidates_generated": 0,
+            "candidates_pool": 0,
+            "queries_performed": 0,
+        }
 
     used: set[tuple[str, str, str]] = set()
     attempts, max_attempts = 0, max(epochs * 20, len(pool) * 2)
@@ -149,7 +152,22 @@ def check_candidate(
             f"&format=json"
         )
 
+        logging.debug(f"Availability request URL used: {url}")
+
         results.append((url, available, s, e, loc, matched_span))
         used.add(key)
 
-    return results
+    # Final summary line
+    logging.info(
+        f"Final usable epochs: {len(results)} / {epochs} "
+        f"(from {len(pool)} channel candidates, {attempts} attempts)"
+    )
+
+    stats = {
+        "candidates_requested": epochs,
+        "candidates_generated": len(results),
+        "candidates_pool": len(pool),
+        "queries_performed": attempts,
+    }
+
+    return results, stats

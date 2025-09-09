@@ -12,8 +12,10 @@ Functions:
 from __future__ import annotations
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 
 
@@ -27,15 +29,17 @@ def _collect_spans(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     for r in payload.get("availability", []) or []:
         if r.get("start") and r.get("end"):
-            spans.append({
-                "network": r.get("network"),
-                "station": r.get("station"),
-                "location": r.get("location"),
-                "channel": r.get("channel"),
-                "quality": r.get("quality"),
-                "start": r["start"],
-                "end": r["end"],
-            })
+            spans.append(
+                {
+                    "network": r.get("network"),
+                    "station": r.get("station"),
+                    "location": r.get("location"),
+                    "channel": r.get("channel"),
+                    "quality": r.get("quality"),
+                    "start": r["start"],
+                    "end": r["end"],
+                }
+            )
 
     for ds in payload.get("datasources", []) or []:
         ds_net, ds_sta = ds.get("network"), ds.get("station")
@@ -43,12 +47,30 @@ def _collect_spans(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         ds_qual = ds.get("quality")
         for ts in ds.get("timespans", []) or []:
             if isinstance(ts, (list, tuple)) and len(ts) >= 2 and ts[0] and ts[1]:
-                spans.append({
-                    "network": ds_net, "station": ds_sta, "location": ds_loc,
-                    "channel": ds_cha, "quality": ds_qual,
-                    "start": ts[0], "end": ts[1],
-                })
+                spans.append(
+                    {
+                        "network": ds_net,
+                        "station": ds_sta,
+                        "location": ds_loc,
+                        "channel": ds_cha,
+                        "quality": ds_qual,
+                        "start": ts[0],
+                        "end": ts[1],
+                    }
+                )
     return spans
+
+
+def _safe_request(url: str, retries: int = 3, backoff: int = 10, timeout: int = 240):
+    """Robust request with retries and exponential backoff."""
+    for attempt in range(1, retries + 1):
+        try:
+            return requests.get(url, timeout=timeout)
+        except Exception as e:
+            logging.warning(f"Availability request failed (attempt {attempt}/{retries}): {e}")
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+    return None
 
 
 def check_availability_query(
@@ -68,37 +90,25 @@ def check_availability_query(
     )
     logging.debug(f"Availability (query) URL: {url}")
 
-    try:
-        resp = requests.get(url, timeout=20)
-
-        if resp.status_code == 204:
-            logging.debug(f"No availability data for {network}.{station}.{location}.{channel}")
-            return {"ok": False, "matched_span": None, "spans": [], "status": 204, "url": url}
-
-        resp.raise_for_status()
-    except Exception as e:
-        logging.warning(f"Availability request failed: {e}")
+    resp = _safe_request(url)
+    if resp is None:
         return {"ok": False, "matched_span": None, "spans": [], "status": 0, "url": url}
 
-    spans: List[Dict[str, Any]] = []
+    if resp.status_code == 204:
+        return {"ok": False, "matched_span": None, "spans": [], "status": 204, "url": url}
+
+    try:
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as e:
+        logging.warning(f"Availability request parse failed: {e}")
+        return {"ok": False, "matched_span": None, "spans": [], "status": resp.status_code, "url": url}
+
+    spans = _collect_spans(payload)
     matched_span: Optional[Dict[str, Any]] = None
     ok = False
 
     try:
-        payload = resp.json()
-        spans = _collect_spans(payload)
-
-        # Debug dump
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            try:
-                pretty = json.dumps(payload, indent=2, ensure_ascii=False)
-            except Exception:
-                pretty = "<unserializable JSON>"
-            logging.debug(
-                "[AVAIL DEBUG] URL: %s\n[AVAIL DEBUG] Keys: %s\n[AVAIL DEBUG] Total spans: %d\n%s",
-                url, list(payload.keys()), len(spans), pretty
-            )
-
         e_start, e_end = _parse_iso(starttime), _parse_iso(endtime)
         for s in spans:
             try:
@@ -109,7 +119,7 @@ def check_availability_query(
                 ok, matched_span = True, s
                 break
     except Exception as e:
-        logging.warning(f"Failed to parse availability JSON: {e}")
+        logging.warning(f"Failed to check coverage: {e}")
 
     return {"ok": ok, "matched_span": matched_span, "spans": spans, "status": resp.status_code, "url": url}
 
@@ -123,25 +133,7 @@ def get_availability_spans(
     endtime: str,
     location: str = "*",
 ) -> List[Dict[str, Any]]:
-    """
-    Query availability once for a channel's full epoch-span and return all spans.
-
-    Parameters
-    ----------
-    base_url : str
-        FDSN base URL, e.g. "https://ws.resif.fr/fdsnws/"
-    network, station, channel : str
-        Channel identifiers.
-    starttime, endtime : str
-        Epoch-span (from StationXML candidate).
-    location : str
-        Location code filter (default "*").
-
-    Returns
-    -------
-    list of dict
-        Availability spans with start/end ISO strings and metadata.
-    """
+    """Query availability once for a channel's full epoch-span and return all spans."""
     url = (
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
@@ -149,31 +141,30 @@ def get_availability_spans(
     )
     logging.debug(f"Availability (spans) URL: {url}")
 
+    resp = _safe_request(url)
+    if resp is None:
+        logging.error(f"Failed to fetch availability spans after retries: {url}")
+        return []
+
+    if resp.status_code == 204:
+        if location != "*":
+            logging.debug(f"Retrying with location='*' for {network}.{station}.{channel}")
+            return get_availability_spans(
+                base_url, network, station, channel, starttime, endtime, location="*"
+            )
+        return []
+
     try:
-        resp = requests.get(url, timeout=30)
-
-        if resp.status_code == 204:
-            logging.debug(f"No availability data for {network}.{station}.{location}.{channel}")
-            # Retry once with location="*" if we didn't already
-            if location != "*":
-                logging.debug(f"Retrying with location='*' for {network}.{station}.{channel}")
-                return get_availability_spans(
-                    base_url, network, station, channel, starttime, endtime, location="*"
-                )
-            return []
-
         resp.raise_for_status()
         payload = resp.json()
         spans = _collect_spans(payload)
         logging.debug(f"Fetched {len(spans)} spans for {network}.{station}.{channel}")
         return spans
-
     except Exception as e:
-        logging.error(f"Failed to fetch availability spans: {e}")
+        logging.error(f"Failed to parse availability JSON ({url}): {e}")
         return []
 
 
-# Back-compat wrapper (keeps older call sites working)
 def check_availability(
     base_url: str,
     network: str,

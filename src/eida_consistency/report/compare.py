@@ -1,73 +1,51 @@
-"""Compare two JSON consistency reports."""
+"""Report comparison utilities."""
+
 import json
-import sys
+import logging
 from pathlib import Path
+from typing import Any, Dict
 
-def compare_reports(report_path_1, report_path_2):
-    """Compare two JSON consistency reports and return a diff summary."""
-    def load_report(path):
-        with open(path) as f:
-            return json.load(f)
 
-    report_a = load_report(report_path_1)
-    report_b = load_report(report_path_2)
+def _load_report(path: Path) -> Dict[str, Any]:
+    """Load a JSON report from disk."""
+    try:
+        return json.loads(Path(path).read_text())
+    except Exception as e:
+        logging.error(f"Failed to load report {path}: {e}")
+        raise
 
-    summary_a = report_a.get("summary", {})
-    summary_b = report_b.get("summary", {})
 
-    # Check seed match
-    if summary_a.get("seed") != summary_b.get("seed"):
-        print("❌ Reports have different seeds. Cannot compare.")
-        print(f"Report 1 Seed: {summary_a.get('seed')}, Report 2 Seed: {summary_b.get('seed')}")
-        sys.exit(1)
+def compare_reports(report1: str | Path, report2: str | Path, report_dir: Path | None = None) -> None:
+    """
+    Compare two reports and log differences.
 
-    print("✅ Same seed found. Proceeding with comparison...\n")
+    Parameters
+    ----------
+    report1, report2 : str | Path
+        Paths or filenames of reports. If filenames are given and report_dir is set,
+        the files will be resolved relative to that directory.
+    report_dir : Path, optional
+        Directory to resolve reports from if only a filename is provided.
+    """
+    r1 = Path(report1)
+    r2 = Path(report2)
 
-    # Extract results
-    def build_indexed_map(report):
-        return {
-            (r["network"], r["station"], r["location"], r["channel"], r["starttime"], r["endtime"]): r
-            for r in report["results"]
-        }
+    if report_dir:
+        if not r1.is_absolute():
+            r1 = Path(report_dir) / r1
+        if not r2.is_absolute():
+            r2 = Path(report_dir) / r2
 
-    results_a = build_indexed_map(report_a)
-    results_b = build_indexed_map(report_b)
+    report_a = _load_report(r1)
+    report_b = _load_report(r2)
 
-    improved = []
-    regressed = []
-    unchanged = []
-    missing = []
+    # Simple diff example: score and totals
+    a_sum = report_a["summary"]
+    b_sum = report_b["summary"]
 
-    for key, rec_a in results_a.items():
-        rec_b = results_b.get(key)
-        if not rec_b:
-            missing.append(key)
-            continue
-
-        if rec_a["consistent"] and not rec_b["consistent"]:
-            regressed.append(key)
-        elif not rec_a["consistent"] and rec_b["consistent"]:
-            improved.append(key)
-        else:
-            unchanged.append(key)
-
-    print(f"🔎 Total comparisons: {len(results_a)}")
-    print(f"📈 Improvements: {len(improved)}")
-    print(f"📉 Regressions: {len(regressed)}")
-    print(f"➖ Unchanged: {len(unchanged)}")
-    print(f"❓ Missing in Report 2: {len(missing)}")
-
-    if improved:
-        print("\n✅ Improved entries:")
-        for k in improved:
-            print(" -", ".".join(k[:4]), f"[{k[4]} → {k[5]})")
-
-    if regressed:
-        print("\n❌ Regressed entries:")
-        for k in regressed:
-            print(" -", ".".join(k[:4]), f"[{k[4]} → {k[5]})")
-
-    if missing:
-        print("\n⚠️ Missing entries in Report 2:")
-        for k in missing:
-            print(" -", ".".join(k[:4]), f"[{k[4]} → {k[5]})")
+    logging.info("📊 Report comparison:")
+    logging.info(f"  Node: {a_sum['node']} vs {b_sum['node']}")
+    logging.info(f"  Total checks: {a_sum['total_checked']} vs {b_sum['total_checked']}")
+    logging.info(f"  Consistent: {a_sum['total_consistent']} vs {b_sum['total_consistent']}")
+    logging.info(f"  Inconsistent: {a_sum['total_inconsistent']} vs {b_sum['total_inconsistent']}")
+    logging.info(f"  Score: {a_sum['score']}% vs {b_sum['score']}%")
