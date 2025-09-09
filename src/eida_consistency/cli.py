@@ -2,10 +2,12 @@
 
 Examples
 --------
-$ eida-consistency --log-level DEBUG consistency --node NOA --epochs 5
-$ eida-consistency compare report1.json report2.json
-$ eida-consistency consistency --delete-old
-$ eida-consistency explore --latest --index 7 --index 8
+$ uv run eida-consistency --log-level DEBUG consistency --node NOA --epochs 5
+$ uv run eida-consistency compare report1.json report2.json
+$ uv run eida-consistency consistency --delete-old
+$ uv run eida-consistency explore --index 7 --index 8
+$ uv run eida-consistency reload-nodes
+$ uv run eida-consistency list-nodes
 """
 
 import logging
@@ -16,6 +18,7 @@ from eida_consistency.runner import run_consistency_check
 from eida_consistency.report.compare import compare_reports
 from eida_consistency.report.report import delete_old_reports, REPORT_DIR
 from eida_consistency.explorer import explore_boundaries
+from eida_consistency.utils import nodes
 
 
 def normalize_log_level(level: str) -> int:
@@ -44,17 +47,26 @@ def _setup_logging(level: str) -> None:
     show_default=True,
     help="Set logging verbosity.",
 )
+@click.option(
+    "--report-dir",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=REPORT_DIR,
+    show_default=True,
+    help="Directory to store and load reports.",
+)
 @click.pass_context
-def cli(ctx, log_level):
+def cli(ctx, log_level, report_dir):
     """EIDA consistency checker."""
     _setup_logging(log_level)
-    ctx.obj = {"log_level": log_level}
-    # If no subcommand provided, show usage and return non-zero
+    ctx.obj = {"log_level": log_level, "report_dir": Path(report_dir)}
     if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
         click.echo(ctx.get_help())
         ctx.exit(1)
 
 
+# ----------------------------------------------------------------------
+# consistency command
+# ----------------------------------------------------------------------
 @cli.command()
 @click.option("--node", help="EIDA node code (e.g., RESIF, NOA)")
 @click.option("--epochs", type=int, default=10, show_default=True, help="Number of epochs")
@@ -71,12 +83,14 @@ def cli(ctx, log_level):
     is_flag=True,
     help="Also print the JSON report to stdout.",
 )
-def consistency(node, epochs, duration, seed, delete_old, print_stdout):
+@click.pass_context
+def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
+    report_dir: Path = ctx.obj["report_dir"]
+
     if delete_old:
-        # housekeeping mode: ignore all other options
-        delete_old_reports(REPORT_DIR, keep=1)
-        logging.info("🗑️ Old reports cleaned up, kept only the latest one.")
+        delete_old_reports(report_dir, keep=1)
+        logging.info("Old reports cleaned up, kept only the latest one.")
         return
 
     if not node:
@@ -90,41 +104,80 @@ def consistency(node, epochs, duration, seed, delete_old, print_stdout):
         duration=duration,
         seed=seed,
         print_stdout=print_stdout,
+        report_dir=report_dir,
     )
 
 
+# ----------------------------------------------------------------------
+# compare command
+# ----------------------------------------------------------------------
 @cli.command()
-@click.argument("report1", type=click.Path(exists=True, path_type=Path))
-@click.argument("report2", type=click.Path(exists=True, path_type=Path))
-def compare(report1, report2):
+@click.argument("report1", type=str)
+@click.argument("report2", type=str)
+@click.pass_context
+def compare(ctx, report1, report2):
     """Compare two JSON report files."""
-    compare_reports(str(report1), str(report2))
+    report_dir: Path = ctx.obj["report_dir"]
+    compare_reports(report1, report2, report_dir=report_dir)
 
 
+# ----------------------------------------------------------------------
+# explore command
+# ----------------------------------------------------------------------
 @cli.command()
-@click.argument("report", type=click.Path(exists=True, path_type=Path), required=False)
+@click.argument("report", required=False, type=click.Path(path_type=Path))
 @click.option(
-    "--index",
-    type=str,
-    callback=lambda _, __, value: [int(x) for x in value.split(",")] if value else None,
-    help="Comma-separated indices of inconsistent tests (e.g. 7,8).",
+    "--index", "-i",
+    multiple=True, type=int,
+    help="Indices of inconsistent results to explore (default: all)."
 )
 @click.option(
-    "--latest",
-    is_flag=True,
-    help="Use the most recent report automatically.",
+    "--days", "-d",
+    default=30, show_default=True, type=int,
+    help="Maximum number of days to explore backward/forward."
 )
-def explore(report, index, latest):
+@click.option("--verbose", is_flag=True, help="Print query URLs while exploring")
+@click.pass_context
+def explore(ctx, report, index, days, verbose):
     """Explore day-by-day boundaries of inconsistencies from a report."""
+    report_dir: Path = ctx.obj["report_dir"]
+
     if not report:
         try:
-            report = max(REPORT_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime)
+            report = max(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
             logging.info(f"Using latest report: {report}")
         except ValueError:
-            raise click.UsageError("No report files found in reports/ directory.")
+            raise click.UsageError(f"No report files found in {report_dir}")
 
     indices = list(index) if index else None
-    explore_boundaries(report, indices)
+    explore_boundaries(report, indices, max_days=days, verbose=verbose)
+
+
+# ----------------------------------------------------------------------
+# reload-nodes command
+# ----------------------------------------------------------------------
+@cli.command(name="reload-nodes")
+def reload_nodes():
+    """Reload EIDA node list from routing service and update cache."""
+    try:
+        new_nodes = nodes.refresh_cache_from_routing()
+        logging.info(f"Reloaded {len(new_nodes)} nodes from routing service.")
+        for name, url, _ in new_nodes:
+            logging.info(f"  {name}: {url}")
+    except Exception as exc:
+        raise click.ClickException(f"Failed to reload nodes: {exc}")
+
+
+# ----------------------------------------------------------------------
+# list-nodes command
+# ----------------------------------------------------------------------
+@cli.command(name="list-nodes")
+def list_nodes():
+    """List currently cached EIDA nodes."""
+    nodes_list = nodes.load_or_refresh_cache()
+    logging.info(f"{len(nodes_list)} nodes currently cached:")
+    for name, url, _ in nodes_list:
+        logging.info(f"  {name}: {url}")
 
 
 if __name__ == "__main__":

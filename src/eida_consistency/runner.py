@@ -6,12 +6,19 @@ import random
 import concurrent.futures
 import json
 import sys
+from pathlib import Path
+
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
 from .core.checker import check_candidate
 from .utils.nodes import load_node_url
 from .core.formatter import format_result
-from .report.report import create_report_object, save_report_json, save_report_markdown
+from .report.report import (
+    create_report_object,
+    save_report_json,
+    save_report_markdown,
+    REPORT_DIR,
+)
 
 
 def run_consistency_check(
@@ -22,6 +29,7 @@ def run_consistency_check(
     delete_old: bool = False,
     max_workers: int = 10,
     print_stdout: bool = False,
+    report_dir: Path = REPORT_DIR,
 ) -> None:
     if seed is None:
         seed = random.randint(0, 999_999)
@@ -32,17 +40,18 @@ def run_consistency_check(
     random.seed(seed)
     base_url = load_node_url(node)
 
-    logging.info(f" Fetching candidates for node: {node}...")
-    candidates = fetch_candidates(base_url)
+    logging.info(f" Fetching random candidates for node: {node}...")
+
+    # Always fetch 5 × epochs (minimum 20) to ensure enough usable candidates
+    target_candidates = max(epochs * 5, 20)
+    candidates = fetch_candidates(base_url, max_stations=target_candidates)
+
     if not candidates:
         logging.warning("No candidates fetched.")
         return
 
-    logging.info(f"Total candidates fetched: {len(candidates)}")
-    logging.info(f" Picking {epochs} random candidates...\n")
-
-    # each item: (url, available, start, end, loc_exact, matched_span)
-    results = check_candidate(
+    # Each item: (url, available, start, end, loc_exact, matched_span)
+    results, stats = check_candidate(
         base_url,
         candidates[0],
         candidates=candidates,
@@ -56,7 +65,7 @@ def run_consistency_check(
 
     def worker(args):
         idx, (url, available, start, end, loc_exact, matched_span), match = args
-        loc_final = loc_exact or match.get("location", "")  # exact single location
+        loc_final = loc_exact or match.get("location", "")
         ds_result = dataselect(
             base_url,
             match["network"], match["station"], match["channel"],
@@ -84,7 +93,6 @@ def run_consistency_check(
             "starttime": str(start),
             "endtime": str(end),
             "debug": ds_result.get("debug", ""),
-            # NEW: include matched availability span
             "matched_span": {
                 "start": matched_span.get("start") if matched_span else None,
                 "end": matched_span.get("end") if matched_span else None,
@@ -125,6 +133,7 @@ def run_consistency_check(
 
     logging.info(f"✅ Collected {len(all_records)} results.")
 
+    # --- Save reports into chosen report_dir ---
     report = create_report_object(
         node=node,
         seed=seed,
@@ -132,8 +141,10 @@ def run_consistency_check(
         duration=duration,
         records=all_records,
     )
-    json_path = save_report_json(report)
-    md_path = save_report_markdown(report)
+    report["summary"].update(stats)  # merge candidate stats into summary
+
+    json_path = save_report_json(report, report_dir=report_dir)
+    md_path = save_report_markdown(report, report_dir=report_dir)
     logging.info(f"📁 Report saved to: {json_path}")
     logging.info(f"📜 Markdown saved to: {md_path}")
 

@@ -1,0 +1,443 @@
+{
+  "summary": {
+    "node": "ETH",
+    "seed": 332194,
+    "epochs_requested": 20,
+    "candidates_requested": 20,
+    "candidates_tested": null,
+    "station_queries": null,
+    "duration": 600,
+    "total_checked": 20,
+    "total_consistent": 19,
+    "total_inconsistent": 1,
+    "score": 95.0,
+    "availability_yes_dataselect_no": 0,
+    "availability_no_dataselect_yes": 1,
+    "timestamp": "2025-09-08T16:53:37.582269+00:00",
+    "candidates_generated": 20,
+    "candidates_pool": 100,
+    "queries_performed": 193
+  },
+  "results": [
+    {
+      "index": 10,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SCHE&location=*&channel=HGZ&start=2001-06-12T00:00:00&end=2009-05-05T00:00:00&format=json",
+      "network": "CH",
+      "station": "SCHE",
+      "channel": "HGZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2005-02-12T01:15:22",
+      "endtime": "2005-02-12T01:25:22",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SCHE&location=&channel=HGZ&starttime=2005-02-12T01:15:22&endtime=2005-02-12T01:25:22&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 3,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SDAS&location=*&channel=HGZ&start=1992-08-25T00:00:00&end=2003-08-01T00:00:00&format=json",
+      "network": "CH",
+      "station": "SDAS",
+      "channel": "HGZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "1999-01-24T11:13:49",
+      "endtime": "1999-01-24T11:23:49",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SDAS&location=&channel=HGZ&starttime=1999-01-24T11:13:49&endtime=1999-01-24T11:23:49&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 4,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=XA&station=BHW16&location=*&channel=HHE&start=2013-11-11T00:00:00&end=2014-11-29T00:00:00&format=json",
+      "network": "XA",
+      "station": "BHW16",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2014-01-01T10:33:40",
+      "endtime": "2014-01-01T10:43:40",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nXA.BHW16..HHE | 2014-01-01T10:33:40.000000Z - 2014-01-01T10:43:40.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=XA&station=BHW16&location=&channel=HHE&starttime=2014-01-01T10:33:40&endtime=2014-01-01T10:43:40&nodata=204",
+      "matched_span": {
+        "start": "2014-01-01T00:00:00.000000Z",
+        "end": "2014-01-02T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 9,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=WALHA&location=*&channel=HHE&start=2020-09-30T11:48:00&end=2025-09-08T16:53:06.854274&format=json",
+      "network": "CH",
+      "station": "WALHA",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2022-04-11T06:23:33",
+      "endtime": "2022-04-11T06:33:33",
+      "debug": "✅ Retrieved 1 trace(s) via raw HTTP+read().\nCH.WALHA..HHE | 2022-04-11T06:23:32.120000Z - 2022-04-11T06:33:34.685000Z | 200.0 Hz, 120514 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=WALHA&location=&channel=HHE&starttime=2022-04-11T06:23:33&endtime=2022-04-11T06:33:33&nodata=204",
+      "matched_span": {
+        "start": "2022-04-11T00:00:00.000000Z",
+        "end": "2022-04-12T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 1,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SZIM&location=*&channel=HGZ&start=2019-06-04T22:00:00&end=2025-09-08T16:52:50.986543&format=json",
+      "network": "CH",
+      "station": "SZIM",
+      "channel": "HGZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-02-26T06:53:05",
+      "endtime": "2025-02-26T07:03:05",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.SZIM..HGZ | 2025-02-26T06:53:05.000000Z - 2025-02-26T07:03:05.000000Z | 250.0 Hz, 150001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SZIM&location=&channel=HGZ&starttime=2025-02-26T06:53:05&endtime=2025-02-26T07:03:05&nodata=204",
+      "matched_span": {
+        "start": "2025-02-26T00:00:00.000000Z",
+        "end": "2025-02-26T18:15:29.868000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 5,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=YL&station=R03&location=*&channel=EHZ&start=2000-08-01T00:00:00&end=2000-12-31T00:00:00&format=json",
+      "network": "YL",
+      "station": "R03",
+      "channel": "EHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2000-12-24T13:21:13",
+      "endtime": "2000-12-24T13:31:13",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=YL&station=R03&location=&channel=EHZ&starttime=2000-12-24T13:21:13&endtime=2000-12-24T13:31:13&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 2,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SKEH&location=*&channel=HGE&start=1994-01-01T00:00:00&end=1995-12-31T00:00:00&format=json",
+      "network": "CH",
+      "station": "SKEH",
+      "channel": "HGE",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "1995-09-30T21:39:54",
+      "endtime": "1995-09-30T21:49:54",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SKEH&location=&channel=HGE&starttime=1995-09-30T21:39:54&endtime=1995-09-30T21:49:54&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 11,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=YL&station=R04&location=*&channel=EHE&start=2000-08-01T00:00:00&end=2000-12-31T00:00:00&format=json",
+      "network": "YL",
+      "station": "R04",
+      "channel": "EHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2000-09-06T04:54:50",
+      "endtime": "2000-09-06T05:04:50",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nYL.R04..EHE | 2000-09-06T04:54:50.000000Z - 2000-09-06T05:04:50.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=YL&station=R04&location=&channel=EHE&starttime=2000-09-06T04:54:50&endtime=2000-09-06T05:04:50&nodata=204",
+      "matched_span": {
+        "start": "2000-09-06T00:00:00.000000Z",
+        "end": "2000-09-07T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 7,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=XT&station=AAE43&location=*&channel=HHN&start=2014-08-07T00:00:00&end=2015-09-03T23:59:59&format=json",
+      "network": "XT",
+      "station": "AAE43",
+      "channel": "HHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2015-01-01T03:49:59",
+      "endtime": "2015-01-01T03:59:59",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nXT.AAE43..HHN | 2015-01-01T03:49:59.000000Z - 2015-01-01T03:59:59.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=XT&station=AAE43&location=&channel=HHN&starttime=2015-01-01T03:49:59&endtime=2015-01-01T03:59:59&nodata=204",
+      "matched_span": {
+        "start": "2015-01-01T00:00:00.000000Z",
+        "end": "2015-01-02T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 6,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=METMA&location=*&channel=HHZ&start=2013-03-28T15:11:39&end=2025-09-08T16:53:01.599242&format=json",
+      "network": "CH",
+      "station": "METMA",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2017-10-22T09:55:49",
+      "endtime": "2017-10-22T10:05:49",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.METMA..HHZ | 2017-10-22T09:55:49.000000Z - 2017-10-22T10:05:49.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=METMA&location=&channel=HHZ&starttime=2017-10-22T09:55:49&endtime=2017-10-22T10:05:49&nodata=204",
+      "matched_span": {
+        "start": "2017-10-22T00:00:00.000000Z",
+        "end": "2017-10-23T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 12,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=Z9&station=MA12&location=*&channel=HHZ&start=2016-12-18T17:30:00&end=2017-03-30T23:59:59&format=json",
+      "network": "Z9",
+      "station": "MA12",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2017-03-22T22:52:22",
+      "endtime": "2017-03-22T23:02:22",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nZ9.MA12..HHZ | 2017-03-22T22:52:22.000000Z - 2017-03-22T23:02:22.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=Z9&station=MA12&location=&channel=HHZ&starttime=2017-03-22T22:52:22&endtime=2017-03-22T23:02:22&nodata=204",
+      "matched_span": {
+        "start": "2017-03-22T00:31:29.975000Z",
+        "end": "2017-03-22T23:35:30.725000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 13,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SLAE&location=*&channel=HGE&start=1999-01-01T00:00:00&end=2016-10-24T14:44:52.3906&format=json",
+      "network": "CH",
+      "station": "SLAE",
+      "channel": "HGE",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2014-01-04T05:25:41",
+      "endtime": "2014-01-04T05:35:41",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SLAE&location=&channel=HGE&starttime=2014-01-04T05:25:41&endtime=2014-01-04T05:35:41&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 8,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=YL&station=A01&location=*&channel=EHN&start=2000-08-01T00:00:00&end=2000-12-31T00:00:00&format=json",
+      "network": "YL",
+      "station": "A01",
+      "channel": "EHN",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2000-10-15T22:10:54",
+      "endtime": "2000-10-15T22:20:54",
+      "debug": "✅ Retrieved 1 trace(s) via raw HTTP+read().\nYL.A01..EHN | 2000-10-15T22:10:53.960000Z - 2000-10-15T22:20:54.170000Z | 200.0 Hz, 120043 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=YL&station=A01&location=&channel=EHN&starttime=2000-10-15T22:10:54&endtime=2000-10-15T22:20:54&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 20,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=8X&station=CA08A&location=*&channel=HHZ&start=2016-11-11T17:00:00&end=2018-09-18T14:15:00&format=json",
+      "network": "8X",
+      "station": "CA08A",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2016-12-28T11:04:10",
+      "endtime": "2016-12-28T11:14:10",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\n8X.CA08A..HHZ | 2016-12-28T11:04:10.000000Z - 2016-12-28T11:14:10.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=8X&station=CA08A&location=&channel=HHZ&starttime=2016-12-28T11:04:10&endtime=2016-12-28T11:14:10&nodata=204",
+      "matched_span": {
+        "start": "2016-12-28T00:00:00.000000Z",
+        "end": "2016-12-29T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 16,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=Z9&station=MA6&location=*&channel=HHN&start=2016-12-17T19:30:00&end=2017-03-29T23:59:59&format=json",
+      "network": "Z9",
+      "station": "MA6",
+      "channel": "HHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2017-01-04T01:23:47",
+      "endtime": "2017-01-04T01:33:47",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nZ9.MA6..HHN | 2017-01-04T01:23:47.000000Z - 2017-01-04T01:33:47.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=Z9&station=MA6&location=&channel=HHN&starttime=2017-01-04T01:23:47&endtime=2017-01-04T01:33:47&nodata=204",
+      "matched_span": {
+        "start": "2017-01-04T00:07:35.975000Z",
+        "end": "2017-01-04T23:41:57.725000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 14,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=YL&station=I01&location=*&channel=EHN&start=2000-08-01T00:00:00&end=2000-12-31T00:00:00&format=json",
+      "network": "YL",
+      "station": "I01",
+      "channel": "EHN",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2000-09-19T12:46:02",
+      "endtime": "2000-09-19T12:56:02",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=YL&station=I01&location=&channel=EHN&starttime=2000-09-19T12:46:02&endtime=2000-09-19T12:56:02&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 18,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=S&station=COLEY&location=*&channel=EHZ&start=2023-11-30T00:00:00&end=2025-09-08T16:53:26.224043&format=json",
+      "network": "S",
+      "station": "COLEY",
+      "channel": "EHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-07-25T03:34:50",
+      "endtime": "2025-07-25T03:44:50",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nS.COLEY..EHZ | 2025-07-25T03:34:50.002000Z - 2025-07-25T03:44:50.002000Z | 100.0 Hz, 60001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=S&station=COLEY&location=&channel=EHZ&starttime=2025-07-25T03:34:50&endtime=2025-07-25T03:44:50&nodata=204",
+      "matched_span": {
+        "start": "2025-07-25T02:58:31.772000Z",
+        "end": "2025-07-25T04:21:49.282000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 17,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=EMMET&location=*&channel=HHZ&start=2024-04-24T13:18:00&end=2025-09-08T16:53:24.808222&format=json",
+      "network": "CH",
+      "station": "EMMET",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-06-07T12:17:40",
+      "endtime": "2025-06-07T12:27:40",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.EMMET..HHZ | 2025-06-07T12:17:40.000000Z - 2025-06-07T12:27:40.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=EMMET&location=&channel=HHZ&starttime=2025-06-07T12:17:40&endtime=2025-06-07T12:27:40&nodata=204",
+      "matched_span": {
+        "start": "2025-06-07T00:00:00.000000Z",
+        "end": "2025-06-07T18:02:17.670000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 19,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=PANIX&location=*&channel=HHE&start=2016-08-12T11:50:00&end=2025-09-08T16:53:32.195884&format=json",
+      "network": "CH",
+      "station": "PANIX",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2017-05-21T20:19:03",
+      "endtime": "2017-05-21T20:29:03",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.PANIX..HHE | 2017-05-21T20:19:03.000000Z - 2017-05-21T20:29:03.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=PANIX&location=&channel=HHE&starttime=2017-05-21T20:19:03&endtime=2017-05-21T20:29:03&nodata=204",
+      "matched_span": {
+        "start": "2017-05-21T00:00:00.000000Z",
+        "end": "2017-05-22T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 15,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=STSP&location=*&channel=HGN&start=2010-11-18T18:20:00&end=2015-06-10T11:55:00&format=json",
+      "network": "CH",
+      "station": "STSP",
+      "channel": "HGN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2012-05-02T11:50:57",
+      "endtime": "2012-05-02T12:00:57",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.STSP..HGN | 2012-05-02T11:50:57.000000Z - 2012-05-02T12:00:57.000000Z | 250.0 Hz, 150001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=STSP&location=&channel=HGN&starttime=2012-05-02T11:50:57&endtime=2012-05-02T12:00:57&nodata=204",
+      "matched_span": {
+        "start": "2012-05-02T00:00:00.000000Z",
+        "end": "2012-05-03T00:00:00.000000Z",
+        "location": ""
+      }
+    }
+  ]
+}

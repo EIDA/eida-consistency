@@ -9,14 +9,21 @@ import os
 from pathlib import Path
 from collections import Counter
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # Default directory where reports are stored
 REPORT_DIR = Path("reports")
 
 
 def create_report_object(
-    node: str, seed: int, epochs: int, duration: int, records: List[Dict[str, Any]]
+    node: str,
+    seed: int,
+    epochs: int,
+    duration: int,
+    records: List[Dict[str, Any]],
+    candidates_requested: Optional[int] = None,
+    candidates_tested: Optional[int] = None,
+    station_queries: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build a serialisable dictionary summarising a full run."""
 
@@ -37,7 +44,10 @@ def create_report_object(
         "summary": {
             "node": node,
             "seed": seed,
-            "epochs": epochs,
+            "epochs_requested": epochs,
+            "candidates_requested": candidates_requested,
+            "candidates_tested": candidates_tested,
+            "station_queries": station_queries,
             "duration": duration,
             "total_checked": total_checked,
             "total_consistent": total_consistent,
@@ -57,31 +67,24 @@ def _make_unique_filename(node: str, seed: int, extension: str) -> str:
     return f"{node.lower()}_{seed}_{short_time}.{extension}"
 
 
-def save_report_json(report: Dict[str, Any], output_dir: Path = REPORT_DIR) -> Path:
+def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
     """Save the full report as pretty-printed JSON."""
-    path = Path(output_dir)
-    path.mkdir(parents=True, exist_ok=True)
-
+    report_dir.mkdir(parents=True, exist_ok=True)
     filename = _make_unique_filename(
         report["summary"]["node"], report["summary"]["seed"], "json"
     )
-    filepath = path / filename
-
-    with filepath.open("w") as f:
-        json.dump(report, f, indent=2)
-
+    filepath = report_dir / filename
+    filepath.write_text(json.dumps(report, indent=2, ensure_ascii=False))
     return filepath
 
 
-def save_report_markdown(report: Dict[str, Any], output_dir: Path = REPORT_DIR) -> Path:
+def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
     """Save the report as a human-readable Markdown file."""
-    path = Path(output_dir)
-    path.mkdir(parents=True, exist_ok=True)
-
+    report_dir.mkdir(parents=True, exist_ok=True)
     filename = _make_unique_filename(
         report["summary"]["node"], report["summary"]["seed"], "md"
     )
-    filepath = path / filename
+    filepath = report_dir / filename
 
     summary = report["summary"]
     results = report["results"]
@@ -94,9 +97,12 @@ def save_report_markdown(report: Dict[str, Any], output_dir: Path = REPORT_DIR) 
         "",
         f"- Seed: `{summary['seed']}`",
         f"- Time: `{summary['timestamp']}`",
-        f"- Epochs: `{summary['epochs']}`",
+        f"- Epochs requested: `{summary['epochs_requested']}`",
+        f"- Candidates requested: `{summary.get('candidates_requested', '?')}`",
+        f"- Candidates tested: `{summary.get('candidates_tested', '?')}`",
+        f"- Station queries performed: `{summary.get('station_queries', '?')}`",
         f"- Duration/epoch: `{summary['duration']} s`",
-        f"- Total checks: `{summary['total_checked']}`",
+        f"- Total checks run: `{summary['total_checked']}`",
         f"- Consistent: `{summary['total_consistent']}`",
         f"- Inconsistent: `{summary['total_inconsistent']}`",
         f"- Score: **{summary['score']} %**",
@@ -136,11 +142,7 @@ def delete_old_reports(report_dir: Path = REPORT_DIR, keep: int = 1) -> None:
     if not report_dir.exists():
         return
 
-    # Collect all JSON reports (MD files share the same stem)
     json_reports = sorted(report_dir.glob("*.json"), key=os.path.getmtime, reverse=True)
-
-    # Decide which to keep / delete
-    to_keep = json_reports[:keep]
     to_delete = json_reports[keep:]
 
     for json_file in to_delete:

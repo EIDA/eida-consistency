@@ -1,0 +1,443 @@
+{
+  "summary": {
+    "node": "BGR",
+    "seed": 214412,
+    "epochs_requested": 20,
+    "candidates_requested": 20,
+    "candidates_tested": null,
+    "station_queries": null,
+    "duration": 600,
+    "total_checked": 20,
+    "total_consistent": 15,
+    "total_inconsistent": 5,
+    "score": 75.0,
+    "availability_yes_dataselect_no": 0,
+    "availability_no_dataselect_yes": 5,
+    "timestamp": "2025-09-08T17:01:39.743741+00:00",
+    "candidates_generated": 20,
+    "candidates_pool": 100,
+    "queries_performed": 29
+  },
+  "results": [
+    {
+      "index": 2,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=SX&station=LEUT&location=*&channel=BHE&start=2023-05-31T10:35:00Z&end=2023-06-14T13:10:00Z&format=json",
+      "network": "SX",
+      "station": "LEUT",
+      "channel": "BHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2023-06-14T07:16:05",
+      "endtime": "2023-06-14T07:26:05",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nSX.LEUT..BHE | 2023-06-14T07:16:05.000000Z - 2023-06-14T07:26:05.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=SX&station=LEUT&location=&channel=BHE&starttime=2023-06-14T07:16:05&endtime=2023-06-14T07:26:05&nodata=204",
+      "matched_span": {
+        "start": "2023-06-14T00:00:00.000000Z",
+        "end": "2023-06-14T13:01:50.800000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 7,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=BQ&station=HILG&location=*&channel=HHE&start=2022-03-31T15:00:00Z&end=2025-09-01T00:00:00Z&format=json",
+      "network": "BQ",
+      "station": "HILG",
+      "channel": "HHE",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2023-03-01T14:13:12",
+      "endtime": "2023-03-01T14:23:12",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nBQ.HILG..HHE | 2023-03-01T14:13:12.000000Z - 2023-03-01T14:23:12.000000Z | 125.0 Hz, 75001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=BQ&station=HILG&location=&channel=HHE&starttime=2023-03-01T14:13:12&endtime=2023-03-01T14:23:12&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 1,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=NOTT&location=*&channel=HHE&start=2004-10-28T00:00:00Z&end=2006-01-30T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "NOTT",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2006-01-24T21:12:55",
+      "endtime": "2006-01-24T21:22:55",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.NOTT..HHE | 2006-01-24T21:12:55.000000Z - 2006-01-24T21:22:55.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=NOTT&location=&channel=HHE&starttime=2006-01-24T21:12:55&endtime=2006-01-24T21:22:55&nodata=204",
+      "matched_span": {
+        "start": "2006-01-24T05:20:50.460000Z",
+        "end": "2006-01-25T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 4,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=SX&station=TRIB&location=*&channel=HHE&start=2018-02-24T00:00:00Z&end=2025-09-08T17:01:19.118614&format=json",
+      "network": "SX",
+      "station": "TRIB",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2024-09-06T07:48:24",
+      "endtime": "2024-09-06T07:58:24",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nSX.TRIB..HHE | 2024-09-06T07:48:24.000000Z - 2024-09-06T07:58:24.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=SX&station=TRIB&location=&channel=HHE&starttime=2024-09-06T07:48:24&endtime=2024-09-06T07:58:24&nodata=204",
+      "matched_span": {
+        "start": "2024-09-06T00:00:00.000000Z",
+        "end": "2024-09-07T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 10,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=BKS1&location=*&channel=EHZ&start=2013-07-17T00:00:00Z&end=2015-07-29T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "BKS1",
+      "channel": "EHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2015-07-18T19:27:36",
+      "endtime": "2015-07-18T19:37:36",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.BKS1..EHZ | 2015-07-18T19:27:36.000000Z - 2015-07-18T19:37:36.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=BKS1&location=&channel=EHZ&starttime=2015-07-18T19:27:36&endtime=2015-07-18T19:37:36&nodata=204",
+      "matched_span": {
+        "start": "2015-07-18T00:00:00.000000Z",
+        "end": "2015-07-19T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 5,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=TH&station=WARTH&location=*&channel=BHZ&start=2021-10-29T06:08:00Z&end=2025-09-08T17:01:19.667906&format=json",
+      "network": "TH",
+      "station": "WARTH",
+      "channel": "BHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2023-02-14T12:28:43",
+      "endtime": "2023-02-14T12:38:43",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nTH.WARTH..BHZ | 2023-02-14T12:28:43.000000Z - 2023-02-14T12:38:43.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=TH&station=WARTH&location=&channel=BHZ&starttime=2023-02-14T12:28:43&endtime=2023-02-14T12:38:43&nodata=204",
+      "matched_span": {
+        "start": "2023-02-14T00:00:00.000000Z",
+        "end": "2023-02-15T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 8,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=TH&station=BONN&location=*&channel=HHZ&start=2025-03-12T11:35:00Z&end=2025-09-08T17:01:21.050130&format=json",
+      "network": "TH",
+      "station": "BONN",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-07-08T05:26:46",
+      "endtime": "2025-07-08T05:36:46",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nTH.BONN..HHZ | 2025-07-08T05:26:45.999999Z - 2025-07-08T05:36:45.999999Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=TH&station=BONN&location=&channel=HHZ&starttime=2025-07-08T05:26:46&endtime=2025-07-08T05:36:46&nodata=204",
+      "matched_span": {
+        "start": "2025-07-08T00:00:00.000000Z",
+        "end": "2025-07-09T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 6,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=HS&station=MESS&location=*&channel=HHE&start=2013-04-25T00:00:00Z&end=2025-06-10T00:00:00Z&format=json",
+      "network": "HS",
+      "station": "MESS",
+      "channel": "HHE",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2016-12-19T10:17:53",
+      "endtime": "2016-12-19T10:27:53",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nHS.MESS..HHE | 2016-12-19T10:17:53.000000Z - 2016-12-19T10:27:53.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=HS&station=MESS&location=&channel=HHE&starttime=2016-12-19T10:17:53&endtime=2016-12-19T10:27:53&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 11,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=SX&station=LEUT&location=*&channel=BHZ&start=2023-05-31T10:35:00Z&end=2023-06-14T13:10:00Z&format=json",
+      "network": "SX",
+      "station": "LEUT",
+      "channel": "BHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2023-05-31T19:54:12",
+      "endtime": "2023-05-31T20:04:12",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nSX.LEUT..BHZ | 2023-05-31T19:54:12.000000Z - 2023-05-31T20:04:12.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=SX&station=LEUT&location=&channel=BHZ&starttime=2023-05-31T19:54:12&endtime=2023-05-31T20:04:12&nodata=204",
+      "matched_span": {
+        "start": "2023-05-31T10:44:51.000000Z",
+        "end": "2023-06-01T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 15,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=LE&station=PEB&location=*&channel=HHN&start=2018-02-08T00:00:00Z&end=2025-06-10T00:00:00Z&format=json",
+      "network": "LE",
+      "station": "PEB",
+      "channel": "HHN",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2023-01-09T16:01:00",
+      "endtime": "2023-01-09T16:11:00",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nLE.PEB..HHN | 2023-01-09T16:01:00.000000Z - 2023-01-09T16:11:00.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=LE&station=PEB&location=&channel=HHN&starttime=2023-01-09T16:01:00&endtime=2023-01-09T16:11:00&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 16,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=FSHA&location=*&channel=SHZ&start=2023-10-01T00:00:00Z&end=2024-08-16T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "FSHA",
+      "channel": "SHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2024-03-10T13:07:33",
+      "endtime": "2024-03-10T13:17:33",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.FSHA..SHZ | 2024-03-10T13:07:33.000000Z - 2024-03-10T13:17:33.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=FSHA&location=&channel=SHZ&starttime=2024-03-10T13:07:33&endtime=2024-03-10T13:17:33&nodata=204",
+      "matched_span": {
+        "start": "2024-03-10T00:00:00.000000Z",
+        "end": "2024-03-11T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 19,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=I26H4&location=*&channel=BDF&start=1999-10-01T00:00:00Z&end=2006-06-26T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "I26H4",
+      "channel": "BDF",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2006-03-10T04:33:58",
+      "endtime": "2006-03-10T04:43:58",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.I26H4..BDF | 2006-03-10T04:33:58.000000Z - 2006-03-10T04:43:58.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=I26H4&location=&channel=BDF&starttime=2006-03-10T04:33:58&endtime=2006-03-10T04:43:58&nodata=204",
+      "matched_span": {
+        "start": "2006-03-10T00:00:00.000000Z",
+        "end": "2006-03-11T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 3,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=TH&station=LAWA&location=*&channel=HHE&start=2011-02-22T10:18:00Z&end=2011-10-17T13:44:00Z&format=json",
+      "network": "TH",
+      "station": "LAWA",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2011-06-12T07:40:56",
+      "endtime": "2011-06-12T07:50:56",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nTH.LAWA..HHE | 2011-06-12T07:40:55.999999Z - 2011-06-12T07:50:55.999999Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=TH&station=LAWA&location=&channel=HHE&starttime=2011-06-12T07:40:56&endtime=2011-06-12T07:50:56&nodata=204",
+      "matched_span": {
+        "start": "2011-06-12T00:00:00.000000Z",
+        "end": "2011-06-13T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 9,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=TH&station=MLFH&location=*&channel=HHE&start=2023-04-26T10:00:00Z&end=2025-09-08T17:01:21.607512&format=json",
+      "network": "TH",
+      "station": "MLFH",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-08-09T04:28:59",
+      "endtime": "2025-08-09T04:38:59",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nTH.MLFH..HHE | 2025-08-09T04:28:59.000000Z - 2025-08-09T04:38:59.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=TH&station=MLFH&location=&channel=HHE&starttime=2025-08-09T04:28:59&endtime=2025-08-09T04:38:59&nodata=204",
+      "matched_span": {
+        "start": "2025-08-09T00:00:00.000000Z",
+        "end": "2025-08-09T06:55:06.940000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 18,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=GEC1&location=*&channel=SHZ&start=1997-01-01T00:00:00Z&end=2017-05-05T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "GEC1",
+      "channel": "SHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2004-02-26T20:29:10",
+      "endtime": "2004-02-26T20:39:10",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.GEC1..SHZ | 2004-02-26T20:29:10.000000Z - 2004-02-26T20:39:10.000000Z | 40.0 Hz, 24001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=GEC1&location=&channel=SHZ&starttime=2004-02-26T20:29:10&endtime=2004-02-26T20:39:10&nodata=204",
+      "matched_span": {
+        "start": "2004-02-26T00:00:00.000000Z",
+        "end": "2004-02-27T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 12,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=YD&station=BGK18&location=*&channel=EHN&start=2020-09-30T09:01:15Z&end=2025-09-08T17:01:23.330873&format=json",
+      "network": "YD",
+      "station": "BGK18",
+      "channel": "EHN",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2021-06-27T03:39:00",
+      "endtime": "2021-06-27T03:49:00",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nYD.BGK18..EHN | 2021-06-27T03:39:00.002000Z - 2021-06-27T03:49:00.002000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=YD&station=BGK18&location=&channel=EHN&starttime=2021-06-27T03:39:00&endtime=2021-06-27T03:49:00&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 20,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=LE&station=TRIT&location=*&channel=EHN&start=2024-03-01T00:00:00Z&end=2025-06-10T00:00:00Z&format=json",
+      "network": "LE",
+      "station": "TRIT",
+      "channel": "EHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2024-03-30T09:12:01",
+      "endtime": "2024-03-30T09:22:01",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nLE.TRIT..EHN | 2024-03-30T09:12:01.000000Z - 2024-03-30T09:22:01.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=LE&station=TRIT&location=&channel=EHN&starttime=2024-03-30T09:12:01&endtime=2024-03-30T09:22:01&nodata=204",
+      "matched_span": {
+        "start": "2024-03-30T00:00:00.000000Z",
+        "end": "2024-03-31T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 13,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=LE&station=ROTT&location=*&channel=EH1&start=2015-03-19T13:00:00Z&end=2025-06-10T00:00:00Z&format=json",
+      "network": "LE",
+      "station": "ROTT",
+      "channel": "EH1",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2016-02-05T03:25:46",
+      "endtime": "2016-02-05T03:35:46",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nLE.ROTT..EH1 | 2016-02-05T03:25:46.000000Z - 2016-02-05T03:35:46.000000Z | 200.0 Hz, 120001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=LE&station=ROTT&location=&channel=EH1&starttime=2016-02-05T03:25:46&endtime=2016-02-05T03:35:46&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 17,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=INS3&location=*&channel=SHZ&start=2012-09-18T12:30:00Z&end=2020-01-29T00:00:00Z&format=json",
+      "network": "GR",
+      "station": "INS3",
+      "channel": "SHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2013-12-21T13:55:02",
+      "endtime": "2013-12-21T14:05:02",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.INS3..SHZ | 2013-12-21T13:55:02.000000Z - 2013-12-21T14:05:02.000000Z | 20.0 Hz, 12001 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=INS3&location=&channel=SHZ&starttime=2013-12-21T13:55:02&endtime=2013-12-21T14:05:02&nodata=204",
+      "matched_span": {
+        "start": "2013-12-21T00:00:00.000000Z",
+        "end": "2013-12-22T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 14,
+      "url": "https://eida.bgr.de/fdsnws/availability/1/query?network=GR&station=GRA4&location=*&channel=HHZ&start=2010-04-26T00:00:00Z&end=2025-09-08T17:01:29.253023&format=json",
+      "network": "GR",
+      "station": "GRA4",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2019-12-25T08:03:30",
+      "endtime": "2019-12-25T08:13:30",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGR.GRA4..HHZ | 2019-12-25T08:03:30.005000Z - 2019-12-25T08:13:29.995000Z | 100.0 Hz, 60000 samples\nhttps://eida.bgr.de/fdsnws/dataselect/1/query?network=GR&station=GRA4&location=&channel=HHZ&starttime=2019-12-25T08:03:30&endtime=2019-12-25T08:13:30&nodata=204",
+      "matched_span": {
+        "start": "2019-12-25T00:00:00.000000Z",
+        "end": "2019-12-26T00:00:00.000000Z",
+        "location": ""
+      }
+    }
+  ]
+}
