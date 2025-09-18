@@ -7,6 +7,7 @@ import concurrent.futures
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
@@ -30,7 +31,16 @@ def run_consistency_check(
     max_workers: int = 10,
     print_stdout: bool = False,
     report_dir: Path = REPORT_DIR,
-) -> None:
+) -> Optional[Path]:
+    """
+    Run the availability + dataselect consistency check and write reports.
+
+    Returns
+    -------
+    Optional[Path]
+        The path to the saved JSON report, or None if nothing was generated
+        (e.g., no candidates).
+    """
     if seed is None:
         seed = random.randint(0, 999_999)
         logging.info(f" Using generated seed: {seed}")
@@ -47,8 +57,8 @@ def run_consistency_check(
     candidates = fetch_candidates(base_url, max_stations=target_candidates)
 
     if not candidates:
-        logging.warning("No candidates fetched.")
-        return
+        logging.warning("No candidates fetched. No report will be generated.")
+        return None
 
     # Each item: (url, available, start, end, loc_exact, matched_span)
     results, stats = check_candidate(
@@ -151,3 +161,6 @@ def run_consistency_check(
     if print_stdout:
         sys.stdout.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         sys.stdout.flush()
+
+    # ✅ Return the path to the JSON report so the CLI can upload it
+    return json_path

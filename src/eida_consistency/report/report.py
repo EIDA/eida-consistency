@@ -68,7 +68,7 @@ def _make_unique_filename(node: str, seed: int, extension: str) -> str:
 
 
 def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
-    """Save the full report as pretty-printed JSON."""
+    """Save the full report as pretty-printed JSON and return the file path."""
     report_dir.mkdir(parents=True, exist_ok=True)
     filename = _make_unique_filename(
         report["summary"]["node"], report["summary"]["seed"], "json"
@@ -147,11 +147,8 @@ def delete_old_reports(report_dir: Path = REPORT_DIR, keep: int = 1) -> None:
 
     for json_file in to_delete:
         md_file = json_file.with_suffix(".md")
-        try:
-            json_file.unlink()
-        except FileNotFoundError:
-            pass
-        try:
-            md_file.unlink()
-        except FileNotFoundError:
-            pass
+        for f in (json_file, md_file):
+            try:
+                f.unlink()
+            except FileNotFoundError:
+                pass
