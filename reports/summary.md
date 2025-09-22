@@ -8,6 +8,7 @@
 | BGS | 20 | 11 | 11 | 6 | 5 | 54.55 % |
 | ETH | 20 | 20 | 20 | 19 | 1 | 95.0 % |
 | GEOFON | 20 | 20 | 20 | 20 | 0 | 100.0 % |
+| INGV | 20 | 20 | 20 | 15 | 5 | 75.0 % |
 | KOERI | 20 | 20 | 20 | 10 | 10 | 50.0 % |
 | LMU | 20 | 20 | 20 | 20 | 0 | 100.0 % |
 | NIEP | 20 | 20 | 20 | 15 | 5 | 75.0 % |
@@ -109,6 +110,30 @@ uv run eida-consistency consistency --node GEOFON --epochs 20
 ### Explore inconsistencies
 ```bash
 uv run eida-consistency explore reports/nodes/geofon/*.json
+```
+
+---
+
+## Node: INGV
+
+- Seed: `692335`
+- Epochs requested: `20`
+- Epochs usable: `20`
+- Candidate pool: `799`
+- Queries performed: `22`
+- Total checks: `20`
+- Consistent: `15`
+- Inconsistent: `5`
+- Score: **75.0 %**
+
+### Reproduce
+```bash
+uv run eida-consistency consistency --node INGV --epochs 20
+```
+
+### Explore inconsistencies
+```bash
+uv run eida-consistency explore reports/nodes/ingv/*.json
 ```
 
 ---

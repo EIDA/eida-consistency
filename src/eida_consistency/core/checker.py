@@ -149,7 +149,7 @@ def check_candidate(
             f"network={sample['network']}&station={sample['station']}"
             f"&location={sample.get('location','*')}&channel={sample['channel']}"
             f"&start={sample['starttime']}&end={sample.get('endtime') or datetime.utcnow().isoformat()}"
-            f"&format=json"
+            f"&format=text"
         )
 
         logging.debug(f"Availability request URL used: {url}")

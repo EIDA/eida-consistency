@@ -24,6 +24,7 @@ def create_report_object(
     candidates_requested: Optional[int] = None,
     candidates_tested: Optional[int] = None,
     station_queries: Optional[int] = None,
+    test_duration_sec: Optional[float] = None,   
 ) -> Dict[str, Any]:
     """Build a serialisable dictionary summarising a full run."""
 
@@ -48,7 +49,8 @@ def create_report_object(
             "candidates_requested": candidates_requested,
             "candidates_tested": candidates_tested,
             "station_queries": station_queries,
-            "duration": duration,
+            "duration": duration,  # per-epoch duration window
+            "test_duration_sec": test_duration_sec,  
             "total_checked": total_checked,
             "total_consistent": total_consistent,
             "total_inconsistent": total_inconsistent,
@@ -102,6 +104,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         f"- Candidates tested: `{summary.get('candidates_tested', '?')}`",
         f"- Station queries performed: `{summary.get('station_queries', '?')}`",
         f"- Duration/epoch: `{summary['duration']} s`",
+        f"- Test runtime: `{summary.get('test_duration_sec', '?')} s`", 
         f"- Total checks run: `{summary['total_checked']}`",
         f"- Consistent: `{summary['total_consistent']}`",
         f"- Inconsistent: `{summary['total_inconsistent']}`",

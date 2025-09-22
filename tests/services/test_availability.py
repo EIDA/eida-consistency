@@ -1,186 +1,167 @@
 import pytest
-import types
+import requests
 from datetime import datetime
 import eida_consistency.services.availability as avail
 
 
-# -----------------
-# _parse_iso
-# -----------------
-
-def test_parse_iso_strips_z():
-    dt = avail._parse_iso("2023-01-01T00:00:00Z")
-    assert isinstance(dt, datetime)
-    assert dt.year == 2023
-
-
-# -----------------
-# _collect_spans
-# -----------------
-
-def test_collect_spans_availability_and_datasources():
-    payload = {
-        "availability": [
-            {"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00",
-             "network": "XX", "station": "STA", "location": "00", "channel": "BHZ", "quality": "M"}
-        ],
-        "datasources": [
-            {
-                "network": "YY", "station": "STA2", "location": "01", "channel": "HHN", "quality": "D",
-                "timespans": [["2023-01-02T00:00:00", "2023-01-02T01:00:00"]]
-            }
-        ]
-    }
-    spans = avail._collect_spans(payload)
-    assert len(spans) == 2
-    assert spans[0]["network"] == "XX"
-    assert spans[1]["network"] == "YY"
-
-def test_collect_spans_empty():
-    spans = avail._collect_spans({})
-    assert spans == []
-
-
-# -----------------
-# _safe_request
-# -----------------
-
 class DummyResp:
-    def __init__(self, status_code=200, json_data=None, raise_exc=None):
-        self.status_code = status_code
-        self._json = json_data or {}
+    def __init__(self, text="", status=200, raise_exc=None):
+        self.text = text
+        self.status_code = status
         self._raise_exc = raise_exc
-        self.text = str(self._json)
-
-    def json(self):
-        if isinstance(self._json, Exception):
-            raise self._json
-        return self._json
 
     def raise_for_status(self):
         if self._raise_exc:
             raise self._raise_exc
 
 
-def test_safe_request_success(monkeypatch):
-    monkeypatch.setattr(avail.requests, "get", lambda url, timeout=240: DummyResp())
-    r = avail._safe_request("http://fake/")
-    assert isinstance(r, DummyResp)
+# -----------------
+# _parse_iso
+# -----------------
+
+def test_parse_iso_with_z():
+    dt = avail._parse_iso("2024-01-01T00:00:00Z")
+    assert isinstance(dt, datetime)
+    assert dt.year == 2024
+
+def test_parse_iso_with_offset():
+    dt = avail._parse_iso("2024-01-01T00:00:00+00:00")
+    assert isinstance(dt, datetime)
+    assert dt.tzinfo is not None
 
 
-def test_safe_request_failure(monkeypatch):
-    calls = {"n": 0}
-    def fail_get(url, timeout=240):
-        calls["n"] += 1
-        raise Exception("boom")
-    monkeypatch.setattr(avail.requests, "get", fail_get)
-    r = avail._safe_request("http://fake/", retries=2, backoff=0)
-    assert r is None
-    assert calls["n"] == 2
+# -----------------
+# _parse_text_availability
+# -----------------
+
+def test_parse_empty_and_comments():
+    assert avail._parse_text_availability("") == []
+    txt = "# just a comment\n"
+    assert avail._parse_text_availability(txt) == []
+
+def test_parse_schema8():
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    spans = avail._parse_text_availability(txt)
+    assert len(spans) == 1
+    s = spans[0]
+    assert s["network"] == "HL"
+    assert s["station"] == "STA"
+    assert s["location"] == ""  # "--" stripped
+    assert s["channel"] == "HHZ"
+    assert s["quality"] == "D"
+    assert s["samplerate"] == "100.0"
+
+def test_parse_schema7():
+    txt = "HL STA -- HHZ 50.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    spans = avail._parse_text_availability(txt)
+    assert spans[0]["samplerate"] == "50.0"
+
+def test_parse_schema6():
+    txt = "HL STA HHZ 20.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    spans = avail._parse_text_availability(txt)
+    assert spans[0]["channel"] == "HHZ"
+    assert spans[0]["samplerate"] == "20.0"
+
+def test_parse_schema5():
+    txt = "HL STA HHZ 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    spans = avail._parse_text_availability(txt)
+    assert spans[0]["channel"] == "HHZ"
+    assert spans[0]["samplerate"] is None
+
+def test_parse_invalid_timestamp_skipped():
+    bad_txt = "HL STA HHZ 20.0 not-a-time 2024-01-02T00:00:00Z"
+    spans = avail._parse_text_availability(bad_txt)
+    assert spans == []
+
+def test_parse_inconsistent_line_skipped():
+    # schema detection says 5 fields, but second line has 6
+    txt = (
+        "HL STA HHZ 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z\n"
+        "HL STA HHZ 20.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    )
+    spans = avail._parse_text_availability(txt)
+    # only first line kept
+    assert len(spans) == 1
 
 
 # -----------------
 # check_availability_query
 # -----------------
 
+def test_check_availability_query_204(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(status=204))
+    result = avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                            "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
+    assert result["status"] == 204
+    assert result["ok"] is False
+    assert result["spans"] == []
+
 def test_check_availability_query_ok(monkeypatch):
-    payload = {"availability": [
-        {"start": "2023-01-01T00:00:00", "end": "2023-01-01T02:00:00"}
-    ]}
-    resp = DummyResp(status_code=200, json_data=payload)
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    result = avail.check_availability_query("http://fake/", "XX", "STA", "BHZ",
-                                            "2023-01-01T00:30:00", "2023-01-01T01:00:00")
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-03T00:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    result = avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                            "2024-01-01T12:00:00Z", "2024-01-02T12:00:00Z")
     assert result["ok"] is True
     assert result["matched_span"] is not None
 
-def test_check_availability_query_not_covered(monkeypatch):
-    payload = {"availability": [
-        {"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00"}
-    ]}
-    resp = DummyResp(status_code=200, json_data=payload)
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    result = avail.check_availability_query("http://fake/", "XX", "STA", "BHZ",
-                                            "2023-01-01T01:30:00", "2023-01-01T02:00:00")
+def test_check_availability_query_notcovered(monkeypatch):
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-01T01:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    result = avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                            "2024-01-01T02:00:00Z", "2024-01-01T03:00:00Z")
     assert result["ok"] is False
     assert result["matched_span"] is None
 
-def test_check_availability_query_resp_none(monkeypatch):
-    monkeypatch.setattr(avail, "_safe_request", lambda url: None)
-    result = avail.check_availability_query("http://fake/", "XX", "STA", "BHZ",
-                                            "2023-01-01T00:00:00", "2023-01-01T01:00:00")
+def test_check_availability_query_exception(monkeypatch):
+    def bad_get(*a, **k): raise Exception("boom")
+    monkeypatch.setattr(requests, "get", bad_get)
+    result = avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                            "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
     assert result["ok"] is False
     assert result["status"] == 0
-
-def test_check_availability_query_204(monkeypatch):
-    resp = DummyResp(status_code=204, json_data={})
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    result = avail.check_availability_query("http://fake/", "XX", "STA", "BHZ",
-                                            "2023-01-01T00:00:00", "2023-01-01T01:00:00")
-    assert result["ok"] is False
-    assert result["status"] == 204
-
-def test_check_availability_query_bad_json(monkeypatch):
-    resp = DummyResp(status_code=200, json_data=ValueError("badjson"))
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    result = avail.check_availability_query("http://fake/", "XX", "STA", "BHZ",
-                                            "2023-01-01T00:00:00", "2023-01-01T01:00:00")
-    assert result["ok"] is False
 
 
 # -----------------
 # get_availability_spans
 # -----------------
 
+def test_get_availability_spans_204(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(status=204))
+    spans = avail.get_availability_spans("http://x/", "HL", "STA", "HHZ",
+                                         "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
+    assert spans == []
+
 def test_get_availability_spans_ok(monkeypatch):
-    payload = {"availability": [{"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00"}]}
-    resp = DummyResp(status_code=200, json_data=payload)
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    spans = avail.get_availability_spans("http://fake/", "XX", "STA", "BHZ",
-                                         "2023-01-01T00:00:00", "2023-01-01T02:00:00")
-    assert spans and spans[0]["start"] == "2023-01-01T00:00:00"
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    spans = avail.get_availability_spans("http://x/", "HL", "STA", "HHZ",
+                                         "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
+    assert len(spans) == 1
 
-def test_get_availability_spans_204_with_retry(monkeypatch):
-    calls = {"n": 0}
-    def fake_safe_request(url):
-        calls["n"] += 1
-        if calls["n"] == 1:
-            return DummyResp(status_code=204, json_data={})
-        return DummyResp(status_code=200, json_data={"availability": [
-            {"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00"}
-        ]})
-    monkeypatch.setattr(avail, "_safe_request", fake_safe_request)
-    spans = avail.get_availability_spans("http://fake/", "XX", "STA", "BHZ",
-                                         "2023-01-01T00:00:00", "2023-01-01T02:00:00",
-                                         location="01")
-    assert spans != [] and calls["n"] == 2
-
-def test_get_availability_spans_204_no_retry(monkeypatch):
-    monkeypatch.setattr(avail, "_safe_request", lambda url: DummyResp(status_code=204, json_data={}))
-    spans = avail.get_availability_spans("http://fake/", "XX", "STA", "BHZ",
-                                         "2023-01-01T00:00:00", "2023-01-01T02:00:00",
-                                         location="*")
-    assert spans == []
-
-def test_get_availability_spans_parse_error(monkeypatch):
-    resp = DummyResp(status_code=200, json_data={}, raise_exc=ValueError("bad"))
-    monkeypatch.setattr(avail, "_safe_request", lambda url: resp)
-    spans = avail.get_availability_spans("http://fake/", "XX", "STA", "BHZ",
-                                         "2023-01-01T00:00:00", "2023-01-01T02:00:00")
+def test_get_availability_spans_exception(monkeypatch):
+    def bad_get(*a, **k): raise Exception("fail")
+    monkeypatch.setattr(requests, "get", bad_get)
+    spans = avail.get_availability_spans("http://x/", "HL", "STA", "HHZ",
+                                         "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
     assert spans == []
 
 
 # -----------------
-# check_availability
+# check_availability wrapper
 # -----------------
 
-def test_check_availability(monkeypatch):
-    monkeypatch.setattr(avail, "check_availability_query",
-                        lambda *a, **kw: {"ok": True, "url": "fakeurl"})
-    assert avail.check_availability("http://fake/", "XX", "STA", "BHZ",
-                                    "2023-01-01T00:00:00", "2023-01-01T01:00:00") is True
-    url, ok = avail.check_availability("http://fake/", "XX", "STA", "BHZ",
-                                       "2023-01-01T00:00:00", "2023-01-01T01:00:00",
-                                       return_url=True)
+def test_check_availability_wrapper(monkeypatch):
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-03T00:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    ok = avail.check_availability("http://x/", "HL", "STA", "HHZ",
+                                  "2024-01-01T12:00:00Z", "2024-01-02T12:00:00Z")
     assert ok is True
-    assert url == "fakeurl"
+
+def test_check_availability_wrapper_return_url(monkeypatch):
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-03T00:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    url, ok = avail.check_availability("http://x/", "HL", "STA", "HHZ",
+                                       "2024-01-01T12:00:00Z", "2024-01-02T12:00:00Z",
+                                       return_url=True)
+    assert isinstance(url, str)
+    assert ok is True

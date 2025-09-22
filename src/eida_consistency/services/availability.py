@@ -1,76 +1,90 @@
-"""EIDA availability (JSON spans).
+"""EIDA availability (text spans).
 
-Supports both payloads:
-- {"availability": [{"start": "...", "end": "...", ...}, ...]}
-- {"datasources": [{"timespans": [["start","end"], ...], ...}, ...]}
+Supports payload in text format, multiple variants:
+- 8 fields: Net Sta Loc Cha Qual SampleRate Start End
+- 7 fields: Net Sta Loc Cha SampleRate Start End
+- 6 fields: Net Sta Cha SampleRate Start End
+- 5 fields: Net Sta Cha Start End
+
+Example:
+#Network Station Location Channel Quality SampleRate Earliest Latest
+HL       ACHA    --      HHZ     D       100.0      2011-01-18T00:00:00Z 2011-01-19T00:00:00Z
+
+Requests are sent with User-Agent = "eida-consistency" to help node operators identify traffic.
 
 Functions:
-- check_availability_query() → check if a specific [start,end] is covered (legacy).
-- get_availability_spans() → fetch all spans for a channel in one request (epoch-span).
+- check_availability_query() → check if a specific [start,end] is covered.
+- get_availability_spans() → fetch all spans for a channel in one request.
 """
 
 from __future__ import annotations
-import json
 import logging
-import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
+from eida_consistency.utils.constants import USER_AGENT
+
 
 def _parse_iso(s: str) -> datetime:
-    return datetime.fromisoformat(s.replace("Z", ""))
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
-def _collect_spans(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Normalize payload from availability service into a flat list of spans."""
+def _parse_text_availability(text: str) -> List[Dict[str, Any]]:
+    """Parse text format availability response into spans with schema detection."""
     spans: List[Dict[str, Any]] = []
+    lines = [ln for ln in text.strip().splitlines() if ln and not ln.startswith("#")]
+    if not lines:
+        return spans
 
-    for r in payload.get("availability", []) or []:
-        if r.get("start") and r.get("end"):
-            spans.append(
-                {
-                    "network": r.get("network"),
-                    "station": r.get("station"),
-                    "location": r.get("location"),
-                    "channel": r.get("channel"),
-                    "quality": r.get("quality"),
-                    "start": r["start"],
-                    "end": r["end"],
-                }
-            )
+    # Detect schema from first valid line
+    schema_len = len(lines[0].split())
+    logging.debug(f"[availability] Detected schema with {schema_len} fields")
 
-    for ds in payload.get("datasources", []) or []:
-        ds_net, ds_sta = ds.get("network"), ds.get("station")
-        ds_loc, ds_cha = ds.get("location"), ds.get("channel")
-        ds_qual = ds.get("quality")
-        for ts in ds.get("timespans", []) or []:
-            if isinstance(ts, (list, tuple)) and len(ts) >= 2 and ts[0] and ts[1]:
-                spans.append(
-                    {
-                        "network": ds_net,
-                        "station": ds_sta,
-                        "location": ds_loc,
-                        "channel": ds_cha,
-                        "quality": ds_qual,
-                        "start": ts[0],
-                        "end": ts[1],
-                    }
-                )
-    return spans
+    for line in lines:
+        parts = line.split()
+        if len(parts) != schema_len:
+            logging.debug(f"[availability] Skipping inconsistent line: {line}")
+            continue
 
-
-def _safe_request(url: str, retries: int = 3, backoff: int = 10, timeout: int = 240):
-    """Robust request with retries and exponential backoff."""
-    for attempt in range(1, retries + 1):
         try:
-            return requests.get(url, timeout=timeout)
+            net, sta = parts[0], parts[1]
+            start, end = parts[-2], parts[-1]
+
+            # Validate timestamps
+            _ = _parse_iso(start)
+            _ = _parse_iso(end)
+
+            loc, cha, qual, sr = "", None, None, None
+            if schema_len == 8:
+                # Net Sta Loc Cha Qual SR Start End
+                loc, cha, qual, sr = parts[2], parts[3], parts[4], parts[5]
+            elif schema_len == 7:
+                # Net Sta Loc Cha SR Start End
+                loc, cha, sr = parts[2], parts[3], parts[4]
+            elif schema_len == 6:
+                # Net Sta Cha SR Start End
+                cha, sr = parts[2], parts[3]
+            elif schema_len == 5:
+                # Net Sta Cha Start End
+                cha = parts[2]
+
+            spans.append({
+                "network": net,
+                "station": sta,
+                "location": "" if loc in ("--", "*") else loc,
+                "channel": cha,
+                "quality": qual,
+                "samplerate": sr,
+                "start": start,
+                "end": end,
+            })
         except Exception as e:
-            logging.warning(f"Availability request failed (attempt {attempt}/{retries}): {e}")
-            if attempt < retries:
-                time.sleep(backoff * attempt)
-    return None
+            logging.debug(f"[availability] Failed to parse line: {line} ({e})")
+            continue
+
+    return spans
 
 
 def check_availability_query(
@@ -82,29 +96,25 @@ def check_availability_query(
     endtime: str,
     location: str = "*",
 ) -> Dict[str, Any]:
-    """Legacy: query availability for a specific [start,end] and see if it is covered."""
+    """Query availability for a specific [start,end] and check coverage."""
     url = (
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={starttime}&end={endtime}&format=json"
+        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap,gap"
     )
     logging.debug(f"Availability (query) URL: {url}")
 
-    resp = _safe_request(url)
-    if resp is None:
+    try:
+        resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+        if resp.status_code == 204:
+            return {"ok": False, "matched_span": None, "spans": [], "status": 204, "url": url}
+
+        resp.raise_for_status()
+        spans = _parse_text_availability(resp.text)
+    except Exception as e:
+        logging.error(f"Failed to parse availability TXT ({url}): {e}")
         return {"ok": False, "matched_span": None, "spans": [], "status": 0, "url": url}
 
-    if resp.status_code == 204:
-        return {"ok": False, "matched_span": None, "spans": [], "status": 204, "url": url}
-
-    try:
-        resp.raise_for_status()
-        payload = resp.json()
-    except Exception as e:
-        logging.warning(f"Availability request parse failed: {e}")
-        return {"ok": False, "matched_span": None, "spans": [], "status": resp.status_code, "url": url}
-
-    spans = _collect_spans(payload)
     matched_span: Optional[Dict[str, Any]] = None
     ok = False
 
@@ -133,35 +143,25 @@ def get_availability_spans(
     endtime: str,
     location: str = "*",
 ) -> List[Dict[str, Any]]:
-    """Query availability once for a channel's full epoch-span and return all spans."""
+    """Fetch all spans for a channel in one request."""
     url = (
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={starttime}&end={endtime}&format=json"
+        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
     )
     logging.debug(f"Availability (spans) URL: {url}")
 
-    resp = _safe_request(url)
-    if resp is None:
-        logging.error(f"Failed to fetch availability spans after retries: {url}")
-        return []
-
-    if resp.status_code == 204:
-        if location != "*":
-            logging.debug(f"Retrying with location='*' for {network}.{station}.{channel}")
-            return get_availability_spans(
-                base_url, network, station, channel, starttime, endtime, location="*"
-            )
-        return []
-
     try:
+        resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+        if resp.status_code == 204:
+            return []
+
         resp.raise_for_status()
-        payload = resp.json()
-        spans = _collect_spans(payload)
+        spans = _parse_text_availability(resp.text)
         logging.debug(f"Fetched {len(spans)} spans for {network}.{station}.{channel}")
         return spans
     except Exception as e:
-        logging.error(f"Failed to parse availability JSON ({url}): {e}")
+        logging.error(f"Failed to parse availability TXT ({url}): {e}")
         return []
 
 

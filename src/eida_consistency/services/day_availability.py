@@ -1,6 +1,6 @@
 """Day-level availability checks for EIDA.
 
-For a given day, fetch availability spans and test consistency
+For a given day, fetch availability spans (TXT) and test consistency
 against a random 10-minute dataselect window inside that day.
 """
 
@@ -13,6 +13,7 @@ from typing import Dict, Any, List
 import requests
 
 from eida_consistency.services.dataselect import dataselect
+from eida_consistency.utils.constants import USER_AGENT
 
 
 def _normalize_location(loc: str | None) -> str:
@@ -30,26 +31,38 @@ def _parse_iso(s: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def _collect_spans(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Normalize payload from availability service into spans."""
+def _parse_text_availability(text: str) -> List[Dict[str, Any]]:
+    """Parse text format availability response into spans."""
     spans: List[Dict[str, Any]] = []
-
-    for r in payload.get("availability", []) or []:
-        if r.get("start") and r.get("end"):
-            spans.append(r)
-
-    for ds in payload.get("datasources", []) or []:
-        for ts in ds.get("timespans", []) or []:
-            if isinstance(ts, (list, tuple)) and len(ts) >= 2 and ts[0] and ts[1]:
-                spans.append({
-                    "network": ds.get("network"),
-                    "station": ds.get("station"),
-                    "location": ds.get("location"),
-                    "channel": ds.get("channel"),
-                    "quality": ds.get("quality"),
-                    "start": ts[0],
-                    "end": ts[1],
-                })
+    lines = text.strip().splitlines()
+    for line in lines:
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        # 7 fields → no SampleRate, 8 fields → includes SampleRate
+        if len(parts) == 7:
+            net, sta, loc, cha, qual, start, end = parts
+            spans.append({
+                "network": net,
+                "station": sta,
+                "location": "" if loc in ("--", "*") else loc,
+                "channel": cha,
+                "quality": qual,
+                "start": start,
+                "end": end,
+            })
+        elif len(parts) >= 8:
+            net, sta, loc, cha, qual, samplerate, start, end = parts[:8]
+            spans.append({
+                "network": net,
+                "station": sta,
+                "location": "" if loc in ("--", "*") else loc,
+                "channel": cha,
+                "quality": qual,
+                "samplerate": samplerate,
+                "start": start,
+                "end": end,
+            })
     return spans
 
 
@@ -71,29 +84,28 @@ def check_day_availability(
     t0 = datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc)
     t1 = datetime.combine(day, datetime.max.time(), tzinfo=timezone.utc)
 
-    # Build availability URL
+    # Build availability URL (TXT + merged spans)
     avail_url = (
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={t0.isoformat()}&end={t1.isoformat()}&format=json"
+        f"&start={t0.isoformat()}&end={t1.isoformat()}&format=text&merge=quality,overlap"
     )
     if verbose:
         logging.info(f"  Availability URL: {avail_url}")
 
     # Fetch availability spans
     try:
-        resp = requests.get(avail_url, timeout=20)
+        resp = requests.get(avail_url, timeout=20, headers={"User-Agent": USER_AGENT})
         resp.raise_for_status()
-        payload = resp.json()
-        spans = _collect_spans(payload)
+        spans = _parse_text_availability(resp.text)
     except Exception as e:
         logging.error(f"[DayAvailability] Request failed: {e}")
         return {"ok": False, "consistent": False, "availability_url": avail_url, "dataselect_url": None}
 
-    # Pick random 10-min window
     if not spans:
         return {"ok": False, "consistent": False, "availability_url": avail_url, "dataselect_url": None}
 
+    # Pick random 10-min window
     rand_offset = random.randint(0, int((t1 - t0).total_seconds()) - 600)
     ds_start = t0 + timedelta(seconds=rand_offset)
     ds_end = ds_start + timedelta(minutes=10)

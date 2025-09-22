@@ -6,6 +6,7 @@ import random
 import concurrent.futures
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -31,6 +32,7 @@ def run_consistency_check(
     max_workers: int = 10,
     print_stdout: bool = False,
     report_dir: Path = REPORT_DIR,
+    station_multiplier: int = 3,
 ) -> Optional[Path]:
     """
     Run the availability + dataselect consistency check and write reports.
@@ -41,6 +43,8 @@ def run_consistency_check(
         The path to the saved JSON report, or None if nothing was generated
         (e.g., no candidates).
     """
+    start_time = time.time()  # ⬅️ measure runtime start
+
     if seed is None:
         seed = random.randint(0, 999_999)
         logging.info(f" Using generated seed: {seed}")
@@ -52,9 +56,9 @@ def run_consistency_check(
 
     logging.info(f" Fetching random candidates for node: {node}...")
 
-    # Always fetch 5 × epochs (minimum 20) to ensure enough usable candidates
-    target_candidates = max(epochs * 5, 20)
-    candidates = fetch_candidates(base_url, max_stations=target_candidates)
+    # Always fetch station_multiplier × epochs candidates
+    target_candidates = epochs * station_multiplier
+    candidates = fetch_candidates(base_url, max_candidates=target_candidates)
 
     if not candidates:
         logging.warning("No candidates fetched. No report will be generated.")
@@ -143,6 +147,11 @@ def run_consistency_check(
 
     logging.info(f"✅ Collected {len(all_records)} results.")
 
+    # --- Measure test duration ---
+    end_time = time.time()
+    test_duration = round(end_time - start_time, 2)
+    
+
     # --- Save reports into chosen report_dir ---
     report = create_report_object(
         node=node,
@@ -152,15 +161,15 @@ def run_consistency_check(
         records=all_records,
     )
     report["summary"].update(stats)  # merge candidate stats into summary
+    report["summary"]["test_duration_sec"] = test_duration  # ⬅️ add runtime here
 
     json_path = save_report_json(report, report_dir=report_dir)
     md_path = save_report_markdown(report, report_dir=report_dir)
     logging.info(f"📁 Report saved to: {json_path}")
     logging.info(f"📜 Markdown saved to: {md_path}")
-
+    logging.info(f"🕒 Test duration: {test_duration} seconds")
     if print_stdout:
         sys.stdout.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         sys.stdout.flush()
 
-    # ✅ Return the path to the JSON report so the CLI can upload it
     return json_path
