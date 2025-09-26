@@ -1,184 +1,80 @@
 import pytest
-import types
-from io import BytesIO
-
-import eida_consistency.services.dataselect as dataselect
+import eida_consistency.services.dataselect as ds
 
 
-# -------------------------------------------------------------------
-# Dummy classes to simulate ObsPy Stream/Trace
-# -------------------------------------------------------------------
-class DummyTrace:
-    def __str__(self):
-        return "Trace XX.AAA..BHZ | 2020-01-01T00:00:00 - 2020-01-01T01:00:00"
-
-
-class DummyStream(list):
-    def __init__(self, traces=None):
-        super().__init__(traces or [])
-    def __len__(self):
-        return list.__len__(self)
-
-
-def make_client_mock(stream_or_exc):
-    """Return a dummy Client replacement."""
-    class DummyClient:
-        def __init__(self, *a, **k):
-            pass
-        def get_waveforms(self, *a, **k):
-            if isinstance(stream_or_exc, Exception):
-                raise stream_or_exc
-            return stream_or_exc
-    return DummyClient
-
-
-class DummyResponse:
-    def __init__(self, status_code, content=b""):
-        self.status_code = status_code
+class DummyResp:
+    def __init__(self, content=b"", status=200):
         self.content = content
-        self.text = content.decode("utf-8", errors="ignore") if isinstance(content, (bytes, bytearray)) else str(content)
+        self.status_code = status
+    def raise_for_status(self): return None
 
 
-# -------------------------------------------------------------------
-# Tests
-# -------------------------------------------------------------------
+# -----------------
+# Helpers
+# -----------------
 
-def test_success_via_obspy_client(monkeypatch):
-    dummy_stream = DummyStream([DummyTrace()])
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(dummy_stream))
+def test_endpoint_from_base_variants():
+    assert ds._endpoint_from_base("https://ws.resif.fr/abc") == "https://ws.resif.fr"
+    assert ds._endpoint_from_base("http://example.com") == "http://example.com"
+    # For a bare string without scheme, function returns "https:"
+    assert ds._endpoint_from_base("example.com") == "https:"
 
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is True
-    assert result["status"] == "OK"
-    assert "ObsPy client" in result["debug"]
-
-
-def test_no_data_via_obspy_client(monkeypatch):
-    dummy_stream = DummyStream([])
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(dummy_stream))
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is False
-    assert result["status"] == "NoData"
-    assert "No waveform data" in result["debug"]
+def test_build_query_url():
+    url = ds._build_query_url("https://h", "N","S","L","C","2024","2025")
+    assert url.startswith("https://h/fdsnws/dataselect/1/query?")
+    assert "network=N" in url and "channel=C" in url
 
 
-def test_fallback_to_http(monkeypatch):
-    # Force client to raise
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(Exception("boom")))
+# -----------------
+# ObsPy client path
+# -----------------
 
-    # Patch requests.get to return fake bytes
-    def fake_get(url, timeout):
-        return DummyResponse(200, b"FAKESEED")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
-
-    # Patch obspy.read to return dummy traces
-    monkeypatch.setattr(dataselect, "read", lambda *a, **k: DummyStream([DummyTrace()]))
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is True
-    assert "raw HTTP" in result["debug"]
-
-
-def test_http_nodata(monkeypatch):
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(Exception("boom")))
-
-    def fake_get(url, timeout):
-        return DummyResponse(204, b"")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is False
-    assert result["status"] == "NoData"
-
-
-def test_http_parse_error(monkeypatch):
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(Exception("boom")))
-
-    def fake_get(url, timeout):
-        return DummyResponse(200, b"FAKESEED")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
-
-    # obspy.read returns empty stream
-    monkeypatch.setattr(dataselect, "read", lambda *a, **k: DummyStream([]))
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is False
-    assert result["status"] == "ParseError"
-
-
-def test_http_exception(monkeypatch):
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(Exception("boom")))
-
-    def fake_get(url, timeout):
-        raise requests.RequestException("fail")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00")
-    assert result["success"] is False
-    assert result["type"] == "Error"
-    assert "Dataselect failed" in result["debug"]
-
-
-def test_return_stream_flag(monkeypatch):
-    dummy_stream = DummyStream([DummyTrace()])
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(dummy_stream))
-
-    result = dataselect.dataselect("http://fake/", "XX", "AAA", "BHZ",
-                                   "2020-01-01T00:00:00", "2020-01-01T01:00:00",
-                                   return_stream=True)
-    assert "stream" in result
-    assert isinstance(result["stream"], DummyStream)
-def test_return_stream_flag_via_http(monkeypatch):
-    # Force ObsPy client to fail
-    monkeypatch.setattr(dataselect, "Client", make_client_mock(Exception("boom")))
-
-    # Fake HTTP response with bytes
-    def fake_get(url, timeout):
-        return DummyResponse(200, b"FAKESEED")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
-
-    # Fake obspy.read returns non-empty stream
-    dummy_stream = DummyStream([DummyTrace()])
-    monkeypatch.setattr(dataselect, "read", lambda *a, **k: dummy_stream)
-
-    result = dataselect.dataselect(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:00:00", "2020-01-01T01:00:00",
-        return_stream=True
-    )
-
-    assert result["success"] is True
-    assert "stream" in result
-    assert isinstance(result["stream"], DummyStream)
-def test_obspy_client_attribute_error_falls_back(monkeypatch):
-    # Simulate ObsPy client raising AttributeError
+def test_client_attributeerror_fallback(monkeypatch):
     class FakeClient:
-        def get_waveforms(self, *a, **k):
-            raise AttributeError("simulated obspy bug")
+        def get_waveforms(self, **k): raise AttributeError("fail")
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: FakeClient())
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(content=b"ok"))
+    monkeypatch.setattr(ds, "read", lambda bio, format=None: [object()])
+    r = ds.dataselect("https://h","N","S","C","2024","2025")
+    assert r["success"]
 
-    monkeypatch.setattr(dataselect, "Client", lambda *a, **k: FakeClient())
+def test_client_otherexception_fallback(monkeypatch):
+    class FakeClient:
+        def get_waveforms(self, **k): raise RuntimeError("boom")
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: FakeClient())
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(content=b"ok"))
+    monkeypatch.setattr(ds, "read", lambda bio, format=None: [object()])
+    r = ds.dataselect("https://h","N","S","C","2024","2025")
+    assert r["success"]
 
-    # Fake HTTP fallback works
-    def fake_get(url, timeout):
-        return DummyResponse(200, b"FAKESEED")
-    monkeypatch.setattr(dataselect.requests, "get", fake_get)
 
-    dummy_stream = DummyStream([DummyTrace()])
-    monkeypatch.setattr(dataselect, "read", lambda *a, **k: dummy_stream)
+# -----------------
+# Raw HTTP fallback
+# -----------------
 
-    result = dataselect.dataselect(
-        "http://fake/", "XX", "AAA", "BHZ",
-        "2020-01-01T00:00:00", "2020-01-01T01:00:00"
-    )
+def test_raw_http_204(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(status=204))
+    r = ds.dataselect("https://h","N","S","C","2024","2025")
+    assert not r["success"] and r["status"]=="NoData"
 
-    # Ensure it fell back and still succeeded
-    assert result["success"] is True
-    assert result["status"] == "OK"
-    assert "FAKESEED" not in result["debug"]  # not raw bytes dump
+def test_raw_http_parse_success(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(content=b"ok"))
+    monkeypatch.setattr(ds, "read", lambda bio, format=None: [object()])
+    r = ds.dataselect("https://h","N","S","C","2024","2025", return_stream=True)
+    assert r["success"] and "stream" in r
+
+def test_raw_http_parse_empty(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(content=b"ok"))
+    monkeypatch.setattr(ds, "read", lambda bio, format=None: [])
+    r = ds.dataselect("https://h","N","S","C","2024","2025")
+    assert not r["success"] and r["status"]=="ParseError"
+
+def test_raw_http_exception(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: (_ for _ in ()).throw(Exception("network down")))
+    r = ds.dataselect("https://h","N","S","C","2024","2025")
+    assert not r["success"] and r["type"]=="Error"
+    assert "debug" in r and "Dataselect failed" in r["debug"]

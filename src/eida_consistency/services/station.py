@@ -1,11 +1,10 @@
-"""EIDA **station** web-service.
+"""EIDA **station** web-service (text format only).
 
-Fetch StationXML (level=channel) in a staged, lightweight way:
-1. Get all networks
-2. Get all stations per network (parallel)
-3. Pick random (network, station) pairs
-4. Fetch channels for those stations
-5. Pick 1 random NSLC per station
+Workflow:
+1. Fetch all networks (format=text)
+2. Fetch all stations per network (format=text, parallel)
+3. Pick random station subsets (controlled by station_multiplier × epochs)
+4. Fetch channels for those stations (format=text, parallel)
 
 Return flat candidates:
 {network, station, channel, starttime[, endtime][, location]}
@@ -14,98 +13,111 @@ Return flat candidates:
 import logging
 import random
 import requests
-import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from eida_consistency.utils.constants import USER_AGENT
 
-def _fetch_xml(url: str, timeout: int = 60):
+
+def _fetch_text(url: str, timeout: int = 60) -> list[str]:
+    """Fetch a station service URL in text format and return non-comment lines."""
     try:
-        resp = requests.get(url, timeout=timeout)
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": USER_AGENT})
         resp.raise_for_status()
-        return ET.fromstring(resp.content)
+        lines = resp.text.strip().splitlines()
+        return [line for line in lines if line and not line.startswith("#")]
     except Exception as e:
-        logging.error(f"Fetch failed {url}: {e}")
-        return None
-
-
-def fetch_candidates(base_url: str, max_stations: int = 10, max_workers: int = 5):
-    # --- Step 1: Fetch networks ---
-    url = f"{base_url}station/1/query?level=network&format=xml&includerestricted=false&nodata=404"
-    root = _fetch_xml(url)
-    if root is None:
+        logging.debug(f"[station] Fetch text failed {url}: {e}")
         return []
 
-    ns = {"": "http://www.fdsn.org/xml/station/1"}
-    networks = [net.attrib.get("code") for net in root.findall("Network", ns)]
+
+def fetch_candidates(base_url: str, max_candidates: int = 30, max_workers: int = 10):
+    """
+    Fetch random NSLC candidates for testing.
+
+    Parameters
+    ----------
+    base_url : str
+        Node base URL (e.g. https://webservices.ingv.it/fdsnws/)
+    max_candidates : int
+        Total number of NSLC candidates to return (station_multiplier × epochs).
+    max_workers : int
+        Thread pool size for parallel fetching.
+
+    Returns
+    -------
+    list of dict
+        Flat NSLC candidates
+    """
+    # --- Step 1: Fetch networks ---
+    url = f"{base_url}station/1/query?level=network&format=text&includerestricted=false&nodata=404"
+    net_lines = _fetch_text(url)
+    networks = [line.split("|", 1)[0] for line in net_lines if "|" in line]
     if not networks:
         logging.warning("No networks found.")
         return []
 
-    # --- Step 2: Fetch stations per network ---
+    # --- Step 2: Fetch stations per network (parallel) ---
     sta_pairs = []
     station_urls = [
-        f"{base_url}station/1/query?network={net}&level=station&format=xml&includerestricted=false&nodata=404"
+        f"{base_url}station/1/query?network={net}&level=station&format=text&includerestricted=false&nodata=404"
         for net in networks
     ]
 
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futures = {ex.submit(_fetch_xml, u): u for u in station_urls}
+        futures = {ex.submit(_fetch_text, u): u for u in station_urls}
         for fut in as_completed(futures):
-            tree = fut.result()
-            if not tree:
-                continue
-            for network in tree.findall("Network", ns):
-                net = network.attrib.get("code")
-                for station in network.findall("Station", ns):
-                    sta = station.attrib.get("code")
-                    if net and sta:
-                        sta_pairs.append((net, sta))
+            lines = fut.result()
+            for line in lines:
+                parts = line.split("|")
+                if len(parts) >= 2:
+                    net, sta = parts[0], parts[1]
+                    sta_pairs.append((net, sta))
 
     if not sta_pairs:
         logging.warning("No stations found.")
         return []
 
-    # --- Step 3–5: keep fetching until we hit max_stations ---
+    # --- Step 3: Pick random stations ---
+    random.shuffle(sta_pairs)
+    selected_sta = sta_pairs[: max_candidates]
+
+    # --- Step 4: Fetch channels for selected stations (parallel) ---
     candidates = []
-    attempts = 0
-    while len(candidates) < max_stations and attempts < max_stations * 5:
-        net, sta = random.choice(sta_pairs)
-        url = (
-            f"{base_url}station/1/query?network={net}&station={sta}"
-            f"&level=channel&format=xml&includerestricted=false&nodata=404"
-        )
+    chan_urls = [
+        f"{base_url}station/1/query?network={net}&station={sta}"
+        f"&level=channel&format=text&includerestricted=false&nodata=404"
+        for net, sta in selected_sta
+    ]
 
-        tree = _fetch_xml(url)
-        if not tree:
-            attempts += 1
-            continue
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(_fetch_text, u): u for u in chan_urls}
+        for fut in as_completed(futures):
+            lines = fut.result()
+            for line in lines:
+                parts = line.split("|")
+                # Expected: Network|Station|Location|Channel|...|StartTime|EndTime
+                if len(parts) < 16:
+                    continue
+                net_code, sta_code, loc_code, cha_code = parts[0], parts[1], parts[2], parts[3]
+                start, end = parts[-2], parts[-1]
 
-        chans = []
-        for network in tree.findall("Network", ns):
-            net_code = network.attrib.get("code")
-            for station in network.findall("Station", ns):
-                sta_code = station.attrib.get("code")
-                for channel in station.findall("Channel", ns):
-                    chan_code = channel.attrib.get("code")
-                    loc_code = channel.attrib.get("locationCode")
-                    start = channel.attrib.get("startDate")
-                    end = channel.attrib.get("endDate")
-                    if not (chan_code and start):
-                        continue
-                    entry = {
-                        "network": net_code,
-                        "station": sta_code,
-                        "channel": chan_code,
-                        "starttime": start,
-                    }
-                    if end:
-                        entry["endtime"] = end
-                    if loc_code:
-                        entry["location"] = loc_code
-                    chans.append(entry)
-        if chans:
-            candidates.append(random.choice(chans))
+                if not (net_code and sta_code and cha_code and start):
+                    continue
 
-        attempts += 1
+                entry = {
+                    "network": net_code,
+                    "station": sta_code,
+                    "channel": cha_code,
+                    "starttime": start,
+                }
+                if end and end.strip():
+                    entry["endtime"] = end
+                if loc_code and loc_code.strip():
+                    entry["location"] = loc_code
+
+                candidates.append(entry)
+
+    if not candidates:
+        logging.warning("No channel candidates found.")
 
     return candidates

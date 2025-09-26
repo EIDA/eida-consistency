@@ -12,6 +12,10 @@ $ uv run eida-consistency list-nodes
 
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 import click
 from eida_consistency.runner import run_consistency_check
@@ -83,8 +87,13 @@ def cli(ctx, log_level, report_dir):
     is_flag=True,
     help="Also print the JSON report to stdout.",
 )
+@click.option(
+    "--upload",
+    is_flag=True,
+    help="Upload report to configured S3 bucket after saving locally.",
+)
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout):
+def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = ctx.obj["report_dir"]
 
@@ -98,7 +107,8 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout):
     if duration < 600:
         raise click.BadParameter("Duration must be at least 600 seconds (10 minutes).")
 
-    run_consistency_check(
+    # Run the check and get the report path
+    report_path = run_consistency_check(
         node=node,
         epochs=epochs,
         duration=duration,
@@ -106,6 +116,17 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout):
         print_stdout=print_stdout,
         report_dir=report_dir,
     )
+
+    # Upload if requested
+    if upload:
+        from eida_consistency.report.storage import upload_report
+        url = upload_report(str(report_path))
+        if url:
+            click.echo(f"Report uploaded: {url}")
+        else:
+            click.echo(f"Upload failed, report kept locally at: {report_path}")
+    else:
+        click.echo(f"Report saved locally at: {report_path}")
 
 
 # ----------------------------------------------------------------------

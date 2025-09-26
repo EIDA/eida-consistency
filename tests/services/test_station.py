@@ -1,95 +1,119 @@
 import pytest
-import xml.etree.ElementTree as ET
+import requests
 import eida_consistency.services.station as station
 
 
-# -----------------
-# _fetch_xml
-# -----------------
-
 class DummyResp:
-    def __init__(self, content=b"<root/>", status=200, raise_exc=None):
-        self.content = content
-        self._raise_exc = raise_exc
-
-    def raise_for_status(self):
-        if self._raise_exc:
-            raise self._raise_exc
+    def __init__(self, text="", status=200):
+        self.text = text
+        self.status_code = status
+    def raise_for_status(self): return None
 
 
-def test_fetch_xml_success(monkeypatch):
-    xml_str = "<Root><A>ok</A></Root>"
-    monkeypatch.setattr(station.requests, "get", lambda url, timeout=60: DummyResp(content=xml_str.encode()))
-    tree = station._fetch_xml("http://fake/")
-    assert isinstance(tree, ET.Element)
-    assert tree.tag == "Root"
+# -----------------
+# _fetch_text
+# -----------------
 
-def test_fetch_xml_failure(monkeypatch):
-    def bad_get(url, timeout=60): raise Exception("boom")
-    monkeypatch.setattr(station.requests, "get", bad_get)
-    result = station._fetch_xml("http://fake/")
-    assert result is None
+def test_fetch_text_success(monkeypatch):
+    text = "#comment\n\nNET1|STA1\nNET2|STA2"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=text))
+    lines = station._fetch_text("http://fake/")
+    assert lines == ["NET1|STA1", "NET2|STA2"]
+
+def test_fetch_text_exception(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda *a, **k: (_ for _ in ()).throw(Exception("boom")))
+    assert station._fetch_text("http://fake/") == []
 
 
 # -----------------
 # fetch_candidates
 # -----------------
 
-NETWORK_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
-  <Network code="XX"/>
-</FDSNStationXML>"""
+def test_no_networks(monkeypatch):
+    monkeypatch.setattr(station, "_fetch_text", lambda *a, **k: [])
+    assert station.fetch_candidates("http://fake/") == []
 
-STATION_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
-  <Network code="XX">
-    <Station code="AAA"/>
-    <Station code="BBB"/>
-  </Network>
-</FDSNStationXML>"""
-
-CHANNEL_XML = """<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1">
-  <Network code="XX">
-    <Station code="AAA">
-      <Channel code="BHZ" locationCode="00" startDate="2023-01-01T00:00:00" endDate="2023-01-01T01:00:00"/>
-      <Channel code="HHN" locationCode="01" startDate="2023-01-01T00:00:00"/>
-    </Station>
-  </Network>
-</FDSNStationXML>"""
-
-
-def test_fetch_candidates_no_networks(monkeypatch):
-    monkeypatch.setattr(station, "_fetch_xml", lambda url: ET.fromstring("<FDSNStationXML/>"))
-    results = station.fetch_candidates("http://fake/")
-    assert results == []
-
-
-def test_fetch_candidates_no_stations(monkeypatch):
-    # Stage 1: networks
-    def fake_fetch(url):
+def test_no_stations(monkeypatch):
+    def fake_fetch(url, **k):
         if "level=network" in url:
-            return ET.fromstring(NETWORK_XML)
+            return ["NET1|meta"]
+        return []
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
+    assert station.fetch_candidates("http://fake/") == []
+
+def test_no_channels(monkeypatch):
+    def fake_fetch(url, **k):
+        if "level=network" in url:
+            return ["NET1|meta"]
         if "level=station" in url:
-            return ET.fromstring("<FDSNStationXML xmlns='http://www.fdsn.org/xml/station/1'><Network code='XX'/></FDSNStationXML>")
-        return None
-    monkeypatch.setattr(station, "_fetch_xml", fake_fetch)
-    results = station.fetch_candidates("http://fake/")
-    assert results == []
+            return ["NET1|STA1"]
+        if "level=channel" in url:
+            return ["bad|line"]
+        return []
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
+    assert station.fetch_candidates("http://fake/") == []
 
+def test_valid_candidates_with_location_and_endtime(monkeypatch):
+    monkeypatch.setattr(station.random, "shuffle", lambda x: x)
 
-def test_fetch_candidates_success(monkeypatch):
-    # Cycle through responses depending on URL
-    def fake_fetch(url):
+    def fake_fetch(url, **k):
         if "level=network" in url:
-            return ET.fromstring(NETWORK_XML)
-        elif "level=station" in url:
-            return ET.fromstring(STATION_XML)
-        elif "level=channel" in url:
-            return ET.fromstring(CHANNEL_XML)
-        return None
+            return ["NET1|meta"]
+        if "level=station" in url:
+            return ["NET1|STA1"]
+        if "level=channel" in url:
+            # Build valid line with >=16 fields
+            parts = [
+                "NET1","STA1","LOC1","BHZ"
+            ] + ["x"]*11 + ["2024-01-01T00:00:00Z","2024-01-02T00:00:00Z"]
+            return ["|".join(parts)]
+        return []
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
 
-    monkeypatch.setattr(station, "_fetch_xml", fake_fetch)
+    result = station.fetch_candidates("http://fake/", max_candidates=1)
+    assert len(result) == 1
+    cand = result[0]
+    assert cand["network"] == "NET1"
+    assert cand["station"] == "STA1"
+    assert cand["channel"] == "BHZ"
+    assert cand["location"] == "LOC1"
+    assert "endtime" in cand
 
-    results = station.fetch_candidates("http://fake/", max_stations=2, max_workers=1)
-    assert len(results) <= 2
-    for r in results:
-        assert "network" in r and "station" in r and "channel" in r
-        assert "starttime" in r
+def test_valid_candidates_without_location_or_endtime(monkeypatch):
+    monkeypatch.setattr(station.random, "shuffle", lambda x: x)
+
+    def fake_fetch(url, **k):
+        if "level=network" in url:
+            return ["NET1|meta"]
+        if "level=station" in url:
+            return ["NET1|STA1"]
+        if "level=channel" in url:
+            parts = ["NET1","STA1","","HHZ"] + ["x"]*11 + ["2024-01-01T00:00:00Z",""]
+            return ["|".join(parts)]
+        return []
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
+
+    result = station.fetch_candidates("http://fake/", max_candidates=1)
+    cand = result[0]
+    assert "location" not in cand
+    assert "endtime" not in cand
+
+def test_truncate_max_candidates(monkeypatch):
+    monkeypatch.setattr(station.random, "shuffle", lambda x: x)
+
+    def fake_fetch(url, **k):
+        if "level=network" in url:
+            return ["NET1|meta"]
+        if "level=station" in url:
+            # 5 stations available
+            return [f"NET1|STA{i}" for i in range(5)]
+        if "station=STA0" in url:
+            parts = ["NET1","STA0","","HHZ"] + ["x"]*11 + ["2024-01-01T00:00:00Z",""]
+            return ["|".join(parts)]
+        return []
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
+
+    result = station.fetch_candidates("http://fake/", max_candidates=2)
+    # Only STA0 yields valid channel
+    assert len(result) == 1
+    assert result[0]["station"] == "STA0"

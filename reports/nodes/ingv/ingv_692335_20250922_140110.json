@@ -1,0 +1,443 @@
+{
+  "summary": {
+    "node": "INGV",
+    "seed": 692335,
+    "epochs_requested": 20,
+    "candidates_requested": 20,
+    "candidates_tested": null,
+    "station_queries": null,
+    "duration": 600,
+    "total_checked": 20,
+    "total_consistent": 15,
+    "total_inconsistent": 5,
+    "score": 75.0,
+    "availability_yes_dataselect_no": 0,
+    "availability_no_dataselect_yes": 5,
+    "timestamp": "2025-09-22T14:01:10.695048+00:00",
+    "candidates_generated": 20,
+    "candidates_pool": 799,
+    "queries_performed": 22
+  },
+  "results": [
+    {
+      "index": 2,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=HLZ&start=2002-10-15T00:00:00&end=2012-11-15T09:55:00&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "HLZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2012-08-08T07:43:57",
+      "endtime": "2012-08-08T07:53:57",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nMN.BNI..HLZ | 2012-08-08T07:43:57.002864Z - 2012-08-08T07:53:57.002864Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=HLZ&starttime=2012-08-08T07:43:57&endtime=2012-08-08T07:53:57&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 6,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=LHN&start=2002-10-15T00:00:00&end=2016-10-26T09:55:00&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "LHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2003-11-14T21:21:59",
+      "endtime": "2003-11-14T21:31:59",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nMN.BNI..LHN | 2003-11-14T21:21:58.950867Z - 2003-11-14T21:31:58.950867Z | 1.0 Hz, 601 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=LHN&starttime=2003-11-14T21:21:59&endtime=2003-11-14T21:31:59&nodata=204",
+      "matched_span": {
+        "start": "2003-11-14T00:00:00.000000Z",
+        "end": "2003-11-15T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 8,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=USI&location=*&channel=LHZ&start=2005-11-03T10:00:00&end=2011-02-10T00:00:00&format=text",
+      "network": "IV",
+      "station": "USI",
+      "channel": "LHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2008-03-02T23:26:29",
+      "endtime": "2008-03-02T23:36:29",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.USI..LHZ | 2008-03-02T23:26:29.420000Z - 2008-03-02T23:36:29.420000Z | 1.0 Hz, 601 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=USI&location=&channel=LHZ&starttime=2008-03-02T23:26:29&endtime=2008-03-02T23:36:29&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 10,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=HLE&start=2002-10-15T00:00:00&end=2012-11-15T09:55:00&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "HLE",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2010-01-22T06:50:20",
+      "endtime": "2010-01-22T07:00:20",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=HLE&starttime=2010-01-22T06:50:20&endtime=2010-01-22T07:00:20&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 9,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=IDI&location=*&channel=LHE&start=2017-12-19T00:00:00&end=2025-09-22T14:00:34.974618&format=text",
+      "network": "MN",
+      "station": "IDI",
+      "channel": "LHE",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2024-04-20T08:12:29",
+      "endtime": "2024-04-20T08:22:29",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=IDI&location=&channel=LHE&starttime=2024-04-20T08:12:29&endtime=2024-04-20T08:22:29&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 11,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=TSM6&location=T0&channel=LS3&start=2022-06-14T00:00:00&end=2025-09-22T14:00:36.420605&format=text",
+      "network": "IV",
+      "station": "TSM6",
+      "channel": "LS3",
+      "location": "T0",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2023-04-22T17:15:30",
+      "endtime": "2023-04-22T17:25:30",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.TSM6.T0.LS3 | 2023-04-22T17:15:30.000000Z - 2023-04-22T17:25:30.000000Z | 1.0 Hz, 601 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=TSM6&location=T0&channel=LS3&starttime=2023-04-22T17:15:30&endtime=2023-04-22T17:25:30&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 12,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=MTCE&location=*&channel=LHZ&start=2018-09-27T10:00:00&end=2025-09-22T14:00:44.183029&format=text",
+      "network": "IV",
+      "station": "MTCE",
+      "channel": "LHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2025-01-14T16:15:12",
+      "endtime": "2025-01-14T16:25:12",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.MTCE..LHZ | 2025-01-14T16:15:12.120100Z - 2025-01-14T16:25:12.120100Z | 1.0 Hz, 601 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=MTCE&location=&channel=LHZ&starttime=2025-01-14T16:15:12&endtime=2025-01-14T16:25:12&nodata=204",
+      "matched_span": {
+        "start": "2025-01-14T12:04:32.120000Z",
+        "end": "2025-01-15T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 13,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=ESLN&location=*&channel=BHZ&start=2005-07-10T00:00:00&end=2025-09-22T14:00:57.146268&format=text",
+      "network": "IV",
+      "station": "ESLN",
+      "channel": "BHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2006-07-25T21:10:24",
+      "endtime": "2006-07-25T21:20:24",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.ESLN..BHZ | 2006-07-25T21:10:24.000000Z - 2006-07-25T21:20:24.000000Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=ESLN&location=&channel=BHZ&starttime=2006-07-25T21:10:24&endtime=2006-07-25T21:20:24&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 14,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=VHN&start=2001-11-13T00:00:00&end=2002-10-14T23:59:59&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "VHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2002-05-05T20:22:17",
+      "endtime": "2002-05-05T20:32:17",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nMN.BNI..VHN | 2002-05-05T20:22:20.061188Z - 2002-05-05T20:32:20.061188Z | 0.1 Hz, 61 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=VHN&starttime=2002-05-05T20:22:17&endtime=2002-05-05T20:32:17&nodata=204",
+      "matched_span": {
+        "start": "2002-05-05T00:00:00.000000Z",
+        "end": "2002-05-06T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 16,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=MTCE&location=*&channel=VHN&start=2009-02-25T15:00:00&end=2018-09-27T10:00:00&format=text",
+      "network": "IV",
+      "station": "MTCE",
+      "channel": "VHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2015-02-26T17:36:09",
+      "endtime": "2015-02-26T17:46:09",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.MTCE..VHN | 2015-02-26T17:36:08.620300Z - 2015-02-26T17:46:08.620300Z | 0.1 Hz, 61 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=MTCE&location=&channel=VHN&starttime=2015-02-26T17:36:09&endtime=2015-02-26T17:46:09&nodata=204",
+      "matched_span": {
+        "start": "2015-02-26T00:00:00.000000Z",
+        "end": "2015-02-27T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 17,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=AC&station=PHP&location=00&channel=HHZ&start=2022-07-19T00:00:00&end=2025-09-22T14:01:03.175197&format=text",
+      "network": "AC",
+      "station": "PHP",
+      "channel": "HHZ",
+      "location": "00",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2023-07-21T14:24:05",
+      "endtime": "2023-07-21T14:34:05",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nAC.PHP.00.HHZ | 2023-07-21T14:24:05.000000Z - 2023-07-21T14:34:05.000000Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=AC&station=PHP&location=00&channel=HHZ&starttime=2023-07-21T14:24:05&endtime=2023-07-21T14:34:05&nodata=204",
+      "matched_span": {
+        "start": "2023-07-21T00:00:00.000000Z",
+        "end": "2023-07-22T00:00:00.000000Z",
+        "location": "00"
+      }
+    },
+    {
+      "index": 15,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=USI&location=*&channel=HHZ&start=2024-05-22T00:00:00&end=2025-09-22T14:00:58.834260&format=text",
+      "network": "IV",
+      "station": "USI",
+      "channel": "HHZ",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2024-07-26T10:49:57",
+      "endtime": "2024-07-26T10:59:57",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.USI..HHZ | 2024-07-26T10:49:57.000100Z - 2024-07-26T10:59:57.000100Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=USI&location=&channel=HHZ&starttime=2024-07-26T10:49:57&endtime=2024-07-26T10:59:57&nodata=204",
+      "matched_span": {
+        "start": "2024-07-26T00:00:00.000000Z",
+        "end": "2024-07-27T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 18,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=TSM6&location=T3&channel=RCB&start=2022-06-14T00:00:00&end=2025-09-22T14:01:03.702081&format=text",
+      "network": "IV",
+      "station": "TSM6",
+      "channel": "RCB",
+      "location": "T3",
+      "available": false,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "starttime": "2025-05-21T13:01:04",
+      "endtime": "2025-05-21T13:11:04",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.TSM6.T3.RCB | 2025-05-21T13:30:00.000000Z - 2025-05-21T13:30:00.000000Z | 3600.0 s, 1 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=TSM6&location=T3&channel=RCB&starttime=2025-05-21T13:01:04&endtime=2025-05-21T13:11:04&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 4,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IV&station=MOCO&location=*&channel=HNN&start=2011-12-19T15:37:00&end=2021-10-20T07:26:00&format=text",
+      "network": "IV",
+      "station": "MOCO",
+      "channel": "HNN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2021-01-01T01:16:32",
+      "endtime": "2021-01-01T01:26:32",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIV.MOCO..HNN | 2021-01-01T01:16:32.000000Z - 2021-01-01T01:26:32.000000Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IV&station=MOCO&location=&channel=HNN&starttime=2021-01-01T01:16:32&endtime=2021-01-01T01:26:32&nodata=204",
+      "matched_span": {
+        "start": "2021-01-01T00:00:06.260000Z",
+        "end": "2021-01-02T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 5,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=GU&station=REMY&location=*&channel=HHE&start=2011-10-01T00:00:00&end=2014-07-16T10:00:00&format=text",
+      "network": "GU",
+      "station": "REMY",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2011-11-20T03:09:58",
+      "endtime": "2011-11-20T03:19:58",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nGU.REMY..HHE | 2011-11-20T03:09:58.000000Z - 2011-11-20T03:19:58.000000Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=GU&station=REMY&location=&channel=HHE&starttime=2011-11-20T03:09:58&endtime=2011-11-20T03:19:58&nodata=204",
+      "matched_span": {
+        "start": "2011-11-20T00:00:00.000000Z",
+        "end": "2011-11-21T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 3,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=7M&station=NR20&location=*&channel=EHZ&start=2021-01-20T12:00:00&end=2021-04-30T00:00:00&format=text",
+      "network": "7M",
+      "station": "NR20",
+      "channel": "EHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2021-04-25T14:51:26",
+      "endtime": "2021-04-25T15:01:26",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=7M&station=NR20&location=&channel=EHZ&starttime=2021-04-25T14:51:26&endtime=2021-04-25T15:01:26&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 1,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=ZO&station=PDN4&location=*&channel=HNZ&start=2021-12-15T00:00:00&end=2031-12-15T00:00:00&format=text",
+      "network": "ZO",
+      "station": "PDN4",
+      "channel": "HNZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2031-11-26T04:20:04",
+      "endtime": "2031-11-26T04:30:04",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=ZO&station=PDN4&location=&channel=HNZ&starttime=2031-11-26T04:20:04&endtime=2031-11-26T04:30:04&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 7,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=IDI&location=*&channel=HHN&start=2003-04-09T00:00:00&end=2017-12-19T00:00:00&format=text",
+      "network": "MN",
+      "station": "IDI",
+      "channel": "HHN",
+      "location": "",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "starttime": "2005-03-10T17:54:10",
+      "endtime": "2005-03-10T18:04:10",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nMN.IDI..HHN | 2005-03-10T17:54:10.004175Z - 2005-03-10T18:04:10.004175Z | 80.0 Hz, 48001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=IDI&location=&channel=HHN&starttime=2005-03-10T17:54:10&endtime=2005-03-10T18:04:10&nodata=204",
+      "matched_span": {
+        "start": "2005-03-10T00:00:00.000000Z",
+        "end": "2005-03-11T00:00:00.000000Z",
+        "location": ""
+      }
+    },
+    {
+      "index": 20,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=LHZ&start=1988-04-30T00:00:00&end=1992-05-28T00:00:00&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "LHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "1989-06-24T07:43:33",
+      "endtime": "1989-06-24T07:53:33",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=LHZ&starttime=1989-06-24T07:43:33&endtime=1989-06-24T07:53:33&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    },
+    {
+      "index": 19,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=MN&station=BNI&location=*&channel=BHZ&start=1999-12-17T00:00:00&end=2001-11-12T23:59:59&format=text",
+      "network": "MN",
+      "station": "BNI",
+      "channel": "BHZ",
+      "location": "",
+      "available": false,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "starttime": "2001-08-22T17:20:29",
+      "endtime": "2001-08-22T17:30:29",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=MN&station=BNI&location=&channel=BHZ&starttime=2001-08-22T17:20:29&endtime=2001-08-22T17:30:29&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      }
+    }
+  ]
+}

@@ -10,7 +10,7 @@ from __future__ import annotations
 import traceback
 from io import BytesIO
 from urllib.parse import urlparse
-
+from eida_consistency.utils.constants import USER_AGENT
 import requests
 from obspy.clients.fdsn import Client
 from obspy import UTCDateTime, read
@@ -55,7 +55,7 @@ def dataselect(
     # Attempt #1 — ObsPy FDSN Client
     q1 = _build_query_url(endpoint, net, sta, loc_code, cha, start, end)
     try:
-        client = Client(endpoint, timeout=timeout)
+        client = Client(endpoint, timeout=timeout, user_agent=USER_AGENT)
         st = client.get_waveforms(
             network=net, station=sta, location=loc_code, channel=cha,
             starttime=UTCDateTime(start), endtime=UTCDateTime(end)
@@ -86,7 +86,7 @@ def dataselect(
 
     # Attempt #2 — raw HTTP GET + obspy.read
     try:
-        r = requests.get(q1, timeout=timeout)
+        r = requests.get(q1, timeout=timeout, headers={"User-Agent": USER_AGENT})
         if r.status_code == 204 or not r.content:
             return {
                 "success": False, "status": "NoData", "type": "NoTrace", "error": None,

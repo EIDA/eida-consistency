@@ -24,6 +24,7 @@ def create_report_object(
     candidates_requested: Optional[int] = None,
     candidates_tested: Optional[int] = None,
     station_queries: Optional[int] = None,
+    test_duration_sec: Optional[float] = None,   
 ) -> Dict[str, Any]:
     """Build a serialisable dictionary summarising a full run."""
 
@@ -48,7 +49,8 @@ def create_report_object(
             "candidates_requested": candidates_requested,
             "candidates_tested": candidates_tested,
             "station_queries": station_queries,
-            "duration": duration,
+            "duration": duration,  # per-epoch duration window
+            "test_duration_sec": test_duration_sec,  
             "total_checked": total_checked,
             "total_consistent": total_consistent,
             "total_inconsistent": total_inconsistent,
@@ -68,7 +70,7 @@ def _make_unique_filename(node: str, seed: int, extension: str) -> str:
 
 
 def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
-    """Save the full report as pretty-printed JSON."""
+    """Save the full report as pretty-printed JSON and return the file path."""
     report_dir.mkdir(parents=True, exist_ok=True)
     filename = _make_unique_filename(
         report["summary"]["node"], report["summary"]["seed"], "json"
@@ -102,6 +104,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         f"- Candidates tested: `{summary.get('candidates_tested', '?')}`",
         f"- Station queries performed: `{summary.get('station_queries', '?')}`",
         f"- Duration/epoch: `{summary['duration']} s`",
+        f"- Test runtime: `{summary.get('test_duration_sec', '?')} s`", 
         f"- Total checks run: `{summary['total_checked']}`",
         f"- Consistent: `{summary['total_consistent']}`",
         f"- Inconsistent: `{summary['total_inconsistent']}`",
@@ -147,11 +150,8 @@ def delete_old_reports(report_dir: Path = REPORT_DIR, keep: int = 1) -> None:
 
     for json_file in to_delete:
         md_file = json_file.with_suffix(".md")
-        try:
-            json_file.unlink()
-        except FileNotFoundError:
-            pass
-        try:
-            md_file.unlink()
-        except FileNotFoundError:
-            pass
+        for f in (json_file, md_file):
+            try:
+                f.unlink()
+            except FileNotFoundError:
+                pass
