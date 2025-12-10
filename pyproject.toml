@@ -39,3 +39,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eida_consistency"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
