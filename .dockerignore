@@ -30,7 +30,7 @@ htmlcov/
 
 # UV
 .venv/
-uv.lock
+
 
 # IDEs
 .idea/
