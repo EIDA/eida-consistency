@@ -1,6 +1,6 @@
 [project]
 name = "eida-consistency"
-version = "0.3.4"
+version = "0.3.5"
 description = "EIDA consistency checker: compare availability vs dataselect services and generate reports."
 readme = "README.md"
 authors = [

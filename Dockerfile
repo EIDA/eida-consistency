@@ -1,6 +1,8 @@
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
 
+LABEL org.opencontainers.image.source="https://github.com/EIDA/eida-consistency"
+
 # Install the project into `/app`
 WORKDIR /app
 
