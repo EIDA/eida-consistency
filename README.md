@@ -1,6 +1,7 @@
 # EIDA Consistency Checker
 [![Run Tests](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml/badge.svg)](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml)
 ![Coverage](badges/coverage.svg)
+[![Docs](https://img.shields.io/badge/docs-visited-blue)](https://EIDA.github.io/eida-consistency/)
 
 ---
 

@@ -32,7 +32,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/EIDA/eida-consistency"
 Issues = "https://github.com/EIDA/eida-consistency/issues"
-Documentation = "https://github.com/EIDA/eida-consistency#readme"
+Documentation = "https://EIDA.github.io/eida-consistency/"
 
 [project.scripts]
 eida-consistency = "eida_consistency.cli:cli"
