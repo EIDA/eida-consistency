@@ -109,6 +109,58 @@ Reports are stored in `./reports/` by default, or in a custom folder using `--re
 
 ---
 
+## 📚 Library Usage
+
+You can also use `eida-consistency` as a Python library to run checks programmatically or build custom tools.
+
+### Check a Single Candidate
+
+```python
+from eida_consistency.core.checker import check_candidate
+
+# Define a candidate (network, station, channel, starttime)
+candidate = {
+    "network": "GR",
+    "station": "ATH",
+    "channel": "BHZ",
+    "starttime": "2023-01-01T00:00:00",
+}
+
+# Run the check
+results, stats = check_candidate(
+    base_url="http://node.eida.eu/fdsnws",
+    candidate=candidate,
+    epochs=5,
+    duration=600
+)
+
+for res in results:
+    url, available, start, end, loc, span = res
+    print(f"Time: {start} -> Available: {available}")
+```
+
+### Run a Full Consistency Check
+
+```python
+from eida_consistency.runner import run_consistency_check
+
+# Run check for a specific node and get the report path
+report_path = run_consistency_check(
+    node="NOA",
+    epochs=10,
+    duration=600
+)
+print(f"Report generated at: {report_path}")
+```
+
+For full API documentation, please visit our [Documentation Site](https://EIDA.github.io/eida-consistency/) or run:
+
+```bash
+uv run mkdocs serve
+```
+
+---
+
 ## 🧪 Example Workflow
 
 ### 1. Run a check for NOA:

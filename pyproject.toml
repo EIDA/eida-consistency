@@ -13,6 +13,7 @@ dependencies = [
     "appdirs>=1.4.4",
     "boto3>=1.40.31",
     "click>=8.2.1",
+    "mkdocs>=1.6.1",
     "obspy>=1.4.2",
     "obstore>=0.8.2",
     "python-dotenv>=1.1.1",
@@ -23,6 +24,9 @@ dependencies = [
 dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
 ]
 
 [project.urls]
