@@ -25,7 +25,8 @@ from .report.report import (
 
 def run_consistency_check(
     node: str,
-    epochs: int = 10,
+    epochs: int | None = 10,
+    percentage: float | None = None,
     duration: int = 600,
     seed: int | None = None,
     delete_old: bool = False,
@@ -54,11 +55,17 @@ def run_consistency_check(
     random.seed(seed)
     base_url = load_node_url(node)
 
-    logging.info(f" Fetching random candidates for node: {node}...")
-
-    # Always fetch station_multiplier × epochs candidates
-    target_candidates = epochs * station_multiplier
-    candidates = fetch_candidates(base_url, max_candidates=target_candidates)
+    if percentage is not None:
+        logging.info(f" Fetching candidates (Percentage {percentage:.1%} of available stations)...")
+        candidates = fetch_candidates(base_url, percentage=percentage)
+        # If percentage logic is used, we test ONE epoch per selected candidate.
+        epochs = len(candidates)
+    else:
+        logging.info(f" Fetching random candidates for node: {node}...")
+        # Always fetch station_multiplier × epochs candidates
+        epochs = epochs or 10  # fallback if None
+        target_candidates = epochs * station_multiplier
+        candidates = fetch_candidates(base_url, max_candidates=target_candidates)
 
     if not candidates:
         logging.warning("No candidates fetched. No report will be generated.")

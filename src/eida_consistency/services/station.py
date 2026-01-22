@@ -30,7 +30,7 @@ def _fetch_text(url: str, timeout: int = 60) -> list[str]:
         return []
 
 
-def fetch_candidates(base_url: str, max_candidates: int = 30, max_workers: int = 10):
+def fetch_candidates(base_url: str, max_candidates: int = 30, percentage: float | None = None, max_workers: int = 10):
     """
     Fetch random NSLC candidates for testing.
 
@@ -39,7 +39,9 @@ def fetch_candidates(base_url: str, max_candidates: int = 30, max_workers: int =
     base_url : str
         Node base URL (e.g. https://webservices.ingv.it/fdsnws/)
     max_candidates : int
-        Total number of NSLC candidates to return (station_multiplier × epochs).
+        Total number of NSLC candidates to return (used if percentage is None).
+    percentage : float, optional
+        If set, select this percentage of total stations available (0.0 - 1.0).
     max_workers : int
         Thread pool size for parallel fetching.
 
@@ -79,7 +81,14 @@ def fetch_candidates(base_url: str, max_candidates: int = 30, max_workers: int =
 
     # --- Step 3: Pick random stations ---
     random.shuffle(sta_pairs)
-    selected_sta = sta_pairs[: max_candidates]
+    
+    if percentage is not None:
+        count = int(len(sta_pairs) * percentage)
+        count = max(1, count)  # minimum 1 if percentage > 0
+        logging.info(f"Percentage {percentage:.1%}: Selected {count} stations out of {len(sta_pairs)} total.")
+        selected_sta = sta_pairs[:count]
+    else:
+        selected_sta = sta_pairs[: max_candidates]
 
     # --- Step 4: Fetch channels for selected stations (parallel) ---
     candidates = []

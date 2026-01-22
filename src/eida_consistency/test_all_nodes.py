@@ -41,7 +41,7 @@ def main():
         try:
             # First, probe how many candidates we can actually fetch
             requested = 100
-            candidates = fetch_candidates(url, max_stations=requested)
+            candidates = fetch_candidates(url, max_candidates=requested)
             found = len(candidates)
 
             

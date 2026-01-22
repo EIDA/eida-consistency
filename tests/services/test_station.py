@@ -117,3 +117,49 @@ def test_truncate_max_candidates(monkeypatch):
     # Only STA0 yields valid channel
     assert len(result) == 1
     assert result[0]["station"] == "STA0"
+
+def test_percentage_candidates(monkeypatch):
+    """Verify percentage argument correctly selects a subset of stations."""
+    monkeypatch.setattr(station.random, "shuffle", lambda x: x)
+
+    def fake_fetch(url, **k):
+        if "level=network" in url:
+            return ["NET1|meta"]
+        if "level=station" in url:
+            # 10 stations available
+            return [f"NET1|STA{i}" for i in range(10)]
+        if "level=channel" in url:
+            # Fake channel for whatever station is queried
+            # Extract station from url: ...station=STA0...
+            # This is a bit simplistic, but suffices if requests are robust.
+            # Using simple looping logic in fetch_candidates 
+            # (which does: for net, sta in selected_sta: fetch...)
+            # We just need to return a valid channel line.
+            
+            # Since fetch_candidates calls _fetch_text with specific URL
+            # we can infer which station is asked.
+            import re
+            m = re.search(r"station=([^&]+)", url)
+            sta = m.group(1) if m else "UNK"
+            
+            line_parts = ["NET1", sta, "", "HHZ"] + ["x"]*11 + ["2024-01-01T00:00:00Z", ""]
+            return ["|".join(line_parts)]
+        return []
+    
+    monkeypatch.setattr(station, "_fetch_text", fake_fetch)
+
+    # Test 50% of 10 stations -> should pick 5 stations -> yield 5 candidates
+    res_50 = station.fetch_candidates("http://fake/", max_candidates=30, percentage=0.5)
+    assert len(res_50) == 5
+    
+    # Test 10% of 10 stations -> should pick 1 station
+    res_10 = station.fetch_candidates("http://fake/", max_candidates=30, percentage=0.1)
+    assert len(res_10) == 1
+
+    # Test 100% -> 10 stations
+    res_100 = station.fetch_candidates("http://fake/", max_candidates=30, percentage=1.0)
+    assert len(res_100) == 10
+    
+    # Test very small percentage -> should min at 1
+    res_small = station.fetch_candidates("http://fake/", max_candidates=30, percentage=0.01)
+    assert len(res_small) == 1

@@ -73,7 +73,7 @@ def cli(ctx, log_level, report_dir):
 # ----------------------------------------------------------------------
 @cli.command()
 @click.option("--node", help="EIDA node code (e.g., RESIF, NOA)")
-@click.option("--epochs", type=int, default=10, show_default=True, help="Number of epochs")
+@click.option("--epochs", type=str, default="10", show_default=True, help="Number of epochs or percentage (e.g. '10', '0.05', '5%')")
 @click.option("--duration", type=int, default=600, show_default=True, help="Duration (s), must be >= 600")
 @click.option("--seed", type=int, help="Random seed")
 @click.option(
@@ -107,10 +107,32 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
     if duration < 600:
         raise click.BadParameter("Duration must be at least 600 seconds (10 minutes).")
 
+    # Parse epochs arg (can be int or percentage)
+    percentage = None
+    epochs_val = 10
+
+    raw = str(epochs).strip()
+    try:
+        if raw.endswith("%"):
+            percentage = float(raw.rstrip("%")) / 100.0
+            epochs_val = None
+        elif "." in raw:
+            val = float(raw)
+            if val <= 1.0:
+                percentage = val
+                epochs_val = None
+            else:
+                epochs_val = int(val)
+        else:
+            epochs_val = int(raw)
+    except ValueError:
+        raise click.BadParameter(f"Invalid format for --epochs: {epochs}")
+
     # Run the check and get the report path
     report_path = run_consistency_check(
         node=node,
-        epochs=epochs,
+        epochs=epochs_val,
+        percentage=percentage,
         duration=duration,
         seed=seed,
         print_stdout=print_stdout,

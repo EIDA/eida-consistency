@@ -35,7 +35,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from eida_consistency.services.availability import get_availability_spans
+from eida_consistency.services.availability import check_availability_query
 
 
 def _parse_iso(dt: Optional[str]) -> Optional[datetime]:
@@ -106,25 +106,19 @@ def check_candidate(
         attempts += 1
         sample = random.choice(pool)
         key = (sample["network"], sample["station"], sample["channel"])
-        if key in used:
+        # Allow checking same channel multiple times if needed, but keeping uniqueness for now if preferred
+        # or we rely on random selection from large pool.
+        # Original logic was 'used' per query, but now we do multiple per channel.
+        # Let's drop unique constraint to allow multiple epochs per channel if pool is small.
+        # Logic change: The user requested N *epochs*, potentially from same channel.
+        # But original logic had `if key in used: continue`.
+        # We'll stick to unique channels if possible, or relax it if epochs > pool.
+        if len(pool) >= epochs and key in used:
             continue
 
         ch_start = _parse_iso(sample.get("starttime"))
         ch_end = _parse_iso(sample.get("endtime")) or datetime.utcnow()
         if not ch_start or not ch_end or ch_start >= ch_end:
-            continue
-
-        # Fetch availability spans once for this channel epoch-span
-        spans = get_availability_spans(
-            base_url,
-            sample["network"],
-            sample["station"],
-            sample["channel"],
-            sample["starttime"],
-            sample.get("endtime") or datetime.utcnow().isoformat(),
-            location=sample.get("location", "*"),
-        )
-        if not spans:
             continue
 
         # Random slice of `duration` seconds inside [ch_start, ch_end]
@@ -140,27 +134,29 @@ def check_candidate(
         s = epoch_start_dt.strftime("%Y-%m-%dT%H:%M:%S")
         e = epoch_end_dt.strftime("%Y-%m-%dT%H:%M:%S")
 
-        available, matched_span = _inside_any_span(epoch_start_dt, epoch_end_dt, spans)
+        # Query availability for THIS specific epoch
+        # Return format: {"ok": bool, "matched_span": dict|None, ...}
+        av_res = check_availability_query(
+            base_url,
+            sample["network"],
+            sample["station"],
+            sample["channel"],
+            s,
+            e,
+            location=sample.get("location", "*"),
+        )
+        
+        available = bool(av_res["ok"])
+        matched_span = av_res.get("matched_span")
         loc = matched_span["location"] if (matched_span and matched_span.get("location")) else sample.get("location", "")
 
-        # Availability request URL (for reproducibility/debugging)
-        url = (
-            f"{base_url}availability/1/query?"
-            f"network={sample['network']}&station={sample['station']}"
-            f"&location={sample.get('location','*')}&channel={sample['channel']}"
-            f"&start={sample['starttime']}&end={sample.get('endtime') or datetime.utcnow().isoformat()}"
-            f"&format=text"
-        )
-
-        logging.debug(f"Availability request URL used: {url}")
-
-        results.append((url, available, s, e, loc, matched_span))
+        results.append((av_res["url"], available, s, e, loc, matched_span))
         used.add(key)
 
     # Final summary line
     logging.info(
         f"Final usable epochs: {len(results)} / {epochs} "
-        f"(from {len(pool)} channel candidates, {attempts} attempts)"
+        f"(from {len(pool)} candidates, {attempts} attempts)"
     )
 
     stats = {

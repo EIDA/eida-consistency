@@ -27,8 +27,13 @@ import requests
 from eida_consistency.utils.constants import USER_AGENT
 
 
+from datetime import timezone
+
 def _parse_iso(s: str) -> datetime:
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _parse_text_availability(text: str) -> List[Dict[str, Any]]:
@@ -100,7 +105,7 @@ def check_availability_query(
     url = (
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap,gap"
+        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
     )
     logging.debug(f"Availability (query) URL: {url}")
 
