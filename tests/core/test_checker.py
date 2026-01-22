@@ -88,14 +88,16 @@ def test_check_candidate_no_valid_pool():
 def test_check_candidate_success(monkeypatch):
     c = make_candidate()
 
-    # fake spans always covering the candidate window
-    fake_spans = [{
-        "start": "2023-01-01T00:00:00",
-        "end": "2023-01-01T23:59:59",
-        "location": "00"
-    }]
+    # Mock availability query response
+    def fake_query(*args, **kwargs):
+        return {
+            "ok": True,
+            "matched_span": {"start": "2023-01-01T00:00:00", "end": "2023-01-01T23:59:59", "location": "00"},
+            "status": 200,
+            "url": "http://fake/availability/1/query?..."
+        }
 
-    monkeypatch.setattr(checker, "get_availability_spans", lambda *a, **kw: fake_spans)
+    monkeypatch.setattr(checker, "check_availability_query", fake_query)
 
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
 
@@ -109,28 +111,43 @@ def test_check_candidate_success(monkeypatch):
     assert stats["candidates_requested"] == 1
 
 
-def test_check_candidate_spans_empty(monkeypatch):
+def test_check_candidate_not_available(monkeypatch):
     c = make_candidate()
 
-    monkeypatch.setattr(checker, "get_availability_spans", lambda *a, **kw: [])
+    # Mock availability query response -> unavailable
+    def fake_query(*args, **kwargs):
+        return {
+            "ok": False,
+            "matched_span": None,
+            "status": 200,
+            "url": "http://fake/query"
+        }
+
+    monkeypatch.setattr(checker, "check_availability_query", fake_query)
 
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
-    # no spans, so no usable epochs
-    assert results == []
-    assert stats["candidates_generated"] == 0
+    
+    assert len(results) == 1
+    url, available, s, e, loc, span = results[0]
+    assert available is False
+    assert span is None
+    assert stats["candidates_generated"] == 1
 
 
 def test_check_candidate_endtime_missing(monkeypatch):
     c = make_candidate()
     c.pop("endtime")  # force code path that uses utcnow
 
-    fake_spans = [{
-        "start": "2023-01-01T00:00:00",
-        "end": (datetime.utcnow() + timedelta(hours=1)).isoformat(),
-        "location": "00"
-    }]
+    def fake_query(*args, **kwargs):
+        return {
+            "ok": True,
+            "matched_span": {"start": "2023-01-01T00:00:00", "end": "2024-01-01T00:00:00"},
+            "status": 200,
+            "url": "http://fake/query"
+        }
 
-    monkeypatch.setattr(checker, "get_availability_spans", lambda *a, **kw: fake_spans)
+    monkeypatch.setattr(checker, "check_availability_query", fake_query)
 
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
-    assert stats["candidates_generated"] in (0, 1)  # depends on timing
+    assert stats["candidates_generated"] == 1
+    assert len(results) == 1
