@@ -46,13 +46,16 @@ uv tool upgrade eida-consistency
 
 Check if **availability spans** align with **dataselect** results:
 
+
 ```bash
 uvx eida-consistency consistency --node RESIF --epochs 10 --duration 600
+# OR check 5% of available stations:
+uvx eida-consistency consistency --node RESIF --epochs "5%"
 ```
 
 Options:
 - `--node`: Node code (e.g. `RESIF`, `NOA`, `ETH`)
-- `--epochs`: Number of random test epochs (default: 10)
+- `--epochs`: Number of random test epochs (default: 10) OR percentage (e.g., `"5%"`, `0.05`)
 - `--duration`: Epoch length in seconds (≥600)
 - `--seed`: Reproducible seed
 - `--delete-old`: Keep only the most recent report
