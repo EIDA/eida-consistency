@@ -107,37 +107,19 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
     if duration < 600:
         raise click.BadParameter("Duration must be at least 600 seconds (10 minutes).")
 
-    # Parse epochs arg (can be int or percentage)
-    percentage = None
-    epochs_val = 10
-
-    raw = str(epochs).strip()
-    try:
-        if raw.endswith("%"):
-            percentage = float(raw.rstrip("%")) / 100.0
-            epochs_val = None
-        elif "." in raw:
-            val = float(raw)
-            if val <= 1.0:
-                percentage = val
-                epochs_val = None
-            else:
-                epochs_val = int(val)
-        else:
-            epochs_val = int(raw)
-    except ValueError:
-        raise click.BadParameter(f"Invalid format for --epochs: {epochs}")
-
     # Run the check and get the report path
-    report_path = run_consistency_check(
-        node=node,
-        epochs=epochs_val,
-        percentage=percentage,
-        duration=duration,
-        seed=seed,
-        print_stdout=print_stdout,
-        report_dir=report_dir,
-    )
+    try:
+        report_path = run_consistency_check(
+            node=node,
+            epochs=epochs,
+            duration=duration,
+            seed=seed,
+            print_stdout=print_stdout,
+            report_dir=report_dir,
+        )
+    except ValueError as e:
+        raise click.BadParameter(str(e))
+
 
     # Upload if requested
     if upload:

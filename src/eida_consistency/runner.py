@@ -25,7 +25,7 @@ from .report.report import (
 
 def run_consistency_check(
     node: str,
-    epochs: int | None = 10,
+    epochs: int | str | None = 10,
     percentage: float | None = None,
     duration: int = 600,
     seed: int | None = None,
@@ -45,6 +45,27 @@ def run_consistency_check(
         (e.g., no candidates).
     """
     start_time = time.time()  # ⬅️ measure runtime start
+
+    # Parse epochs arg (can be int or percentage) if percentage is not explicitly provided
+    if percentage is None and epochs is not None:
+        raw = str(epochs).strip()
+        try:
+            if raw.endswith("%"):
+                percentage = float(raw.rstrip("%")) / 100.0
+                epochs = None
+            elif "." in raw:
+                val = float(raw)
+                if val <= 1.0:
+                    percentage = val
+                    epochs = None
+                else:
+                    epochs = int(val)
+            else:
+                epochs = int(raw)
+        except ValueError:
+            raise ValueError(f"Invalid format for epochs: {epochs}")
+    elif percentage is not None:
+        epochs = None
 
     if seed is None:
         seed = random.randint(0, 999_999)
