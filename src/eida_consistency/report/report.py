@@ -66,7 +66,7 @@ def create_report_object(
 def _make_unique_filename(node: str, seed: int, extension: str) -> str:
     """Create a unique file name for the report."""
     short_time = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    return f"{node.lower()}_{seed}_{short_time}.{extension}"
+    return f"{node.lower()}_{short_time}_{seed}.{extension}"
 
 
 def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
@@ -76,7 +76,7 @@ def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> P
         report["summary"]["node"], report["summary"]["seed"], "json"
     )
     filepath = report_dir / filename
-    filepath.write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    filepath.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     return filepath
 
 
@@ -94,8 +94,41 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         r.get("dataselect_type", "?") for r in results if r.get("dataselect_type")
     )
 
+    inconsistent_recs = [r for r in results if not r["consistent"]]
+
     md_lines = [
         f"# EIDA Consistency Report: `{summary['node']}`",
+        "",
+    ]
+
+    if not inconsistent_recs:
+        md_lines.extend([
+            "## 🟢 Status: All Consistent",
+            "",
+            "No inconsistencies were detected in this run.",
+            "",
+        ])
+    else:
+        md_lines.extend([
+            "## 🔴 Detected Inconsistencies",
+            "",
+            "| Channel | Window (UTC) | Avail | DS | Type | Status |",
+            "| :--- | :--- | :---: | :---: | :---: | :--- |",
+        ])
+        for r in inconsistent_recs:
+            chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
+            window = f"{r['starttime']} → {r['endtime']}"
+            avail = "Y" if r["available"] else "N"
+            ds = "Y" if r["dataselect_success"] else "N"
+            dstype = r.get("dataselect_type", "?")
+            status = r["dataselect_status"]
+            md_lines.append(f"| `{chan}` | `{window}` | {avail} | {ds} | {dstype} | `{status}` |")
+        md_lines.append("")
+
+    md_lines.extend([
+        "---",
+        "",
+        "## Run Summary",
         "",
         f"- Seed: `{summary['seed']}`",
         f"- Time: `{summary['timestamp']}`",
@@ -110,17 +143,18 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         f"- Inconsistent: `{summary['total_inconsistent']}`",
         f"- Score: **{summary['score']} %**",
         "",
-        "## Inconsistency Breakdown",
+        "### Inconsistency Breakdown",
         f"- Availability says YES, Dataselect says NO: `{summary['availability_yes_dataselect_no']}`",
         f"- Availability says NO, Dataselect says YES: `{summary['availability_no_dataselect_yes']}`",
         "",
-        "## Dataselect Response Types",
+        "### Dataselect Response Types",
         *(f"- **{key}**: `{value}`" for key, value in sorted(type_counts.items())),
         "",
         "---",
         "",
         "## Detailed Results",
-    ]
+        "",
+    ])
 
     for r in results:
         md_lines.extend(
@@ -136,7 +170,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             ]
         )
 
-    filepath.write_text("\n".join(md_lines))
+    filepath.write_text("\n".join(md_lines), encoding="utf-8")
     return filepath
 
 

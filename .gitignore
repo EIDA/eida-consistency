@@ -2,6 +2,7 @@
 infra/minio-data/
 infra/.env
 .mc/
+reports_example/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

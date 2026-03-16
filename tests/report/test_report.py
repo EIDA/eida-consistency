@@ -48,9 +48,14 @@ def test_create_report_object_empty_records():
 # -----------------
 
 def test_make_unique_filename_format(monkeypatch):
+    # The format is node_date_seed.json
+    # We can't easily mock datetime.now here without more setup, 
+    # but we can check the general structure.
     fname = report._make_unique_filename("NODE", 42, "json")
-    assert fname.startswith("node_42_")
-    assert fname.endswith(".json")
+    # node_YYYYMMDD_HHMMSS_42.json
+    assert fname.startswith("node_")
+    assert "_42.json" in fname
+    assert len(fname.split("_")) == 4 # node, date, time, seed.extension
 
 
 # -----------------
@@ -77,10 +82,17 @@ def test_save_report_markdown(tmp_path):
     ]
     rep = report.create_report_object("NODE", 2, 2, 600, recs)
     path = report.save_report_markdown(rep, report_dir=tmp_path)
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     assert "# EIDA Consistency Report" in text
-    assert "Dataselect Response Types" in text
-    assert "✔️" in text or "❌" in text
+    assert "## 🔴 Detected Inconsistencies" in text
+    assert "## Run Summary" in text
+    assert "## Detailed Results" in text
+    assert "✔️" in text and "❌" in text
+    # Table headers
+    assert "| Channel | Window (UTC) | Avail | DS | Type | Status |" in text
+    # Data row for inconsistency
+    assert "| `XX.STA.00.BHZ` |" in text
+    assert "B" in text
 
 
 # -----------------
