@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
+import requests
+
 from eida_consistency.services.availability import get_availability_spans
 from eida_consistency.services.dataselect import dataselect
 from eida_consistency.utils.nodes import load_node_url
@@ -97,7 +99,14 @@ def explore_boundaries(
     Explore inconsistencies from a report.
     If indices is None, explores all inconsistent entries.
     """
-    report = json.loads(Path(report_path).read_text())
+    report_path = str(report_path)
+    if report_path.startswith("http://") or report_path.startswith("https://"):
+        logging.info(f"Fetching report from URL: {report_path}")
+        response = requests.get(report_path, timeout=30)
+        response.raise_for_status()
+        report = response.json()
+    else:
+        report = json.loads(Path(report_path).read_text())
     results = report["results"]
 
     # Filter results

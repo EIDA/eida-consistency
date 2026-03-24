@@ -150,7 +150,7 @@ def compare(ctx, report1, report2):
 # explore command
 # ----------------------------------------------------------------------
 @cli.command()
-@click.argument("report", required=False, type=click.Path(path_type=Path))
+@click.argument("report", required=False, type=str)
 @click.option(
     "--index", "-i",
     multiple=True, type=int,
