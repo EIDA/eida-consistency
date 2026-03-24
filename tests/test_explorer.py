@@ -97,7 +97,7 @@ def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     explorer.explore_boundaries(rep, indices=[1], max_days=1, verbose=True)
     logs = caplog.text
     assert "[1/1]" in logs              # progress counter
-    assert "searching boundaries" in logs
+    assert "XX.STA.00.BHZ" in logs      # channel label present
     assert "EXPLORATION SUMMARY" in logs
     assert "uvx dmtri" in logs
 
