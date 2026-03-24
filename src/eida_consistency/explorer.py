@@ -66,7 +66,7 @@ def _slice_consistent(
 
     consistent = covered == ds["success"]
 
-    # 4. Logging
+    # 4. Logging -- verbose prints full URLs, otherwise DEBUG only (no noise)
     if verbose:
         logging.info(
             f"  Availability URL: {base_url}availability/1/query?"
@@ -79,12 +79,12 @@ def _slice_consistent(
             f"&starttime={_iso(ds_t0)}&endtime={_iso(ds_t1)}&nodata=204"
         )
         logging.info(
-            f"  Result → availability covered={covered}, "
+            f"  Result -> availability covered={covered}, "
             f"dataselect success={ds['success']}, "
             f"consistent={consistent}"
         )
     else:
-        logging.info(f"  Checked {t0.date()} → consistent={consistent}")
+        logging.debug(f"  Checked {t0.date()} -> consistent={consistent}")
 
     return consistent
 
@@ -98,6 +98,7 @@ def explore_boundaries(
     """
     Explore inconsistencies from a report.
     If indices is None, explores all inconsistent entries.
+    Prints a summary table at the end with windows and dmtri commands.
     """
     report_path = str(report_path)
     if report_path.startswith("http://") or report_path.startswith("https://"):
@@ -121,72 +122,86 @@ def explore_boundaries(
 
     node = report["summary"]["node"]
     base_url = load_node_url(node)
+    total = len(targets)
 
-    for r in targets:
+    # Collect summary entries
+    summary: list[dict] = []
+
+    for item_num, r in enumerate(targets, start=1):
         if r.get("consistent", False):
-            logging.info(
-                f"Index {r['index']} is marked consistent in the report → skipping."
+            logging.debug(
+                f"Index {r['index']} is marked consistent in the report -> skipping."
             )
             continue
 
         net, sta, cha, loc = r["network"], r["station"], r["channel"], r["location"]
+        label = f"{net}.{sta}.{loc}.{cha}"
         slice_start = _parse_iso(r["starttime"])
         slice_end = _parse_iso(r["endtime"])
 
-        logging.info(
-            f"Exploring inconsistency for {net}.{sta}.{loc}.{cha} "
-            f"(index={r['index']}) around {slice_start} → {slice_end}"
-        )
+        logging.info(f"[{item_num}/{total}] {label} -- searching boundaries ...")
 
         # --- Walk backward ---
         back = slice_start.date()
-        checked = 0
-        while checked < max_days:
+        for back_step in range(1, max_days + 1):
             prev_day = back - timedelta(days=1)
             t0 = datetime.combine(prev_day, datetime.min.time(), tzinfo=timezone.utc)
             t1 = datetime.combine(prev_day, datetime.max.time(), tzinfo=timezone.utc)
-
+            logging.info(f"  <- backward day {back_step}/{max_days} ({prev_day})")
             if _slice_consistent(base_url, net, sta, cha, loc, t0, t1, verbose):
-                logging.info("  Day was consistent, stopping backward search.")
                 break
             back = prev_day
-            checked += 1
         else:
-            logging.warning(f"Reached max backward search limit ({max_days} days).")
+            logging.warning(f"  Reached max backward search limit ({max_days} days).")
 
         # --- Walk forward ---
         forward = slice_end.date()
-        checked = 0
-        while checked < max_days:
+        for fwd_step in range(1, max_days + 1):
             next_day = forward + timedelta(days=1)
             t0 = datetime.combine(next_day, datetime.min.time(), tzinfo=timezone.utc)
             t1 = datetime.combine(next_day, datetime.max.time(), tzinfo=timezone.utc)
-
+            logging.info(f"  -> forward  day {fwd_step}/{max_days} ({next_day})")
             if _slice_consistent(base_url, net, sta, cha, loc, t0, t1, verbose):
-                logging.info("  Day was consistent, stopping forward search.")
                 break
             forward = next_day
-            checked += 1
         else:
-            logging.warning(f"Reached max forward search limit ({max_days} days).")
+            logging.warning(f"  Reached max forward search limit ({max_days} days).")
 
-        # Report the expanded window
-        logging.info(f"Inconsistency window: {back} → {forward}")
-
-        # Suggested action
+        # Determine suggested action
         if r["available"] and not r["dataselect_success"]:
             cmd = "clean"
-            explanation = "Availability shows data but dataselect failed, cleaning is needed."
+            action = "Availability YES / Dataselect NO -> clean needed"
         elif not r["available"] and r["dataselect_success"]:
             cmd = "refresh"
-            explanation = "Dataselect has data but availability disagrees, refreshing is needed."
+            action = "Dataselect YES / Availability NO -> refresh needed"
         else:
             cmd = "refresh"
-            explanation = "Inconsistency detected, unclear direction. Defaulting to 'refresh'."
+            action = "Unclear direction -> defaulting to refresh"
 
-        logging.info(f"Suggested action: {explanation}")
-        logging.info(
-            "Command:\n"
-            f"uvx dmtri {cmd} --network={net} --station={sta} --channel={cha} "
-            f"--start={back} --end={forward}"
+        dmtri_cmd = (
+            f"uvx dmtri {cmd} --network={net} --station={sta} "
+            f"--channel={cha} --start={back} --end={forward}"
         )
+
+        summary.append({
+            "label": label,
+            "window": f"{back} -> {forward}",
+            "action": action,
+            "cmd": dmtri_cmd,
+        })
+
+    # -- Final summary ---------------------------------------------------------
+    sep = "-" * 72
+    n = len(summary)
+    logging.info("")
+    logging.info(sep)
+    logging.info(f"  EXPLORATION SUMMARY  ({n} inconsistenc{'y' if n == 1 else 'ies'})")
+    logging.info(sep)
+    for i, s in enumerate(summary, start=1):
+        logging.info(f"  [{i}/{n}] {s['label']}")
+        logging.info(f"        Window : {s['window']}")
+        logging.info(f"        Action : {s['action']}")
+        logging.info(f"        Command: {s['cmd']}")
+        if i < n:
+            logging.info("")
+    logging.info(sep)

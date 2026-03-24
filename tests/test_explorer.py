@@ -96,9 +96,9 @@ def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     caplog.set_level(logging.INFO)
     explorer.explore_boundaries(rep, indices=[1], max_days=1, verbose=True)
     logs = caplog.text
-    assert "Exploring inconsistency" in logs
-    assert "Inconsistency window" in logs
-    assert "Suggested action" in logs
+    assert "[1/1]" in logs              # progress counter
+    assert "searching boundaries" in logs
+    assert "EXPLORATION SUMMARY" in logs
     assert "uvx dmtri" in logs
 
 
@@ -168,3 +168,4 @@ def test_explore_boundaries_url_inconsistent(monkeypatch, caplog):
         explorer.explore_boundaries("https://example.com/report.json", max_days=1)
 
     assert "uvx dmtri" in caplog.text
+    assert "EXPLORATION SUMMARY" in caplog.text
