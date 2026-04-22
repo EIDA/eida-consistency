@@ -6,7 +6,7 @@ infra/minio-data/
 infra/.env
 .mc/
 reports_example/
-
+reports/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
