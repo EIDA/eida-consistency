@@ -86,8 +86,8 @@ def test_explore_boundaries_no_targets(tmp_path, caplog):
 def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 
-    # availability never covers
-    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [])
+    # availability covers the time window so avail=True
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
     # dataselect always fails
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
     # base url loader
@@ -159,7 +159,7 @@ def test_explore_boundaries_url_inconsistent(monkeypatch, caplog):
     mock_response.json.return_value = _report_payload(consistent=False)
     mock_response.raise_for_status.return_value = None
 
-    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [])
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
     monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
 

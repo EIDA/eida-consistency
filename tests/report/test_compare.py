@@ -24,6 +24,33 @@ def test_load_report_failure(tmp_path):
     with pytest.raises(Exception):
         cmp._load_report(p)
 
+def test_load_report_url_success(monkeypatch):
+    class MockResponse:
+        def __init__(self, json_data, status_code=200):
+            self.json_data = json_data
+            self.status_code = status_code
+        def json(self):
+            return self.json_data
+        def raise_for_status(self):
+            pass
+
+    import requests
+    def mock_get(url, *args, **kwargs):
+        return MockResponse({"summary": {"node": "URL_NODE"}})
+    
+    monkeypatch.setattr(requests, "get", mock_get)
+    result = cmp._load_report("https://fake.url/report.json")
+    assert result["summary"]["node"] == "URL_NODE"
+
+def test_load_report_url_failure(monkeypatch):
+    import requests
+    def mock_get(url, *args, **kwargs):
+        raise requests.exceptions.ConnectionError("Failed to connect")
+    
+    monkeypatch.setattr(requests, "get", mock_get)
+    with pytest.raises(Exception):
+        cmp._load_report("https://fake.url/report.json")
+
 
 # -----------------
 # compare_reports

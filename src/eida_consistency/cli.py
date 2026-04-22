@@ -146,6 +146,48 @@ def compare(ctx, report1, report2):
     compare_reports(report1, report2, report_dir=report_dir)
 
 
+@cli.command()
+@click.option("--node", required=True, help="EIDA node code (e.g., NOA, RESIF)")
+@click.option("--net", required=True, help="Network code")
+@click.option("--sta", required=True, help="Station code")
+@click.option("--cha", required=True, help="Channel code")
+@click.option("--loc", default="", help="Location code")
+@click.option("--start", required=True, help="Start time (ISO or YYYY-MM-DD)")
+@click.option("--end", required=True, help="End time (ISO or YYYY-MM-DD)")
+@click.pass_context
+def check(ctx, node, net, sta, cha, loc, start, end):
+    """Check consistency for a specific stream and time window."""
+    from eida_consistency.services.availability import check_availability_query
+    from eida_consistency.services.dataselect import dataselect
+    from eida_consistency.utils.nodes import load_node_url
+    
+    base_url = load_node_url(node)
+    
+    # 1. Check Availability
+    logging.info(f"Checking Availability for {net}.{sta}.{loc}.{cha}...")
+    av_res = check_availability_query(base_url, net, sta, cha, start, end, location=loc or "*")
+    available = bool(av_res["ok"])
+    
+    # 2. Check Dataselect
+    logging.info(f"Checking Dataselect for {net}.{sta}.{loc}.{cha}...")
+    ds_res = dataselect(base_url, net, sta, cha, start, end, loc)
+    ds_success = ds_res["success"]
+    
+    consistent = (available == ds_success)
+    
+    logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
+    logging.info(f"  Availability: {'YES' if available else 'NO'} (status {av_res['status']})")
+    logging.info(f"  Dataselect:   {'YES' if ds_success else 'NO'} (status {ds_res['status']})")
+    
+    if consistent:
+        logging.info("  Summary: CONSISTENT")
+    else:
+        logging.info("  Summary: INCONSISTENT")
+        
+    if not ds_success and ds_res.get("debug"):
+        logging.debug(f"  Debug: {ds_res['debug']}")
+
+
 # ----------------------------------------------------------------------
 # explore command
 # ----------------------------------------------------------------------

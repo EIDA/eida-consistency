@@ -144,3 +144,63 @@ def test_list_nodes(monkeypatch, caplog):
     result = runner.invoke(cli.list_nodes)
     assert result.exit_code == 0
     assert "nodes currently cached" in caplog.text
+
+
+# -----------------
+# check command
+# -----------------
+
+def test_check_command_consistent(monkeypatch, caplog):
+    import eida_consistency.utils.nodes as nodes
+    monkeypatch.setattr(nodes, "load_node_url", lambda n: "http://fake/")
+    
+    def fake_av(*args, **kwargs):
+        return {"ok": True, "status": 200}
+    
+    def fake_ds(*args, **kwargs):
+        return {"success": True, "status": 200, "debug": ""}
+    
+    import eida_consistency.services.availability as av
+    import eida_consistency.services.dataselect as ds
+    monkeypatch.setattr(av, "check_availability_query", fake_av)
+    monkeypatch.setattr(ds, "dataselect", fake_ds)
+    
+    caplog.set_level(logging.INFO)
+    runner = CliRunner()
+    result = runner.invoke(cli.check, [
+        "--node", "NOA", "--net", "HP", "--sta", "SERG", 
+        "--cha", "HHN", "--start", "2016-09-20", "--end", "2016-10-19"
+    ])
+    
+    assert result.exit_code == 0
+    assert "Checking Availability" in caplog.text
+    assert "Checking Dataselect" in caplog.text
+    assert "Summary: CONSISTENT" in caplog.text
+
+def test_check_command_inconsistent(monkeypatch, caplog):
+    import eida_consistency.utils.nodes as nodes
+    monkeypatch.setattr(nodes, "load_node_url", lambda n: "http://fake/")
+
+    
+    def fake_av(*args, **kwargs):
+        return {"ok": True, "status": 200}
+    
+    def fake_ds(*args, **kwargs):
+        return {"success": False, "status": 204, "debug": "NO DATA"}
+    
+    import eida_consistency.services.availability as av
+    import eida_consistency.services.dataselect as ds
+    monkeypatch.setattr(av, "check_availability_query", fake_av)
+    monkeypatch.setattr(ds, "dataselect", fake_ds)
+    
+    caplog.set_level(logging.DEBUG)
+    runner = CliRunner()
+    result = runner.invoke(cli.check, [
+        "--node", "NOA", "--net", "HP", "--sta", "SERG", 
+        "--cha", "HHN", "--start", "2016-09-20", "--end", "2016-10-19"
+    ])
+    
+    assert result.exit_code == 0
+    assert "Summary: INCONSISTENT" in caplog.text
+    assert "Debug: NO DATA" in caplog.text
+

@@ -151,6 +151,21 @@ def explore_boundaries(
 
         logging.info(f"[{item_num}/{total}] {label}")
 
+        # --- Re-verify current status ---
+        logging.info(f"  Verifying current status of {slice_start.date()}...")
+        t0_orig = datetime.combine(slice_start.date(), datetime.min.time(), tzinfo=timezone.utc)
+        t1_orig = datetime.combine(slice_start.date(), datetime.max.time(), tzinfo=timezone.utc)
+        
+        if _slice_consistent(base_url, net, sta, cha, loc, t0_orig, t1_orig, verbose):
+            logging.info(f"  FIXED: This window is now consistent. Skipping exploration.")
+            summary.append({
+                "label": label,
+                "window": f"{slice_start.date()} (Verified Fixed)",
+                "action": "Fixed",
+                "cmd": "-",
+            })
+            continue
+
         # --- Walk backward ---
         back = slice_start.date()
         hit_limit = True
