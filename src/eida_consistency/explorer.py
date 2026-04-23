@@ -45,12 +45,8 @@ def _slice_consistent(
     spans = get_availability_spans(
         base_url, net, sta, cha, _iso(t0), _iso(t1), location=loc or "*"
     )
-    covered = any(
-        _parse_iso(s["start"]) <= t0 and _parse_iso(s["end"]) >= t1
-        for s in spans
-    )
 
-    # 2. Pick random 10-min window
+    # 2. Pick random 10-min window within this slice
     day_seconds = int((t1 - t0).total_seconds())
     if day_seconds > 600:
         offset = random.randint(0, day_seconds - 600)
@@ -59,10 +55,16 @@ def _slice_consistent(
     else:
         ds_t0, ds_t1 = t0, t1
 
-    # 3. Run dataselect
+    # 3. Check if THIS specific window is covered by any availability span
+    window_covered = any(
+        (_parse_iso(s["start"]) <= ds_t0 and _parse_iso(s["end"]) >= ds_t1)
+        for s in spans
+    )
+
+    # 4. Run dataselect
     ds = dataselect(base_url, net, sta, cha, _iso(ds_t0), _iso(ds_t1), loc)
 
-    consistent = covered == ds["success"]
+    consistent = window_covered == ds["success"]
 
     # 4. Logging
     if verbose:
@@ -77,7 +79,7 @@ def _slice_consistent(
             f"&starttime={_iso(ds_t0)}&endtime={_iso(ds_t1)}&nodata=204"
         )
         logging.info(
-            f"  Result → availability covered={covered}, "
+            f"  Result → availability window_covered={window_covered}, "
             f"dataselect success={ds['success']}, "
             f"consistent={consistent}"
         )
