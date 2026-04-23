@@ -136,7 +136,9 @@ def test_explore_boundaries_url_fetches_json(caplog):
         caplog.set_level(logging.INFO)
         explorer.explore_boundaries("https://example.com/report.json")
 
-    mock_get.assert_called_once_with("https://example.com/report.json", timeout=30)
+    mock_get.assert_called_once_with(
+        "https://example.com/report.json", headers={"User-Agent": "eida-consistency"}, timeout=30
+    )
     assert "Fetching report from URL" in caplog.text
     assert "No targets to explore" in caplog.text  # all consistent → nothing to do
 
