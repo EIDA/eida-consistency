@@ -1,7 +1,9 @@
+import json
 import pytest
 import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 import eida_consistency.explorer as explorer
 
 
@@ -84,8 +86,8 @@ def test_explore_boundaries_no_targets(tmp_path, caplog):
 def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 
-    # availability never covers
-    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [])
+    # availability covers the time window so avail=True
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
     # dataselect always fails
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
     # base url loader
@@ -94,7 +96,76 @@ def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     caplog.set_level(logging.INFO)
     explorer.explore_boundaries(rep, indices=[1], max_days=1, verbose=True)
     logs = caplog.text
-    assert "Exploring inconsistency" in logs
-    assert "Inconsistency window" in logs
-    assert "Suggested action" in logs
+    assert "[1/1]" in logs              # progress counter
+    assert "XX.STA.00.BHZ" in logs      # channel label present
+    assert "EXPLORATION SUMMARY" in logs
     assert "uvx dmtri" in logs
+
+
+# -----------------
+# URL report input
+# -----------------
+
+def _report_payload(consistent=True):
+    return {
+        "summary": {"node": "NOA"},
+        "results": [
+            {
+                "index": 1,
+                "network": "XX",
+                "station": "STA",
+                "channel": "BHZ",
+                "location": "00",
+                "starttime": "2023-01-01T00:00:00Z",
+                "endtime": "2023-01-01T01:00:00Z",
+                "consistent": consistent,
+                "available": True,
+                "dataselect_success": False,
+            }
+        ],
+    }
+
+
+def test_explore_boundaries_url_fetches_json(caplog):
+    """When given a URL, explore_boundaries fetches via requests.get."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = _report_payload(consistent=True)
+    mock_response.raise_for_status.return_value = None
+
+    with patch("eida_consistency.explorer.requests.get", return_value=mock_response) as mock_get:
+        caplog.set_level(logging.INFO)
+        explorer.explore_boundaries("https://example.com/report.json")
+
+    mock_get.assert_called_once_with("https://example.com/report.json", timeout=30)
+    assert "Fetching report from URL" in caplog.text
+    assert "No targets to explore" in caplog.text  # all consistent → nothing to do
+
+
+def test_explore_boundaries_url_http_error():
+    """An HTTP error from the remote URL propagates as an exception."""
+    import requests as req
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = req.HTTPError("404 Not Found")
+
+    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+        with pytest.raises(req.HTTPError):
+            explorer.explore_boundaries("https://example.com/missing.json")
+
+
+def test_explore_boundaries_url_inconsistent(monkeypatch, caplog):
+    """URL report with inconsistencies triggers boundary exploration and dmtri command."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = _report_payload(consistent=False)
+    mock_response.raise_for_status.return_value = None
+
+    monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
+    monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
+
+    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+        caplog.set_level(logging.INFO)
+        explorer.explore_boundaries("https://example.com/report.json", max_days=1)
+
+    assert "uvx dmtri" in caplog.text
+    assert "EXPLORATION SUMMARY" in caplog.text

@@ -101,7 +101,7 @@ def run_consistency_check(
         duration=duration,
     )
 
-    logging.info("▶ Checking availability + dataselect consistency in parallel:\n")
+    logging.info("Checking availability + dataselect consistency in parallel:\n")
 
     all_logs, all_records = [], []
 
@@ -173,7 +173,7 @@ def run_consistency_check(
             all_logs.append(log)
             all_records.append(record)
 
-    logging.info(f"✅ Collected {len(all_records)} results.")
+    logging.info(f"Collected {len(all_records)} results.")
 
     # --- Measure test duration ---
     end_time = time.time()
@@ -193,9 +193,9 @@ def run_consistency_check(
 
     json_path = save_report_json(report, report_dir=report_dir)
     md_path = save_report_markdown(report, report_dir=report_dir)
-    logging.info(f"📁 Report saved to: {json_path}")
-    logging.info(f"📜 Markdown saved to: {md_path}")
-    logging.info(f"🕒 Test duration: {test_duration} seconds")
+    logging.info(f"Report saved to: {json_path}")
+    logging.info(f"Markdown saved to: {md_path}")
+    logging.info(f"Test duration: {test_duration} seconds")
     if print_stdout:
         sys.stdout.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         sys.stdout.flush()
