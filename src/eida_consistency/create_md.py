@@ -33,8 +33,8 @@ def build_markdown(reports: List[Tuple[Path, Dict[str, Any]]]) -> str:
     # --- Global table ---
     lines.append("## Per-node summary")
     lines.append("")
-    lines.append("| Node | Epochs Requested | Epochs Usable | Total Checks | Consistent | Inconsistent | Score |")
-    lines.append("|------|------------------|---------------|--------------|------------|--------------|-------|")
+    lines.append("| Node | Epochs Requested | Epochs Usable | Total Checks | Skipped | Consistent | Inconsistent | Score |")
+    lines.append("|------|------------------|---------------|--------------|---------|------------|--------------|-------|")
 
     for path, rep in reports:
         s = rep.get("summary", {})
@@ -42,13 +42,14 @@ def build_markdown(reports: List[Tuple[Path, Dict[str, Any]]]) -> str:
         requested = s.get("candidates_requested", s.get("epochs", "?"))
         usable = s.get("candidates_generated", s.get("epochs", "?"))
         total_checked = s.get("total_checked", 0)
+        total_skipped = s.get("total_skipped", 0)
         total_consistent = s.get("total_consistent", 0)
         total_inconsistent = s.get("total_inconsistent", 0)
         score = s.get("score", 0.0)
 
         lines.append(
             f"| {node} | {requested} | {usable} | "
-            f"{total_checked} | {total_consistent} | "
+            f"{total_checked} | {total_skipped} | {total_consistent} | "
             f"{total_inconsistent} | {score} % |"
         )
 
@@ -68,6 +69,7 @@ def build_markdown(reports: List[Tuple[Path, Dict[str, Any]]]) -> str:
         lines.append(f"- Candidate pool: `{s.get('candidates_pool', '?')}`")
         lines.append(f"- Queries performed: `{s.get('queries_performed', '?')}`")
         lines.append(f"- Total checks: `{s.get('total_checked', 0)}`")
+        lines.append(f"- Skipped: `{s.get('total_skipped', 0)}`")
         lines.append(f"- Consistent: `{s.get('total_consistent', 0)}`")
         lines.append(f"- Inconsistent: `{s.get('total_inconsistent', 0)}`")
         lines.append(f"- Score: **{s.get('score', 0.0)} %**")

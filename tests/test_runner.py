@@ -56,3 +56,32 @@ def test_print_stdout(monkeypatch, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "summary" in out
     assert result == tmp_path / "out.json"
+
+
+def test_transient_dataselect_failure_is_marked_skipped(monkeypatch, tmp_path):
+    monkeypatch.setattr(runner, "fetch_candidates", lambda *a, **k: [make_fake_candidate()])
+    monkeypatch.setattr(runner, "check_candidate", lambda *a, **k: make_fake_result())
+    monkeypatch.setattr(
+        runner,
+        "dataselect",
+        lambda *a, **k: {"success": False, "status": "ConnectionError", "type": "Error", "debug": "network"},
+    )
+    monkeypatch.setattr(runner, "format_result", lambda *a, **k: "LOG")
+    monkeypatch.setattr(runner, "load_node_url", lambda node: "http://fake/")
+
+    captured = {}
+
+    def fake_create_report_object(**kwargs):
+        captured["records"] = kwargs["records"]
+        return {"summary": {}, "results": kwargs["records"]}
+
+    monkeypatch.setattr(runner, "create_report_object", fake_create_report_object)
+    monkeypatch.setattr(runner, "save_report_json", lambda report, report_dir: tmp_path / "out.json")
+    monkeypatch.setattr(runner, "save_report_markdown", lambda report, report_dir: tmp_path / "out.md")
+
+    result = runner.run_consistency_check("FAKE", seed=1, report_dir=tmp_path)
+    assert result == tmp_path / "out.json"
+    record = captured["records"][0]
+    assert record["consistent"] is None
+    assert record["scoreable"] is False
+    assert record["consistency_status"] == "Skipped"

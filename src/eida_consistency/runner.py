@@ -13,6 +13,7 @@ from typing import Optional
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
 from .core.checker import check_candidate
+from .core.consistency import classify_consistency
 from .utils.nodes import load_node_url
 from .core.formatter import format_result
 from .report.report import (
@@ -113,6 +114,7 @@ def run_consistency_check(
             match["network"], match["station"], match["channel"],
             start, end, loc_final
         )
+        classification = classify_consistency(available, ds_result)
         log = format_result(
             idx,
             url,
@@ -131,7 +133,10 @@ def run_consistency_check(
             "dataselect_success": ds_result["success"],
             "dataselect_status": ds_result["status"],
             "dataselect_type": ds_result.get("type", "?"),
-            "consistent": available == ds_result["success"],
+            "consistent": classification["consistent"],
+            "scoreable": classification["scoreable"],
+            "consistency_status": classification["status"],
+            "consistency_reason": classification["reason"],
             "starttime": str(start),
             "endtime": str(end),
             "debug": ds_result.get("debug", ""),

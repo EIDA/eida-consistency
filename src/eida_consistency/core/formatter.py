@@ -1,17 +1,16 @@
-"""Formatter module for logging consistency-check results."""     
+"""Formatter module for logging consistency-check results."""
+
+from __future__ import annotations
+
+from eida_consistency.core.consistency import classify_consistency
+
 
 def format_result(idx, url, available, ds_result, match):
-    net = match["network"]
-    sta = match["station"]
-    cha = match["channel"]
-    loc = match.get("location", "")
-
     original_start = match.get("starttime", "?")
     original_end = match.get("endtime", "?")
 
     log = [f"{idx}. {url}"]
 
-        # Availability result
     if available:
         line = "     Availability: ✅ (timespan covered)"
         matched_span = match.get("matched_span")
@@ -21,13 +20,17 @@ def format_result(idx, url, available, ds_result, match):
     else:
         log.append("     Availability: ❌ (No availability in this timespan)")
 
-
-    # Dataselect result
     dataselect_status = "✅" if ds_result["success"] else f"❌ ({ds_result['status']})"
     log.append(f"     Dataselect:   {dataselect_status}")
 
-    consistent = available == ds_result["success"]
-    log.append(f"     Consistent:   {'✅' if consistent else '❌'}")
+    classification = classify_consistency(available, ds_result)
+    if classification["consistent"] is True:
+        consistency_status = "✅"
+    elif classification["consistent"] is False:
+        consistency_status = "❌"
+    else:
+        consistency_status = f"⚪ ({classification['status']}: {ds_result['status']})"
+    log.append(f"     Consistent:   {consistency_status}")
     log.append(f"     Epoch span: {original_start} → {original_end}")
 
     debug = ds_result.get("debug", "").strip()

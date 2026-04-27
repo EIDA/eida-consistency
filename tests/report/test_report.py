@@ -1,10 +1,18 @@
 import json
 import time
-from pathlib import Path
+
 import eida_consistency.report.report as report
 
 
-def make_record(consistent=True, available=True, ds_success=True, ds_type="M", status=200):
+def make_record(
+    consistent=True,
+    available=True,
+    ds_success=True,
+    ds_type="M",
+    status=200,
+    scoreable=True,
+    reason=None,
+):
     return {
         "network": "XX",
         "station": "STA",
@@ -17,50 +25,54 @@ def make_record(consistent=True, available=True, ds_success=True, ds_type="M", s
         "dataselect_type": ds_type,
         "dataselect_status": status,
         "consistent": consistent,
+        "scoreable": scoreable,
+        "consistency_reason": reason,
     }
 
 
-# -----------------
-# create_report_object
-# -----------------
-
 def test_create_report_object_basic():
-    records = [make_record(True), make_record(False, available=True, ds_success=False)]
-    rep = report.create_report_object("NODE", 123, 5, 600, records,
-                                      candidates_requested=5, candidates_tested=2, station_queries=1)
+    records = [
+        make_record(True),
+        make_record(False, available=True, ds_success=False),
+        make_record(None, available=True, ds_success=False, status="ConnectionError", scoreable=False, reason="TransientDataselectFailure"),
+    ]
+    rep = report.create_report_object(
+        "NODE",
+        123,
+        5,
+        600,
+        records,
+        candidates_requested=5,
+        candidates_tested=3,
+        station_queries=1,
+    )
     summary = rep["summary"]
     assert summary["node"] == "NODE"
-    assert summary["total_checked"] == 2
+    assert summary["total_checked"] == 3
+    assert summary["total_evaluated"] == 2
+    assert summary["total_skipped"] == 1
     assert summary["total_consistent"] == 1
     assert summary["total_inconsistent"] == 1
+    assert summary["total_transient"] == 1
+    assert summary["score"] == 50.0
     assert "availability_yes_dataselect_no" in summary
     assert "availability_no_dataselect_yes" in summary
     assert isinstance(summary["timestamp"], str)
+
 
 def test_create_report_object_empty_records():
     rep = report.create_report_object("NODE", 1, 1, 600, [])
     assert rep["summary"]["score"] == 0.0
     assert rep["summary"]["total_checked"] == 0
+    assert rep["summary"]["total_skipped"] == 0
 
 
-# -----------------
-# _make_unique_filename
-# -----------------
-
-def test_make_unique_filename_format(monkeypatch):
-    # The format is node_date_seed.json
-    # We can't easily mock datetime.now here without more setup, 
-    # but we can check the general structure.
+def test_make_unique_filename_format():
     fname = report._make_unique_filename("NODE", 42, "json")
-    # node_YYYYMMDD_HHMMSS_42.json
     assert fname.startswith("node_")
     assert "_42.json" in fname
-    assert len(fname.split("_")) == 4 # node, date, time, seed.extension
+    assert len(fname.split("_")) == 4
 
-
-# -----------------
-# save_report_json
-# -----------------
 
 def test_save_report_json_and_content(tmp_path):
     recs = [make_record()]
@@ -71,55 +83,42 @@ def test_save_report_json_and_content(tmp_path):
     assert data["summary"]["node"] == "NODE"
 
 
-# -----------------
-# save_report_markdown
-# -----------------
-
-def test_save_report_markdown(tmp_path):
+def test_save_report_markdown_with_skipped(tmp_path):
     recs = [
         make_record(True, ds_type="A"),
         make_record(False, ds_type="B"),
+        make_record(None, ds_success=False, ds_type="Error", status="ConnectionError", scoreable=False, reason="TransientDataselectFailure"),
     ]
-    rep = report.create_report_object("NODE", 2, 2, 600, recs)
+    rep = report.create_report_object("NODE", 2, 3, 600, recs)
     path = report.save_report_markdown(rep, report_dir=tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "# EIDA Consistency Report" in text
-    assert "## 🔴 Detected Inconsistencies" in text
-    assert "## Run Summary" in text
-    assert "## Detailed Results" in text
-    assert "✔️" in text and "❌" in text
-    # Table headers
+    assert "## Detected Inconsistencies" in text
+    assert "## Service & Network Errors" in text
+    assert "Quality Breakdown" in text
+    assert "Service/Network Errors: `1`" in text
+    assert "Scored checks" in text
+    assert "Skipped checks" in text
+    assert "TransientDataselectFailure" in text
     assert "| Channel | Window (UTC) | Avail | DS | Type | Status |" in text
-    # Data row for inconsistency
-    assert "| `XX.STA.00.BHZ` |" in text
-    assert "B" in text
 
-
-# -----------------
-# delete_old_reports
-# -----------------
 
 def test_delete_old_reports(tmp_path):
-    # Create 3 JSON + MD reports
     recs = [make_record()]
     rep = report.create_report_object("NODE", 1, 1, 600, recs)
-    paths = []
-    for i in range(3):
-        p_json = report.save_report_json(rep, report_dir=tmp_path)
-        p_md = report.save_report_markdown(rep, report_dir=tmp_path)
-        paths.append((p_json, p_md))
-        time.sleep(0.01)  # ensure mtime ordering
+    for _ in range(3):
+        report.save_report_json(rep, report_dir=tmp_path)
+        report.save_report_markdown(rep, report_dir=tmp_path)
+        time.sleep(0.01)
 
-    # Keep only 1
     report.delete_old_reports(report_dir=tmp_path, keep=1)
 
     remaining = list(tmp_path.glob("*.json"))
     assert len(remaining) == 1
-    # corresponding md should also remain
     md_remaining = list(tmp_path.glob("*.md"))
     assert len(md_remaining) == 1
 
+
 def test_delete_old_reports_nonexistent_dir(tmp_path):
     non_existing = tmp_path / "not_here"
-    # Should not raise
     report.delete_old_reports(non_existing, keep=1)
