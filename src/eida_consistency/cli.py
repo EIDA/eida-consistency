@@ -22,6 +22,7 @@ from eida_consistency.runner import run_consistency_check
 from eida_consistency.report.compare import compare_reports
 from eida_consistency.report.report import delete_old_reports, REPORT_DIR
 from eida_consistency.explorer import explore_boundaries
+from eida_consistency.core.consistency import classify_consistency
 from eida_consistency.utils import nodes
 
 
@@ -172,17 +173,18 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     logging.info(f"Checking Dataselect for {net}.{sta}.{loc}.{cha}...")
     ds_res = dataselect(base_url, net, sta, cha, start, end, loc)
     ds_success = ds_res["success"]
-    
-    consistent = (available == ds_success)
+    classification = classify_consistency(available, ds_res)
     
     logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
     logging.info(f"  Availability: {'YES' if available else 'NO'} (status {av_res['status']})")
     logging.info(f"  Dataselect:   {'YES' if ds_success else 'NO'} (status {ds_res['status']})")
-    
-    if consistent:
+
+    if classification["consistent"] is True:
         logging.info("  Summary: CONSISTENT")
-    else:
+    elif classification["consistent"] is False:
         logging.info("  Summary: INCONSISTENT")
+    else:
+        logging.info(f"  Summary: SKIPPED ({classification['reason']})")
         
     if not ds_success and ds_res.get("debug"):
         logging.debug(f"  Debug: {ds_res['debug']}")

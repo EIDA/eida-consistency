@@ -12,6 +12,7 @@ import requests
 
 from eida_consistency.services.availability import get_availability_spans
 from eida_consistency.services.dataselect import dataselect
+from eida_consistency.core.consistency import classify_consistency
 from eida_consistency.utils.nodes import load_node_url
 
 _BAR_WIDTH = 20
@@ -58,7 +59,7 @@ def _slice_consistent(
     t0: datetime,
     t1: datetime,
     verbose: bool = False,
-) -> bool:
+) -> bool | None:
     """
     Check if a time slice is consistent between availability and dataselect.
     Returns True if consistent, False if inconsistent.
@@ -82,7 +83,8 @@ def _slice_consistent(
     )
 
     ds = dataselect(base_url, net, sta, cha, _iso(ds_t0), _iso(ds_t1), loc)
-    consistent = window_covered == ds["success"]
+    classification = classify_consistency(window_covered, ds)
+    consistent = classification["consistent"]
 
     if verbose:
         logging.info(
@@ -131,7 +133,7 @@ def explore_boundaries(
     if indices:
         targets = [r for r in results if r["index"] in indices]
     else:
-        targets = [r for r in results if not r["consistent"]]
+        targets = [r for r in results if r.get("consistent") is False]
 
     if not targets:
         logging.info("No targets to explore (all consistent or no matching index).")
@@ -143,7 +145,7 @@ def explore_boundaries(
     summary: list[dict] = []
 
     for item_num, r in enumerate(targets, start=1):
-        if r.get("consistent", False):
+        if r.get("consistent") is not False:
             logging.debug(f"Index {r['index']} is marked consistent -> skipping.")
             continue
 
@@ -159,12 +161,22 @@ def explore_boundaries(
         t0_orig = datetime.combine(slice_start.date(), datetime.min.time(), tzinfo=timezone.utc)
         t1_orig = datetime.combine(slice_start.date(), datetime.max.time(), tzinfo=timezone.utc)
         
-        if _slice_consistent(base_url, net, sta, cha, loc, t0_orig, t1_orig, verbose):
+        current_status = _slice_consistent(base_url, net, sta, cha, loc, t0_orig, t1_orig, verbose)
+        if current_status is True:
             logging.info(f"  FIXED: This window is now consistent. Skipping exploration.")
             summary.append({
                 "label": label,
                 "window": f"{slice_start.date()} (Verified Fixed)",
                 "action": "Fixed",
+                "cmd": "-",
+            })
+            continue
+        if current_status is None:
+            logging.info("  TRANSIENT: Current Dataselect retrieval failed transiently. Skipping exploration.")
+            summary.append({
+                "label": label,
+                "window": f"{slice_start.date()} (Transient retrieval failure)",
+                "action": "Skipped",
                 "cmd": "-",
             })
             continue

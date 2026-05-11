@@ -35,14 +35,13 @@ def test_format_result_inconsistent_avail_yes_ds_no():
     assert "Consistent:   ❌" in out
 
 
-def test_format_result_inconsistent_avail_no_ds_yes():
+def test_format_result_skipped_transient_dataselect_failure():
     url = "http://fake/query"
-    ds_result = {"success": True, "status": "OK", "debug": ""}
-    out = formatter.format_result(3, url, False, ds_result, make_match())
+    ds_result = {"success": False, "status": "ConnectionError", "debug": ""}
+    out = formatter.format_result(3, url, True, ds_result, make_match())
 
-    assert "Availability: ❌" in out
-    assert "Dataselect:   ✅" in out
-    assert "Consistent:   ❌" in out
+    assert "Dataselect:   ❌ (ConnectionError)" in out
+    assert "Consistent:   ⚪ (Skipped: ConnectionError)" in out
 
 
 def test_format_result_with_missing_location_and_times():
@@ -52,7 +51,6 @@ def test_format_result_with_missing_location_and_times():
         "network": "YY",
         "station": "BBB",
         "channel": "EHN",
-        # no location, no endtime
         "starttime": "2020-05-01T00:00:00",
     }
     out = formatter.format_result(4, url, False, ds_result, match)
@@ -63,7 +61,6 @@ def test_format_result_with_missing_location_and_times():
 
 
 def test_format_result_with_matched_span_includes_start_end():
-    """Ensure matched_span start/end are appended when present in match dict."""
     url = "http://fake/query"
     ds_result = {"success": True, "status": "OK", "debug": ""}
     match = make_match()
