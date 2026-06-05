@@ -41,5 +41,6 @@ plugins:
 
 nav:
   - Home: index.md
+  - WFCatalog Cross-check: wfcatalog.md
   - API Reference: api_reference.md
   - CLI Reference: cli.md

@@ -93,8 +93,14 @@ def cli(ctx, log_level, report_dir):
     is_flag=True,
     help="Upload report to configured S3 bucket after saving locally.",
 )
+@click.option(
+    "--with-wfcatalog",
+    "with_wfcatalog",
+    is_flag=True,
+    help="Also cross-check each epoch against the WFCatalog service (advisory; not scored).",
+)
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload):
+def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload, with_wfcatalog):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = ctx.obj["report_dir"]
 
@@ -117,6 +123,7 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
             seed=seed,
             print_stdout=print_stdout,
             report_dir=report_dir,
+            with_wfcatalog=with_wfcatalog,
         )
     except ValueError as e:
         raise click.BadParameter(str(e))

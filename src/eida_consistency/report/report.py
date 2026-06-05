@@ -43,29 +43,72 @@ def create_report_object(
         if r["consistent"] is False and (not r["available"]) and r["dataselect_success"]
     )
 
+    summary = {
+        "node": node,
+        "seed": seed,
+        "epochs_requested": epochs,
+        "candidates_requested": candidates_requested,
+        "candidates_tested": candidates_tested,
+        "station_queries": station_queries,
+        "duration": duration,
+        "test_duration_sec": test_duration_sec,
+        "total_checked": total_checked,
+        "total_evaluated": total_evaluated,
+        "total_skipped": total_skipped,
+        "total_consistent": total_consistent,
+        "total_inconsistent": total_inconsistent,
+        "total_transient": total_skipped,
+        "score": round(score, 2),
+        "availability_yes_dataselect_no": avail_yes_ds_no,
+        "availability_no_dataselect_yes": avail_no_ds_yes,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    wf_summary = _summarize_wfcatalog(records)
+    if wf_summary is not None:
+        summary["wfcatalog"] = wf_summary
+
     return {
-        "summary": {
-            "node": node,
-            "seed": seed,
-            "epochs_requested": epochs,
-            "candidates_requested": candidates_requested,
-            "candidates_tested": candidates_tested,
-            "station_queries": station_queries,
-            "duration": duration,
-            "test_duration_sec": test_duration_sec,
-            "total_checked": total_checked,
-            "total_evaluated": total_evaluated,
-            "total_skipped": total_skipped,
-            "total_consistent": total_consistent,
-            "total_inconsistent": total_inconsistent,
-            "total_transient": total_skipped,
-            "score": round(score, 2),
-            "availability_yes_dataselect_no": avail_yes_ds_no,
-            "availability_no_dataselect_yes": avail_no_ds_yes,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        },
+        "summary": summary,
         "results": records,
     }
+
+
+def _summarize_wfcatalog(records: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Advisory WFCatalog verdict counts, or None if it wasn't queried."""
+    wf_records = [r for r in records if "wfcatalog_verdict" in r]
+    if not wf_records:
+        return None
+
+    counts = Counter(r["wfcatalog_verdict"] for r in wf_records)
+    # Name the actionable channels so a catalog-gap is never hidden, even when
+    # the availability/dataselect pair was otherwise consistent.
+    gap_channels = [
+        f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
+        for r in wf_records
+        if r["wfcatalog_verdict"] == "catalog-gap"
+    ]
+    return {"counts": dict(counts), "catalog_gap_channels": gap_channels}
+
+
+def _wf_cell(r: Dict[str, Any]) -> str:
+    """Render a record's WFCatalog verdict, with the day's % when known."""
+    verdict = r.get("wfcatalog_verdict", "-")
+    pct = r.get("wfcatalog_percent")
+    return f"{verdict} ({pct:.1f}%)" if pct is not None else verdict
+
+
+def _wfcatalog_summary_lines(wf: Optional[Dict[str, Any]]) -> List[str]:
+    """Render the advisory WFCatalog summary as one (or two) Markdown lines."""
+    if not wf:
+        return []
+    order = ["agree", "catalog-gap", "day-partial", "n/a"]
+    parts = [f"{wf['counts'][v]} {v}" for v in order if wf["counts"].get(v)]
+    lines = [f"### WFCatalog (advisory): {' · '.join(parts)}"]
+    if wf["catalog_gap_channels"]:
+        lines.append(f"- ⚠️ catalog-gap: `{', '.join(wf['catalog_gap_channels'])}`")
+    lines.append("")
+    return lines
 
 
 def _make_unique_filename(node: str, seed: int, extension: str) -> str:
@@ -94,16 +137,19 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     type_counts = Counter(r.get("dataselect_type", "?") for r in results if r.get("dataselect_type"))
     inconsistent_recs = [r for r in results if r.get("consistent") is False]
     skipped_recs = [r for r in results if not r.get("scoreable", True)]
+    wf_on = any("wfcatalog_verdict" in r for r in results)
 
     md_lines = [f"# EIDA Consistency Report: `{summary['node']}`", ""]
 
     if inconsistent_recs:
+        wf_head = " WF |" if wf_on else ""
+        wf_sep = " :---: |" if wf_on else ""
         md_lines.extend(
             [
                 "## Detected Inconsistencies",
                 "",
-                "| Channel | Window (UTC) | Avail | DS | Type | Status |",
-                "| :--- | :--- | :---: | :---: | :---: | :--- |",
+                f"| Channel | Window (UTC) | Avail | DS | Type | Status |{wf_head}",
+                f"| :--- | :--- | :---: | :---: | :---: | :--- |{wf_sep}",
             ]
         )
         for r in inconsistent_recs:
@@ -111,8 +157,9 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             window = f"{r['starttime']} → {r['endtime']}"
             avail = "Y" if r["available"] else "N"
             ds = "Y" if r["dataselect_success"] else "N"
+            wf_cell = f" {_wf_cell(r)} |" if wf_on else ""
             md_lines.append(
-                f"| `{chan}` | `{window}` | {avail} | {ds} | {r.get('dataselect_type', '?')} | `{r['dataselect_status']}` |"
+                f"| `{chan}` | `{window}` | {avail} | {ds} | {r.get('dataselect_type', '?')} | `{r['dataselect_status']}` |{wf_cell}"
             )
         md_lines.append("")
     elif skipped_recs:
@@ -180,6 +227,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             "### Dataselect Response Types",
             *(f"- **{key}**: `{value}`" for key, value in sorted(type_counts.items())),
             "",
+            *_wfcatalog_summary_lines(summary.get("wfcatalog")),
             "---",
             "",
             "## Detailed Results",
@@ -205,6 +253,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
                 f"- Status: `{r['dataselect_status']}`",
                 f"- Scored: `{r.get('scoreable', True)}`",
                 f"- Consistent: `{consistency_text}`",
+                *([f"- WFCatalog: `{_wf_cell(r)}`"] if "wfcatalog_verdict" in r else []),
                 "",
             ]
         )

@@ -12,8 +12,9 @@ from typing import Optional
 
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
+from .services.wfcatalog import check_wfcatalog
 from .core.checker import check_candidate
-from .core.consistency import classify_consistency
+from .core.consistency import classify_consistency, classify_wfcatalog
 from .utils.nodes import load_node_url
 from .core.formatter import format_result
 from .report.report import (
@@ -35,6 +36,7 @@ def run_consistency_check(
     print_stdout: bool = False,
     report_dir: Path = REPORT_DIR,
     station_multiplier: int = 3,
+    with_wfcatalog: bool = False,
 ) -> Optional[Path]:
     """
     Run the availability + dataselect consistency check and write reports.
@@ -115,6 +117,18 @@ def run_consistency_check(
             start, end, loc_final
         )
         classification = classify_consistency(available, ds_result)
+
+        wf_fields = {}
+        if with_wfcatalog:
+            wf_result = check_wfcatalog(
+                base_url,
+                match["network"], match["station"], match["channel"],
+                start, end, loc_final,
+            )
+            wf_fields = {
+                "wfcatalog_verdict": classify_wfcatalog(ds_result, wf_result),
+                "wfcatalog_percent": wf_result.get("percent_availability"),
+            }
         log = format_result(
             idx,
             url,
@@ -145,6 +159,7 @@ def run_consistency_check(
                 "end": matched_span.get("end") if matched_span else None,
                 "location": matched_span.get("location") if matched_span else None,
             },
+            **wf_fields,
         }
         return log, record
 
