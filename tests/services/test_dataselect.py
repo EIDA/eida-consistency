@@ -1,5 +1,38 @@
+import types
 import pytest
 import eida_consistency.services.dataselect as ds
+
+
+def _fake_trace(start_iso, end_iso, sr):
+    stats = types.SimpleNamespace(
+        starttime=types.SimpleNamespace(isoformat=lambda s=start_iso: s),
+        endtime=types.SimpleNamespace(isoformat=lambda e=end_iso: e),
+        sampling_rate=sr,
+    )
+    return types.SimpleNamespace(stats=stats)
+
+
+def test_segments_extracted_from_stream(monkeypatch):
+    fake_stream = [
+        _fake_trace("2020-01-09T23:59:19", "2020-01-09T23:59:59", 100.0),
+        _fake_trace("2020-01-10T00:00:00", "2020-01-10T00:09:19", 100.0),
+    ]
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(content=b"ok"))
+    monkeypatch.setattr(ds, "read", lambda bio, format=None: fake_stream)
+    r = ds.dataselect("https://h", "N", "S", "C", "2020-01-09", "2020-01-10")
+    assert r["success"]
+    assert r["segments"] == [
+        ("2020-01-09T23:59:19", "2020-01-09T23:59:59", 100.0),
+        ("2020-01-10T00:00:00", "2020-01-10T00:09:19", 100.0),
+    ]
+
+
+def test_segments_empty_on_nodata(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(status=204))
+    r = ds.dataselect("https://h", "N", "S", "C", "2020", "2021")
+    assert r["segments"] == []
 
 
 class DummyResp:
