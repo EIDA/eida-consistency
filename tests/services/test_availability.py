@@ -112,6 +112,26 @@ def test_check_availability_query_notcovered(monkeypatch):
     assert result["ok"] is False
     assert result["matched_span"] is None
 
+def test_check_availability_query_hides_restricted(monkeypatch):
+    captured = {}
+    def fake_get(url, *a, **k):
+        captured["url"] = url
+        return DummyResp(text="")
+    monkeypatch.setattr(requests, "get", fake_get)
+    avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                   "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
+    assert "includerestricted=false" in captured["url"]
+
+def test_get_availability_spans_hides_restricted(monkeypatch):
+    captured = {}
+    def fake_get(url, *a, **k):
+        captured["url"] = url
+        return DummyResp(text="")
+    monkeypatch.setattr(requests, "get", fake_get)
+    avail.get_availability_spans("http://x/", "HL", "STA", "HHZ",
+                                 "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
+    assert "includerestricted=false" in captured["url"]
+
 def test_check_availability_query_exception(monkeypatch):
     def bad_get(*a, **k): raise Exception("boom")
     monkeypatch.setattr(requests, "get", bad_get)

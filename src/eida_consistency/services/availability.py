@@ -106,6 +106,7 @@ def check_availability_query(
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
         f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
+        f"&includerestricted=false"
     )
     logging.debug(f"Availability (query) URL: {url}")
 
@@ -153,6 +154,7 @@ def get_availability_spans(
         f"{base_url}availability/1/query?"
         f"network={network}&station={station}&location={location}&channel={channel}"
         f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
+        f"&includerestricted=false"
     )
     logging.debug(f"Availability (spans) URL: {url}")
 
