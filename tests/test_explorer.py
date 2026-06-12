@@ -83,6 +83,33 @@ def test_explore_boundaries_no_targets(tmp_path, caplog):
     explorer.explore_boundaries(rep)
     assert "No targets to explore" in caplog.text
 
+def test_explore_boundaries_no_targets_returns_empty(tmp_path):
+    rep = make_report(tmp_path / "rep.json", consistent=True)
+    result = explorer.explore_boundaries(rep)
+    assert result["schema_version"] == explorer.SCHEMA_VERSION
+    assert result["node"] == "NOA"
+    assert result["fixes"] == []
+
+def test_explore_boundaries_returns_structured_fixes(monkeypatch, tmp_path):
+    rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
+    monkeypatch.setattr(explorer, "get_availability_spans",
+                        lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
+    monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
+
+    result = explorer.explore_boundaries(rep, indices=[1], max_days=1)
+
+    assert result["schema_version"] == explorer.SCHEMA_VERSION
+    assert result["node"] == "NOA"
+    assert len(result["fixes"]) == 1
+    fix = result["fixes"][0]
+    assert fix["index"] == 1
+    assert (fix["network"], fix["station"], fix["location"], fix["channel"]) == ("XX", "STA", "00", "BHZ")
+    # report row says available=True / dataselect_success=False -> clean direction
+    assert fix["direction"] == "clean"
+    assert fix["status"] == "actionable"
+    assert fix["start"] and fix["end"]  # boundary window populated
+
 def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 

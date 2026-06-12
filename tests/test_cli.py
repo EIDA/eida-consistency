@@ -1,3 +1,4 @@
+import json
 import pytest
 import logging
 from pathlib import Path
@@ -110,6 +111,75 @@ def test_explore_no_reports(tmp_path):
     result = runner.invoke(cli.explore, [], obj={"report_dir": tmp_path})
     assert result.exit_code != 0
     assert "No report files found" in result.output
+
+def test_explore_json_flag_outputs_json(monkeypatch, tmp_path):
+    f = tmp_path / "rep.json"
+    f.write_text("{}")
+    sample = {
+        "schema_version": "1.0",
+        "node": "NOA",
+        "report": str(f),
+        "fixes": [{
+            "index": 1, "network": "XX", "station": "STA",
+            "location": "00", "channel": "BHZ",
+            "start": "2008-01-01", "end": "2008-02-01",
+            "direction": "refresh", "status": "actionable",
+        }],
+    }
+    monkeypatch.setattr(cli, "explore_boundaries",
+                        lambda report, indices, max_days, verbose: sample)
+    runner = CliRunner()
+    result = runner.invoke(cli.explore, [str(f), "--json"], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0
+    parsed = json.loads(result.output)  # stdout must be pure JSON
+    assert parsed["schema_version"] == "1.0"
+    assert parsed["fixes"][0]["direction"] == "refresh"
+    assert parsed["fixes"][0]["status"] == "actionable"
+
+def test_explore_without_json_flag_prints_no_json(monkeypatch, tmp_path):
+    f = tmp_path / "rep.json"
+    f.write_text("{}")
+    monkeypatch.setattr(cli, "explore_boundaries",
+                        lambda report, indices, max_days, verbose: {"fixes": []})
+    runner = CliRunner()
+    result = runner.invoke(cli.explore, [str(f)], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0
+    assert "schema_version" not in result.output  # no JSON dumped without the flag
+
+def test_explore_json_end_to_end(monkeypatch, tmp_path):
+    """--json runs the REAL explore_boundaries and emits structured fixes on stdout."""
+    import eida_consistency.explorer as explorer
+    report = tmp_path / "rep.json"
+    report.write_text(json.dumps({
+        "summary": {"node": "NOA"},
+        "results": [{
+            "index": 1, "network": "XX", "station": "STA",
+            "channel": "BHZ", "location": "00",
+            "starttime": "2023-01-01T00:00:00Z", "endtime": "2023-01-01T01:00:00Z",
+            "consistent": False, "available": True, "dataselect_success": False,
+        }],
+    }))
+    # availability covers the window, dataselect always fails -> inconsistent/actionable
+    monkeypatch.setattr(explorer, "get_availability_spans",
+                        lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
+    monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
+
+    runner = CliRunner()
+    result = runner.invoke(cli.explore, [str(report), "--json", "--days", "1"],
+                           obj={"report_dir": tmp_path})
+    assert result.exit_code == 0
+    # CliRunner folds stderr (progress/logs) into output; in a real terminal they
+    # are separate fds. The JSON block is emitted last, so parse from its first '{'.
+    parsed = json.loads(result.output[result.output.index("{"):])
+    assert parsed["schema_version"] == "1.0"
+    assert parsed["node"] == "NOA"
+    assert len(parsed["fixes"]) == 1
+    fix = parsed["fixes"][0]
+    assert (fix["network"], fix["station"], fix["location"], fix["channel"]) == ("XX", "STA", "00", "BHZ")
+    assert fix["direction"] == "clean"   # report: available=True, dataselect=False
+    assert fix["status"] == "actionable"
+    assert fix["start"] and fix["end"]
 
 
 # -----------------
