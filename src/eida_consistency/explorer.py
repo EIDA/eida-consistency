@@ -17,6 +17,11 @@ from eida_consistency.utils.nodes import load_node_url
 
 _BAR_WIDTH = 20
 
+# Version of the machine-readable fix schema returned by explore_boundaries and
+# emitted by `explore --json`. Bump on any breaking change to the fix records so
+# consumers (e.g. dmtri fix) can guard against incompatible output.
+SCHEMA_VERSION = "1.0"
+
 
 def _progress(direction: str, step: int, max_days: int, date: str) -> None:
     """Print an in-place progress bar to stderr (overwrites the same line)."""
@@ -113,11 +118,37 @@ def explore_boundaries(
     indices: Optional[List[int]] = None,
     max_days: int = 30,
     verbose: bool = False,
-) -> None:
+) -> dict:
     """
     Explore inconsistencies from a report.
     If indices is None, explores all inconsistent entries.
-    Prints a summary table at the end with windows and dmtri commands.
+    Prints a human-readable summary table at the end with windows and dmtri
+    commands (unchanged behavior).
+
+    Returns a machine-readable result dict::
+
+        {
+            "schema_version": SCHEMA_VERSION,
+            "node": "<node>",
+            "report": "<path or url>",
+            "fixes": [
+                {
+                    "index": <int>,
+                    "network": "..", "station": "..",
+                    "location": "..", "channel": "..",
+                    "start": "YYYY-MM-DD" | None,
+                    "end":   "YYYY-MM-DD" | None,
+                    "direction": "refresh" | "clean" | None,
+                    "status": "actionable" | "fixed" | "transient",
+                },
+                ...
+            ],
+        }
+
+    Only ``status == "actionable"`` fixes carry a window/direction; "fixed"
+    (already consistent again) and "transient" (dataselect failed transiently)
+    rows are reported with null window so a consumer can see they were evaluated
+    but need no action. The ``--json`` CLI flag dumps this dict to stdout.
     """
     report_path = str(report_path)
     if report_path.startswith("http://") or report_path.startswith("https://"):
@@ -137,12 +168,18 @@ def explore_boundaries(
 
     if not targets:
         logging.info("No targets to explore (all consistent or no matching index).")
-        return
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "node": report["summary"]["node"],
+            "report": report_path,
+            "fixes": [],
+        }
 
     node = report["summary"]["node"]
     base_url = load_node_url(node)
     total = len(targets)
     summary: list[dict] = []
+    fixes: list[dict] = []
 
     for item_num, r in enumerate(targets, start=1):
         if r.get("consistent") is not False:
@@ -170,6 +207,12 @@ def explore_boundaries(
                 "action": "Fixed",
                 "cmd": "-",
             })
+            fixes.append({
+                "index": r["index"], "network": net, "station": sta,
+                "location": loc, "channel": cha,
+                "start": None, "end": None, "direction": None,
+                "status": "fixed",
+            })
             continue
         if current_status is None:
             logging.info("  TRANSIENT: Current Dataselect retrieval failed transiently. Skipping exploration.")
@@ -178,6 +221,12 @@ def explore_boundaries(
                 "window": f"{slice_start.date()} (Transient retrieval failure)",
                 "action": "Skipped",
                 "cmd": "-",
+            })
+            fixes.append({
+                "index": r["index"], "network": net, "station": sta,
+                "location": loc, "channel": cha,
+                "start": None, "end": None, "direction": None,
+                "status": "transient",
             })
             continue
 
@@ -233,6 +282,12 @@ def explore_boundaries(
             "action": action,
             "cmd": dmtri_cmd,
         })
+        fixes.append({
+            "index": r["index"], "network": net, "station": sta,
+            "location": loc, "channel": cha,
+            "start": str(back), "end": str(forward),
+            "direction": cmd, "status": "actionable",
+        })
 
     # -- Final summary ---------------------------------------------------------
     sep = "-" * 72
@@ -249,3 +304,10 @@ def explore_boundaries(
         if i < n:
             logging.info("")
     logging.info(sep)
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "node": node,
+        "report": report_path,
+        "fixes": fixes,
+    }

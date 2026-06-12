@@ -10,6 +10,7 @@ $ uv run eida-consistency reload-nodes
 $ uv run eida-consistency list-nodes
 """
 
+import json
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
@@ -206,8 +207,13 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     help="Maximum number of days to explore backward/forward."
 )
 @click.option("--verbose", is_flag=True, help="Print query URLs while exploring")
+@click.option(
+    "--json", "as_json", is_flag=True,
+    help="Emit the discovered fixes as JSON to stdout (machine-readable). "
+         "Human logs/progress stay on stderr, so stdout is pure JSON.",
+)
 @click.pass_context
-def explore(ctx, report, index, days, verbose):
+def explore(ctx, report, index, days, verbose, as_json):
     """Explore day-by-day boundaries of inconsistencies from a report."""
     report_dir: Path = ctx.obj["report_dir"]
 
@@ -219,7 +225,11 @@ def explore(ctx, report, index, days, verbose):
             raise click.UsageError(f"No report files found in {report_dir}")
 
     indices = list(index) if index else None
-    explore_boundaries(report, indices, max_days=days, verbose=verbose)
+    result = explore_boundaries(report, indices, max_days=days, verbose=verbose)
+    if as_json:
+        # stdout only -- logging/progress already went to stderr -- so a caller
+        # (e.g. `dmtri fix`) can parse stdout as JSON directly.
+        click.echo(json.dumps(result, indent=2, default=str))
 
 
 # ----------------------------------------------------------------------
