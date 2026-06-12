@@ -1,5 +1,14 @@
-# Claude Code local config (personal, not for version control)
+# AI assistant artifacts (personal, not for version control)
 .claude/
+docs/superpowers/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursor/
+.cursorrules
+.aider*
+.mcp.json
+.github/copilot-instructions.md
 
 # Local MinIO dev server
 infra/minio-data/
