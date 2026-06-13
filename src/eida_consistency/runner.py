@@ -107,20 +107,21 @@ def run_consistency_check(
     all_logs, all_records = [], []
 
     def worker(args):
-        idx, (url, available, start, end, loc_exact, matched_span), match = args
+        idx, (url, available, start, end, loc_exact, matched_span, spans), match = args
         loc_final = loc_exact or match.get("location", "")
         ds_result = dataselect(
             base_url,
             match["network"], match["station"], match["channel"],
             start, end, loc_final
         )
-        classification = classify_consistency(available, ds_result)
+        classification = classify_consistency(spans, ds_result, (start, end))
         log = format_result(
             idx,
             url,
             available,
             ds_result,
             {**match, "location": loc_final, "matched_span": matched_span},
+            classification,
         )
         record = {
             "index": idx,
@@ -137,6 +138,7 @@ def run_consistency_check(
             "scoreable": classification["scoreable"],
             "consistency_status": classification["status"],
             "consistency_reason": classification["reason"],
+            "mismatch": classification.get("mismatch", []),
             "starttime": str(start),
             "endtime": str(end),
             "debug": ds_result.get("debug", ""),
@@ -149,7 +151,7 @@ def run_consistency_check(
         return log, record
 
     args_list = []
-    for idx, (url, available, start, end, loc_exact, matched_span) in enumerate(results, 1):
+    for idx, (url, available, start, end, loc_exact, matched_span, spans) in enumerate(results, 1):
         try:
             parts = url.split("?")[1].split("&")
             net = next(p.split("=")[1] for p in parts if p.startswith("network="))
@@ -167,7 +169,7 @@ def run_consistency_check(
             None,
         )
         if match:
-            args_list.append((idx, (url, available, start, end, loc_exact, matched_span), match))
+            args_list.append((idx, (url, available, start, end, loc_exact, matched_span, spans), match))
 
     pool_size = max(1, min(max_workers, len(args_list)))
     with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:

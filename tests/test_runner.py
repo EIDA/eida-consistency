@@ -12,7 +12,9 @@ def make_fake_candidate():
 
 def make_fake_result():
     url = "http://fake/fdsnws/availability/1/query?network=N&station=S&channel=C"
-    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", {"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "location": ""})], {"stat": 1}
+    matched_span = {"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "location": ""}
+    spans = [{"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "samplerate": "100.0"}]
+    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", matched_span, spans)], {"stat": 1}
 
 
 def patch_all(monkeypatch, tmp_path):
