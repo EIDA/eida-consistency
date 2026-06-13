@@ -93,6 +93,7 @@ def test_check_candidate_success(monkeypatch):
         return {
             "ok": True,
             "matched_span": {"start": "2023-01-01T00:00:00", "end": "2023-01-01T23:59:59", "location": "00"},
+            "spans": [{"start": "2023-01-01T00:00:00", "end": "2023-01-01T23:59:59", "samplerate": "100.0"}],
             "status": 200,
             "url": "http://fake/availability/1/query?..."
         }
@@ -102,11 +103,12 @@ def test_check_candidate_success(monkeypatch):
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
 
     assert len(results) == 1
-    url, available, s, e, loc, span = results[0]
+    url, available, s, e, loc, span, spans = results[0]
     assert url.startswith("http://fake/availability/1/query?")
     assert available is True
     assert loc == "00"
     assert isinstance(span, dict)
+    assert spans == [{"start": "2023-01-01T00:00:00", "end": "2023-01-01T23:59:59", "samplerate": "100.0"}]
     assert stats["candidates_generated"] == 1
     assert stats["candidates_requested"] == 1
 
@@ -128,7 +130,7 @@ def test_check_candidate_not_available(monkeypatch):
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
     
     assert len(results) == 1
-    url, available, s, e, loc, span = results[0]
+    url, available, s, e, loc, span, spans = results[0]
     assert available is False
     assert span is None
     assert stats["candidates_generated"] == 1
