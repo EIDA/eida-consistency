@@ -169,13 +169,13 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     logging.info(f"Checking Availability for {net}.{sta}.{loc}.{cha}...")
     av_res = check_availability_query(base_url, net, sta, cha, start, end, location=loc or "*")
     available = bool(av_res["ok"])
-    
+
     # 2. Check Dataselect
     logging.info(f"Checking Dataselect for {net}.{sta}.{loc}.{cha}...")
     ds_res = dataselect(base_url, net, sta, cha, start, end, loc)
     ds_success = ds_res["success"]
-    classification = classify_consistency(available, ds_res)
-    
+    classification = classify_consistency(av_res.get("spans", []), ds_res, (start, end))
+
     logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
     logging.info(f"  Availability: {'YES' if available else 'NO'} (status {av_res['status']})")
     logging.info(f"  Dataselect:   {'YES' if ds_success else 'NO'} (status {ds_res['status']})")
@@ -186,7 +186,10 @@ def check(ctx, node, net, sta, cha, loc, start, end):
         logging.info("  Summary: INCONSISTENT")
     else:
         logging.info(f"  Summary: SKIPPED ({classification['reason']})")
-        
+
+    for m in classification.get("mismatch", []):
+        logging.info(f"  Gap mismatch: {m['start']} -> {m['end']}")
+
     if not ds_success and ds_res.get("debug"):
         logging.debug(f"  Debug: {ds_res['debug']}")
 

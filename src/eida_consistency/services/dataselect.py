@@ -17,6 +17,23 @@ from obspy.clients.fdsn import Client
 from obspy import UTCDateTime, read
 
 
+def _segments_from_stream(st) -> list:
+    """Extract (start_iso, end_iso, sampling_rate) per trace; defensive."""
+    segs = []
+    for tr in st:
+        try:
+            stats = tr.stats
+            start = stats.starttime
+            end = stats.endtime
+            start_iso = start.isoformat() if hasattr(start, "isoformat") else str(start)
+            end_iso = end.isoformat() if hasattr(end, "isoformat") else str(end)
+            sr = float(getattr(stats, "sampling_rate", 0.0) or 0.0)
+            segs.append((start_iso, end_iso, sr))
+        except Exception:
+            continue
+    return segs
+
+
 def _endpoint_from_base(base_url: str) -> str:
     """Preserve scheme/host (e.g. https://ws.resif.fr)."""
     p = urlparse(base_url)
@@ -79,6 +96,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ No waveform data (ObsPy client).\n{q1}",
+                    "segments": [],
                 }
             info = "\n".join(str(tr) for tr in st)
             res = {
@@ -87,6 +105,7 @@ def dataselect(
                 "type": "MultiTrace" if n > 1 else "SingleTrace",
                 "error": None,
                 "debug": f"✅ Retrieved {n} trace(s) via ObsPy client.\n{info}\n{q1}",
+                "segments": _segments_from_stream(st),
             }
             if return_stream:
                 res["stream"] = st
@@ -108,6 +127,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ No waveform bytes (HTTP {r.status_code}).\n{q1}",
+                    "segments": [],
                 }
 
             if r.status_code >= 500:
@@ -126,6 +146,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ Could not parse MiniSEED from HTTP bytes.\n{q1}",
+                    "segments": [],
                 }
 
             info = "\n".join(str(tr) for tr in st)
@@ -135,6 +156,7 @@ def dataselect(
                 "type": "MultiTrace" if n > 1 else "SingleTrace",
                 "error": None,
                 "debug": f"✅ Retrieved {n} trace(s) via raw HTTP+read().\n{info}\n{q1}",
+                "segments": _segments_from_stream(st),
             }
             if return_stream:
                 res["stream"] = st
@@ -162,4 +184,5 @@ def dataselect(
         "type": "Error",
         "error": last_error,
         "debug": f"❌ Dataselect failed after {max_attempts} attempts.\n{q1}",
+        "segments": [],
     }

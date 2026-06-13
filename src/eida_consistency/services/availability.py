@@ -92,6 +92,36 @@ def _parse_text_availability(text: str) -> List[Dict[str, Any]]:
     return spans
 
 
+def _availability_request(
+    base_url: str,
+    network: str,
+    station: str,
+    channel: str,
+    starttime: str,
+    endtime: str,
+    location: str,
+):
+    """GET availability with includerestricted=FALSE; retry without it on HTTP 400.
+
+    Restricted data is hidden by default so it isn't falsely flagged as
+    inconsistent. Some nodes reject the parameter (HTTP 400) or require a
+    specific casing; if the first request 400s we drop the parameter and retry
+    once so those nodes still work. Returns (response, url).
+    """
+    base = (
+        f"{base_url}availability/1/query?"
+        f"network={network}&station={station}&location={location}&channel={channel}"
+        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
+    )
+    url = base + "&includerestricted=FALSE"
+    resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+    if resp.status_code == 400:
+        logging.debug("[availability] includerestricted rejected (HTTP 400); retrying without it")
+        url = base
+        resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+    return resp, url
+
+
 def check_availability_query(
     base_url: str,
     network: str,
@@ -102,15 +132,12 @@ def check_availability_query(
     location: str = "*",
 ) -> Dict[str, Any]:
     """Query availability for a specific [start,end] and check coverage."""
-    url = (
-        f"{base_url}availability/1/query?"
-        f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
-    )
-    logging.debug(f"Availability (query) URL: {url}")
-
+    url = ""
     try:
-        resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+        resp, url = _availability_request(
+            base_url, network, station, channel, starttime, endtime, location
+        )
+        logging.debug(f"Availability (query) URL: {url}")
         if resp.status_code == 204:
             return {"ok": False, "matched_span": None, "spans": [], "status": 204, "url": url}
 
@@ -149,15 +176,12 @@ def get_availability_spans(
     location: str = "*",
 ) -> List[Dict[str, Any]]:
     """Fetch all spans for a channel in one request."""
-    url = (
-        f"{base_url}availability/1/query?"
-        f"network={network}&station={station}&location={location}&channel={channel}"
-        f"&start={starttime}&end={endtime}&format=text&merge=quality,overlap"
-    )
-    logging.debug(f"Availability (spans) URL: {url}")
-
+    url = ""
     try:
-        resp = requests.get(url, timeout=300, headers={"User-Agent": USER_AGENT})
+        resp, url = _availability_request(
+            base_url, network, station, channel, starttime, endtime, location
+        )
+        logging.debug(f"Availability (spans) URL: {url}")
         if resp.status_code == 204:
             return []
 

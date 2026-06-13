@@ -12,10 +12,16 @@ def make_match():
     }
 
 
+def cls(consistent, status, mismatch=None):
+    return {"consistent": consistent, "status": status,
+            "reason": None if consistent is not None else "TransientDataselectFailure",
+            "mismatch": mismatch or []}
+
+
 def test_format_result_consistent_ok():
     url = "http://fake/query"
     ds_result = {"success": True, "status": "OK", "debug": "extra-debug"}
-    out = formatter.format_result(1, url, True, ds_result, make_match())
+    out = formatter.format_result(1, url, True, ds_result, make_match(), cls(True, "Consistent"))
 
     assert url in out
     assert "Availability: ✅" in out
@@ -28,17 +34,20 @@ def test_format_result_consistent_ok():
 def test_format_result_inconsistent_avail_yes_ds_no():
     url = "http://fake/query"
     ds_result = {"success": False, "status": "NoData", "debug": ""}
-    out = formatter.format_result(2, url, True, ds_result, make_match())
+    out = formatter.format_result(2, url, True, ds_result, make_match(),
+                                  cls(False, "Inconsistent",
+                                      [{"start": "2020-01-01T00:03:00", "end": "2020-01-01T00:06:00"}]))
 
     assert "Availability: ✅" in out
     assert "Dataselect:   ❌ (NoData)" in out
     assert "Consistent:   ❌" in out
+    assert "00:03:00" in out  # mismatch interval shown
 
 
 def test_format_result_skipped_transient_dataselect_failure():
     url = "http://fake/query"
     ds_result = {"success": False, "status": "ConnectionError", "debug": ""}
-    out = formatter.format_result(3, url, True, ds_result, make_match())
+    out = formatter.format_result(3, url, True, ds_result, make_match(), cls(None, "Skipped"))
 
     assert "Dataselect:   ❌ (ConnectionError)" in out
     assert "Consistent:   ⚪ (Skipped: ConnectionError)" in out
@@ -53,7 +62,7 @@ def test_format_result_with_missing_location_and_times():
         "channel": "EHN",
         "starttime": "2020-05-01T00:00:00",
     }
-    out = formatter.format_result(4, url, False, ds_result, match)
+    out = formatter.format_result(4, url, False, ds_result, match, cls(False, "Inconsistent"))
 
     assert "Epoch span: 2020-05-01T00:00:00 → ?" in out
     assert "Availability: ❌" in out
@@ -69,7 +78,7 @@ def test_format_result_with_matched_span_includes_start_end():
         "end": "2020-01-01T02:00:00",
     }
 
-    out = formatter.format_result(5, url, True, ds_result, match)
+    out = formatter.format_result(5, url, True, ds_result, match, cls(True, "Consistent"))
 
     assert "2020-01-01T01:00:00" in out
     assert "2020-01-01T02:00:00" in out
