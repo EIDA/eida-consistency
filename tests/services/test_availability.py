@@ -120,7 +120,7 @@ def test_check_availability_query_hides_restricted(monkeypatch):
     monkeypatch.setattr(requests, "get", fake_get)
     avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
                                    "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
-    assert "includerestricted=false" in captured["url"]
+    assert "includerestricted=FALSE" in captured["url"]
 
 def test_get_availability_spans_hides_restricted(monkeypatch):
     captured = {}
@@ -130,7 +130,25 @@ def test_get_availability_spans_hides_restricted(monkeypatch):
     monkeypatch.setattr(requests, "get", fake_get)
     avail.get_availability_spans("http://x/", "HL", "STA", "HHZ",
                                  "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
-    assert "includerestricted=false" in captured["url"]
+    assert "includerestricted=FALSE" in captured["url"]
+
+def test_availability_falls_back_when_includerestricted_rejected(monkeypatch):
+    """A node that 400s on includerestricted gets a retry without the param."""
+    calls = []
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        if "includerestricted" in url:
+            return DummyResp(status=400, text="includerestricted should be TRUE or FALSE")
+        return DummyResp(text="HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-03T00:00:00Z")
+    monkeypatch.setattr(requests, "get", fake_get)
+    result = avail.check_availability_query("http://x/", "HL", "STA", "HHZ",
+                                            "2024-01-01T12:00:00Z", "2024-01-02T12:00:00Z")
+    # first call had the param, second (retry) dropped it
+    assert len(calls) == 2
+    assert "includerestricted" in calls[0]
+    assert "includerestricted" not in calls[1]
+    # the retry succeeded and parsed spans
+    assert result["ok"] is True
 
 def test_check_availability_query_exception(monkeypatch):
     def bad_get(*a, **k): raise Exception("boom")
