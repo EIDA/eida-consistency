@@ -35,7 +35,9 @@ def test_slice_consistent_available_and_dataselect(monkeypatch, caplog):
                         lambda *a, **kw: [{"start": "2023-01-01T00:00:00",
                                            "end": "2023-01-01T02:00:00"}])
     monkeypatch.setattr(explorer, "dataselect",
-                        lambda *a, **kw: {"success": True})
+                        lambda *a, **kw: {"success": True,
+                                          "segments": [("2023-01-01T00:00:00",
+                                                        "2023-01-01T02:00:00", 100.0)]})
 
     caplog.set_level(logging.INFO)
     ok = explorer._slice_consistent("http://fake/", "XX", "STA", "BHZ", "00", t0, t1, verbose=True)

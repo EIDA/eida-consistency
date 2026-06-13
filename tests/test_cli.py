@@ -253,10 +253,12 @@ def test_check_command_inconsistent(monkeypatch, caplog):
 
     
     def fake_av(*args, **kwargs):
-        return {"ok": True, "status": 200}
-    
+        return {"ok": True, "status": 200,
+                "spans": [{"start": "2016-09-20T00:00:00", "end": "2016-10-19T00:00:00",
+                           "samplerate": "100.0"}]}
+
     def fake_ds(*args, **kwargs):
-        return {"success": False, "status": 204, "debug": "NO DATA"}
+        return {"success": False, "status": 204, "debug": "NO DATA", "segments": []}
     
     import eida_consistency.services.availability as av
     import eida_consistency.services.dataselect as ds

@@ -88,7 +88,7 @@ def _slice_consistent(
     )
 
     ds = dataselect(base_url, net, sta, cha, _iso(ds_t0), _iso(ds_t1), loc)
-    classification = classify_consistency(window_covered, ds)
+    classification = classify_consistency(spans, ds, (_iso(ds_t0), _iso(ds_t1)))
     consistent = classification["consistent"]
 
     if verbose:
