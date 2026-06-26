@@ -9,7 +9,118 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from eida_consistency.core.coverage import parse_iso
+
 REPORT_DIR = Path("reports")
+
+# Which service holds the data inside a mismatch gap -> display glyph + label.
+_DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲"}
+_DIRECTION_LABEL = {
+    "availability": "Availability: data · Dataselect: NO DATA",
+    "dataselect": "Availability: NO DATA · Dataselect: data",
+}
+
+
+def _gap_duration_seconds(start: str, end: str) -> float:
+    """Seconds spanned by a mismatch gap, or 0.0 if unparseable."""
+    s, e = parse_iso(start), parse_iso(end)
+    if s is None or e is None:
+        return 0.0
+    return (e - s).total_seconds()
+
+
+def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List[str]:
+    """Markdown table with one row per mismatch gap, tagged with direction.
+
+    Channel and window are shown on the first gap row of each record and left
+    blank on continuation rows, so multiple gaps in one window read as a group.
+    """
+    lines = [
+        "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |",
+        "| :--- | :--- | :--- | :---: | :--- |",
+    ]
+    for r in inconsistent_recs:
+        chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
+        window = f"{r['starttime']} → {r['endtime']}"
+        gaps = r.get("mismatch") or []
+        if not gaps:
+            lines.append(f"| `{chan}` | `{window}` |  |  |  |")
+            continue
+        for i, m in enumerate(gaps):
+            who = m.get("who", "")
+            sym = _DIRECTION_SYMBOL.get(who, "")
+            label = _DIRECTION_LABEL.get(who, "")
+            dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
+            span = f"{m.get('start', '?')} → {m.get('end', '?')}"
+            c = f"`{chan}`" if i == 0 else ""
+            w = f"`{window}`" if i == 0 else ""
+            lines.append(f"| {c} | {w} | `{span}` | {dur:.1f} s | {sym} {label} |")
+    return lines
+
+
+def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str:
+    """Single-line coverage timeline across ``[window_start, window_end]``.
+
+    ``avail`` / ``ds`` are lists of ``(start_iso, end_iso)`` coverage intervals.
+    Each cell is one glyph:
+
+    - ``█`` data in both        ``·`` no data in either
+    - ``▼`` availability only (Avail YES / Data NO)
+    - ``▲`` dataselect only (Data YES / Avail NO)
+    """
+    w0, w1 = parse_iso(window_start), parse_iso(window_end)
+    total = (w1 - w0).total_seconds() if (w0 and w1) else 0.0
+    avail_iv = [(parse_iso(s), parse_iso(e)) for s, e in (avail or [])]
+    ds_iv = [(parse_iso(s), parse_iso(e)) for s, e in (ds or [])]
+
+    def sec(x):
+        return (x - w0).total_seconds()
+
+    def covered(iv, i):
+        if total <= 0:
+            return False
+        cs, ce = i * total / width, (i + 1) * total / width
+        return any(
+            s and e and max(cs, sec(s)) < min(ce, sec(e)) - 1e-9 for s, e in iv
+        )
+
+    out = []
+    for i in range(width):
+        a, d = covered(avail_iv, i), covered(ds_iv, i)
+        out.append("█" if a and d else "▼" if a else "▲" if d else "·")
+    return "".join(out)
+
+
+def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
+    """Detail block for one inconsistent record: ASCII timeline + exact gap list.
+
+    Returns an empty list when the record has no mismatch gaps (consistent or
+    skipped records get no timeline).
+    """
+    gaps = r.get("mismatch") or []
+    if not gaps:
+        return []
+    cov = r.get("coverage") or {}
+    timeline = render_timeline(
+        r["starttime"], r["endtime"],
+        cov.get("availability", []), cov.get("dataselect", []),
+    )
+    lines = [
+        "```",
+        timeline,
+        "▲ Data YES / Avail NO    ▼ Avail YES / Data NO    █ both    · none",
+        "```",
+        f"- Gaps ({len(gaps)}):",
+    ]
+    for m in gaps:
+        who = m.get("who", "")
+        sym = _DIRECTION_SYMBOL.get(who, "")
+        label = _DIRECTION_LABEL.get(who, "")
+        dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
+        lines.append(
+            f"  - `{m.get('start', '?')} → {m.get('end', '?')}`  ({dur:.1f} s)  {sym} {label}"
+        )
+    return lines
 
 
 def create_report_object(
@@ -98,22 +209,8 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     md_lines = [f"# EIDA Consistency Report: `{summary['node']}`", ""]
 
     if inconsistent_recs:
-        md_lines.extend(
-            [
-                "## Detected Inconsistencies",
-                "",
-                "| Channel | Window (UTC) | Avail | DS | Type | Status |",
-                "| :--- | :--- | :---: | :---: | :---: | :--- |",
-            ]
-        )
-        for r in inconsistent_recs:
-            chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
-            window = f"{r['starttime']} → {r['endtime']}"
-            avail = "Y" if r["available"] else "N"
-            ds = "Y" if r["dataselect_success"] else "N"
-            md_lines.append(
-                f"| `{chan}` | `{window}` | {avail} | {ds} | {r.get('dataselect_type', '?')} | `{r['dataselect_status']}` |"
-            )
+        md_lines.extend(["## Detected Inconsistencies", ""])
+        md_lines.extend(build_inconsistencies_table(inconsistent_recs))
         md_lines.append("")
     elif skipped_recs:
         md_lines.extend(
@@ -205,9 +302,10 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
                 f"- Status: `{r['dataselect_status']}`",
                 f"- Scored: `{r.get('scoreable', True)}`",
                 f"- Consistent: `{consistency_text}`",
-                "",
             ]
         )
+        md_lines.extend(render_detail_gaps(r))
+        md_lines.append("")
 
     filepath.write_text("\n".join(md_lines), encoding="utf-8")
     return filepath

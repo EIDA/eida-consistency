@@ -100,7 +100,84 @@ def test_save_report_markdown_with_skipped(tmp_path):
     assert "Scored checks" in text
     assert "Skipped checks" in text
     assert "TransientDataselectFailure" in text
-    assert "| Channel | Window (UTC) | Avail | DS | Type | Status |" in text
+    assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
+
+
+def test_inconsistencies_table_one_row_per_gap_with_direction():
+    rec = make_record(False)
+    rec["mismatch"] = [
+        {"start": "2014-02-15T05:18:25.006900+00:00",
+         "end": "2014-02-15T05:19:01.606900+00:00", "who": "availability"},
+    ]
+    text = "\n".join(report.build_inconsistencies_table([rec]))
+    assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
+    assert "Availability: data · Dataselect: NO DATA" in text
+    assert "▼" in text
+    assert "36.6 s" in text
+
+
+def test_inconsistencies_table_dataselect_direction():
+    rec = make_record(False)
+    rec["mismatch"] = [
+        {"start": "2020-01-01T00:04:00+00:00", "end": "2020-01-01T00:05:30+00:00", "who": "dataselect"},
+    ]
+    text = "\n".join(report.build_inconsistencies_table([rec]))
+    assert "Availability: NO DATA · Dataselect: data" in text
+    assert "▲" in text
+
+
+def test_inconsistencies_table_multiple_gaps_blank_continuation():
+    rec = make_record(False)
+    rec["mismatch"] = [
+        {"start": "2020-01-01T00:01:00+00:00", "end": "2020-01-01T00:02:30+00:00", "who": "availability"},
+        {"start": "2020-01-01T00:04:00+00:00", "end": "2020-01-01T00:05:30+00:00", "who": "dataselect"},
+    ]
+    lines = report.build_inconsistencies_table([rec])
+    # the channel name appears on only the first of the two gap rows
+    chan_rows = [l for l in lines if "XX.STA.00.BHZ" in l]
+    assert len(chan_rows) == 1
+
+
+def test_render_timeline_availability_only_uses_down_triangle():
+    line = report.render_timeline(
+        "2014-02-15T05:09:53", "2014-02-15T05:19:53",
+        [("2014-02-15T05:17:09.6", "2014-02-15T05:19:01.6")],
+        [("2014-02-15T05:17:09.6", "2014-02-15T05:18:25.0")],
+        width=58,
+    )
+    assert len(line) == 58
+    assert "█" in line          # both services have data
+    assert "▼" in line          # availability-only tail (Avail YES / Data NO)
+    assert "▲" not in line
+    assert "·" in line          # empty lead-in (both empty)
+
+
+def test_markdown_detail_includes_timeline_and_gaps(tmp_path):
+    rec = make_record(False)
+    rec["starttime"] = "2014-02-15T05:09:53"
+    rec["endtime"] = "2014-02-15T05:19:53"
+    rec["mismatch"] = [{"start": "2014-02-15T05:18:25.006900+00:00",
+                        "end": "2014-02-15T05:19:01.606900+00:00", "who": "availability"}]
+    rec["coverage"] = {
+        "availability": [["2014-02-15T05:17:09.6", "2014-02-15T05:19:01.6"]],
+        "dataselect": [["2014-02-15T05:17:09.6", "2014-02-15T05:18:25.0"]],
+    }
+    rep = report.create_report_object("NODE", 1, 1, 600, [rec])
+    text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert "█" in text          # only the ASCII timeline draws coverage blocks
+    assert "·" in text          # empty lead-in in the timeline
+    assert "36.6 s" in text     # gap listed in the detail
+
+
+def test_render_timeline_dataselect_only_uses_up_triangle():
+    line = report.render_timeline(
+        "2020-01-01T00:00:00", "2020-01-01T00:10:00",
+        [],
+        [("2020-01-01T00:04:00", "2020-01-01T00:06:00")],
+        width=20,
+    )
+    assert "▲" in line          # dataselect-only (Data YES / Avail NO)
+    assert "▼" not in line
 
 
 def test_delete_old_reports(tmp_path):

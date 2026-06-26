@@ -86,3 +86,39 @@ def test_mismatch_just_over_tolerance_is_flagged():  # scenario 10
     assert cov.mismatch_intervals(a, d, tol=0.5) == [
         (dt("2020-01-01T00:00:00"), dt("2020-01-01T00:00:02"))
     ]
+
+
+# --- directional mismatch: tag each gap with which service HAS the data ---
+def test_directional_availability_only_gap_tagged_availability():
+    # availability covers more than dataselect -> the extra tail is "availability"
+    a = [(dt("2014-02-15T05:17:09.617"), dt("2014-02-15T05:19:01.607"))]
+    d = [(dt("2014-02-15T05:17:09.617"), dt("2014-02-15T05:18:25.007"))]
+    out = cov.mismatch_intervals_directional(a, d, tol=0.5)
+    assert out == [
+        (dt("2014-02-15T05:18:25.007"), dt("2014-02-15T05:19:01.607"), "availability")
+    ]
+
+def test_directional_dataselect_only_gap_tagged_dataselect():
+    # dataselect has data availability missed -> "dataselect"
+    a = [(dt("2020-01-01T00:00:00"), dt("2020-01-01T00:03:00"))]
+    d = [(dt("2020-01-01T00:00:00"), dt("2020-01-01T00:06:00"))]
+    out = cov.mismatch_intervals_directional(a, d, tol=0.5)
+    assert out == [
+        (dt("2020-01-01T00:03:00"), dt("2020-01-01T00:06:00"), "dataselect")
+    ]
+
+def test_directional_mixed_directions_sorted_by_start():
+    a = [(dt("2020-01-01T00:01:00"), dt("2020-01-01T00:02:30")),
+         (dt("2020-01-01T00:07:00"), dt("2020-01-01T00:09:00"))]
+    d = [(dt("2020-01-01T00:04:00"), dt("2020-01-01T00:05:30")),
+         (dt("2020-01-01T00:07:00"), dt("2020-01-01T00:08:00"))]
+    out = cov.mismatch_intervals_directional(a, d, tol=0.5)
+    assert out == [
+        (dt("2020-01-01T00:01:00"), dt("2020-01-01T00:02:30"), "availability"),
+        (dt("2020-01-01T00:04:00"), dt("2020-01-01T00:05:30"), "dataselect"),
+        (dt("2020-01-01T00:08:00"), dt("2020-01-01T00:09:00"), "availability"),
+    ]
+
+def test_directional_no_mismatch_returns_empty():
+    a = [(dt("2020-01-01T00:00:00"), dt("2020-01-01T00:10:00"))]
+    assert cov.mismatch_intervals_directional(a, list(a), tol=0.5) == []

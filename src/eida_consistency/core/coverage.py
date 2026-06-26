@@ -97,3 +97,26 @@ def mismatch_intervals(a: Sequence[Interval], b: Sequence[Interval], tol: float)
     diff = _subtract(ma, mb) + _subtract(mb, ma)
     diff = [(s, e) for (s, e) in diff if (e - s).total_seconds() > tol]
     return sorted(diff)
+
+
+def mismatch_intervals_directional(
+    avail: Sequence[Interval], ds: Sequence[Interval], tol: float
+) -> List[Tuple[datetime, datetime, str]]:
+    """Like :func:`mismatch_intervals` but tags each gap with the side that has data.
+
+    Returns a sorted list of ``(start, end, who)`` where ``who`` is:
+
+    - ``"availability"`` -> availability has data here, dataselect does not
+    - ``"dataselect"``   -> dataselect has data here, availability does not
+
+    Empty result => the two coverage maps agree (Consistent).
+    """
+    ma = merge_intervals(avail, tol)
+    md = merge_intervals(ds, tol)
+    avail_only = [
+        (s, e, "availability") for s, e in _subtract(ma, md) if (e - s).total_seconds() > tol
+    ]
+    ds_only = [
+        (s, e, "dataselect") for s, e in _subtract(md, ma) if (e - s).total_seconds() > tol
+    ]
+    return sorted(avail_only + ds_only, key=lambda x: (x[0], x[1]))

@@ -71,3 +71,30 @@ def test_dataselect_hole_records_location():                  # scenario 4
     assert r["consistent"] is False
     assert r["mismatch"][0]["start"].startswith("2020-01-09T23:58:00")
     assert r["mismatch"][0]["end"].startswith("2020-01-10T00:01:00")
+
+
+# --- each mismatch is tagged with which side has the data ("who") ---
+def test_mismatch_who_is_availability_when_dataselect_empty():
+    spans = [span("2020-01-09T23:55:00", "2020-01-10T00:05:00")]
+    ds = {"success": False, "status": "NoData", "segments": []}
+    r = classify_consistency(spans, ds, WINDOW)
+    assert r["mismatch"][0]["who"] == "availability"
+
+def test_mismatch_who_is_dataselect_when_availability_missing():
+    spans = []  # availability has nothing
+    ds = {"success": True, "status": "OK", "segments": [
+        ("2020-01-09T23:56:00", "2020-01-10T00:04:00", 100.0)]}
+    r = classify_consistency(spans, ds, WINDOW)
+    assert r["consistent"] is False
+    assert r["mismatch"][0]["who"] == "dataselect"
+
+
+def test_classify_returns_clipped_coverage_for_timeline():
+    spans = [span("2020-01-09T23:55:00", "2020-01-10T00:05:00")]
+    ds = {"success": True, "status": "OK", "segments": [
+        ("2020-01-09T23:56:00", "2020-01-10T00:04:00", 100.0)]}
+    r = classify_consistency(spans, ds, WINDOW)
+    assert r["coverage"]["availability"][0][0].startswith("2020-01-09T23:55:00")
+    assert r["coverage"]["availability"][0][1].startswith("2020-01-10T00:05:00")
+    assert r["coverage"]["dataselect"][0][0].startswith("2020-01-09T23:56:00")
+    assert r["coverage"]["dataselect"][0][1].startswith("2020-01-10T00:04:00")

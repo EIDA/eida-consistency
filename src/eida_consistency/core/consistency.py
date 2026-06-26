@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from eida_consistency.core.coverage import (
-    parse_iso, tolerance_seconds, clip_intervals, mismatch_intervals,
+    parse_iso, tolerance_seconds, clip_intervals, mismatch_intervals_directional,
 )
 
 
@@ -75,7 +75,7 @@ def classify_consistency(spans, ds_result: Dict[str, Any], window) -> Dict[str, 
 
     a = clip_intervals(avail_iv, w0, w1)
     d = clip_intervals(ds_iv, w0, w1)
-    mism = mismatch_intervals(a, d, tol)
+    mism = mismatch_intervals_directional(a, d, tol)
     consistent = len(mism) == 0
 
     return {
@@ -83,5 +83,11 @@ def classify_consistency(spans, ds_result: Dict[str, Any], window) -> Dict[str, 
         "scoreable": True,
         "status": "Consistent" if consistent else "Inconsistent",
         "reason": None,
-        "mismatch": [{"start": s.isoformat(), "end": e.isoformat()} for s, e in mism],
+        "mismatch": [
+            {"start": s.isoformat(), "end": e.isoformat(), "who": who} for s, e, who in mism
+        ],
+        "coverage": {
+            "availability": [[s.isoformat(), e.isoformat()] for s, e in a],
+            "dataselect": [[s.isoformat(), e.isoformat()] for s, e in d],
+        },
     }

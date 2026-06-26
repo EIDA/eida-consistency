@@ -139,6 +139,7 @@ def run_consistency_check(
             "consistency_status": classification["status"],
             "consistency_reason": classification["reason"],
             "mismatch": classification.get("mismatch", []),
+            "coverage": classification.get("coverage", {}),
             "starttime": str(start),
             "endtime": str(end),
             "debug": ds_result.get("debug", ""),
