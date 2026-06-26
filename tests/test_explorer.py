@@ -112,6 +112,28 @@ def test_explore_boundaries_returns_structured_fixes(monkeypatch, tmp_path):
     assert fix["status"] == "actionable"
     assert fix["start"] and fix["end"]  # boundary window populated
 
+def test_verify_rechecks_exact_reported_window(monkeypatch, tmp_path):
+    """Re-verification must replay the EXACT reported window (deterministic),
+    not a random 10-minute slice of the day."""
+    rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=True)
+
+    calls = []
+
+    def fake_ds(base, net, sta, cha, start, end, loc=None, *a, **kw):
+        calls.append((start, end))
+        return {"success": True, "status": "OK", "segments": [(start, end, 100.0)]}
+
+    monkeypatch.setattr(explorer, "get_availability_spans",
+                        lambda *a, **kw: [{"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00"}])
+    monkeypatch.setattr(explorer, "dataselect", fake_ds)
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
+
+    explorer.explore_boundaries(rep, indices=[1], max_days=1)
+
+    # first dataselect call is the re-verify of the original window
+    assert calls[0] == ("2023-01-01T00:00:00", "2023-01-01T01:00:00")
+
+
 def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 

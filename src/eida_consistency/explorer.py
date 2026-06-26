@@ -55,7 +55,7 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def _slice_consistent(
+def _check_window(
     base_url: str,
     net: str,
     sta: str,
@@ -65,30 +65,23 @@ def _slice_consistent(
     t1: datetime,
     verbose: bool = False,
 ) -> bool | None:
-    """
-    Check if a time slice is consistent between availability and dataselect.
-    Returns True if consistent, False if inconsistent.
+    """Consistency of the EXACT ``[t0, t1]`` window (no sampling).
+
+    Deterministic: the same window always produces the same verdict. Used to
+    re-verify the precise window a report flagged.
     """
     spans = get_availability_spans(
         base_url, net, sta, cha, _iso(t0), _iso(t1), location=loc or "*"
     )
-    
-    day_seconds = int((t1 - t0).total_seconds())
-    if day_seconds > 600:
-        offset = random.randint(0, day_seconds - 600)
-        ds_t0 = t0 + timedelta(seconds=offset)
-        ds_t1 = ds_t0 + timedelta(seconds=600)
-    else:
-        ds_t0, ds_t1 = t0, t1
 
     # Check if THIS specific window is covered by any availability span
     window_covered = any(
-        (_parse_iso(s["start"]) <= ds_t0 and _parse_iso(s["end"]) >= ds_t1)
+        (_parse_iso(s["start"]) <= t0 and _parse_iso(s["end"]) >= t1)
         for s in spans
     )
 
-    ds = dataselect(base_url, net, sta, cha, _iso(ds_t0), _iso(ds_t1), loc)
-    classification = classify_consistency(spans, ds, (_iso(ds_t0), _iso(ds_t1)))
+    ds = dataselect(base_url, net, sta, cha, _iso(t0), _iso(t1), loc)
+    classification = classify_consistency(spans, ds, (_iso(t0), _iso(t1)))
     consistent = classification["consistent"]
 
     if verbose:
@@ -100,7 +93,7 @@ def _slice_consistent(
         logging.info(
             f"  Dataselect URL:   {base_url}dataselect/1/query?"
             f"network={net}&station={sta}&location={loc}&channel={cha}"
-            f"&starttime={_iso(ds_t0)}&endtime={_iso(ds_t1)}&nodata=204"
+            f"&starttime={_iso(t0)}&endtime={_iso(t1)}&nodata=204"
         )
         logging.info(
             f"  Result -> availability window_covered={window_covered}, "
@@ -111,6 +104,33 @@ def _slice_consistent(
         logging.debug(f"  Checked {t0.date()} -> consistent={consistent}")
 
     return consistent
+
+
+def _slice_consistent(
+    base_url: str,
+    net: str,
+    sta: str,
+    cha: str,
+    loc: str,
+    t0: datetime,
+    t1: datetime,
+    verbose: bool = False,
+) -> bool | None:
+    """Check a (possibly day-long) range.
+
+    If the range is longer than 600 s a random 600 s slice is sampled (used by
+    the boundary walk over neighbouring days); otherwise the exact range is
+    checked. Returns True if consistent, False if inconsistent.
+    """
+    day_seconds = int((t1 - t0).total_seconds())
+    if day_seconds > 600:
+        offset = random.randint(0, day_seconds - 600)
+        ds_t0 = t0 + timedelta(seconds=offset)
+        ds_t1 = ds_t0 + timedelta(seconds=600)
+    else:
+        ds_t0, ds_t1 = t0, t1
+
+    return _check_window(base_url, net, sta, cha, loc, ds_t0, ds_t1, verbose)
 
 
 def explore_boundaries(
@@ -193,12 +213,9 @@ def explore_boundaries(
 
         logging.info(f"[{item_num}/{total}] {label}")
 
-        # --- Re-verify current status ---
-        logging.info(f"  Verifying current status of {slice_start.date()}...")
-        t0_orig = datetime.combine(slice_start.date(), datetime.min.time(), tzinfo=timezone.utc)
-        t1_orig = datetime.combine(slice_start.date(), datetime.max.time(), tzinfo=timezone.utc)
-        
-        current_status = _slice_consistent(base_url, net, sta, cha, loc, t0_orig, t1_orig, verbose)
+        # --- Re-verify current status on the EXACT reported window (deterministic) ---
+        logging.info(f"  Verifying current status of {slice_start} → {slice_end}...")
+        current_status = _check_window(base_url, net, sta, cha, loc, slice_start, slice_end, verbose)
         if current_status is True:
             logging.info(f"  FIXED: This window is now consistent. Skipping exploration.")
             summary.append({
