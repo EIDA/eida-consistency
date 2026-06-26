@@ -134,6 +134,30 @@ def test_verify_rechecks_exact_reported_window(monkeypatch, tmp_path):
     assert calls[0] == ("2023-01-01T00:00:00", "2023-01-01T01:00:00")
 
 
+def test_verify_is_deterministic_across_runs(monkeypatch, tmp_path):
+    """Same report re-verified twice must check the same window both times
+    (no random daily sampling) -> no 'fixed/not-fixed' flapping."""
+    rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=True)
+    monkeypatch.setattr(explorer, "get_availability_spans",
+                        lambda *a, **kw: [{"start": "2023-01-01T00:00:00", "end": "2023-01-01T01:00:00"}])
+    monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
+
+    def run_once():
+        calls = []
+
+        def fake_ds(base, net, sta, cha, start, end, loc=None, *a, **kw):
+            calls.append((start, end))
+            return {"success": True, "status": "OK", "segments": [(start, end, 100.0)]}
+
+        monkeypatch.setattr(explorer, "dataselect", fake_ds)
+        explorer.explore_boundaries(rep, indices=[1], max_days=1)
+        return calls
+
+    first, second = run_once(), run_once()
+    assert first == second                       # identical windows both runs
+    assert first[0] == ("2023-01-01T00:00:00", "2023-01-01T01:00:00")
+
+
 def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     rep = make_report(tmp_path / "rep.json", consistent=False, avail=True, ds_success=False)
 
