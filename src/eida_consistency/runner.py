@@ -68,6 +68,12 @@ def run_consistency_check(
     elif percentage is not None:
         epochs = None
 
+    # OPEN ISSUE (seed removal): a seed only reproduces a run while the node's
+    # live station inventory is unchanged; weeks later the same seed selects
+    # different channels, so it cannot reproduce a specific finding. To
+    # re-verify a finding, replay its exact window (see explorer._check_window).
+    # Removal is pending confirmation that the Oculus/dmtri pipeline does not
+    # depend on the seed in the report filename / summary. See report.py.
     if seed is None:
         seed = random.randint(0, 999_999)
         logging.info(f" Using generated seed: {seed}")

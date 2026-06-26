@@ -180,7 +180,15 @@ def create_report_object(
 
 
 def _make_unique_filename(node: str, seed: int, extension: str) -> str:
-    """Create a unique file name for the report."""
+    """Create a unique file name for the report.
+
+    OPEN ISSUE (seed removal): the trailing ``_{seed}`` here, and the ``seed``
+    field in the run summary, are slated for removal because a seed does not
+    reproduce a finding across time (the live station inventory drifts, so the
+    same seed picks different channels later). Before removing, confirm the
+    Oculus / dmtri pipeline does not parse the seed from the filename or read
+    ``summary.seed`` — those consume these report files. Until then, kept as-is.
+    """
     short_time = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     return f"{node.lower()}_{short_time}_{seed}.{extension}"
 
