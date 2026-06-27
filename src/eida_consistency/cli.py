@@ -176,9 +176,13 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     ds_success = ds_res["success"]
     classification = classify_consistency(av_res.get("spans", []), ds_res, (start, end))
 
+    # Report what each service actually returned (data present?), not the legacy
+    # "is the whole window covered by one span?" boolean — that read as "NO" even
+    # when availability returned data, contradicting the timeline below.
+    avail_has_data = bool(av_res.get("spans"))
     logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
-    logging.info(f"  Availability: {'YES' if available else 'NO'} (status {av_res['status']})")
-    logging.info(f"  Dataselect:   {'YES' if ds_success else 'NO'} (status {ds_res['status']})")
+    logging.info(f"  Availability: {'data present' if avail_has_data else 'no data'} (HTTP {av_res['status']})")
+    logging.info(f"  Dataselect:   {'data present' if ds_success else 'no data'} (status {ds_res['status']})")
 
     if classification["consistent"] is True:
         logging.info("  Summary: CONSISTENT")
