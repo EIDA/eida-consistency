@@ -1,12 +1,14 @@
 # EIDA Consistency Checker
 [![Run Tests](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml/badge.svg)](https://github.com/EIDA/eida-consistency/actions/workflows/test.yml)
 ![Coverage](badges/coverage.svg)
-[![Docs](https://img.shields.io/badge/docs-visited-blue)](https://EIDA.github.io/eida-consistency/)
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://EIDA.github.io/eida-consistency/)
 
 ---
 
 A tool to evaluate the consistency between EIDA nodes' **availability** and **dataselect** web services.  
 Designed for use in quality control and monitoring tasks across the European Integrated Data Archive (EIDA).
+
+📖 **Full documentation:** <https://EIDA.github.io/eida-consistency/>
 
 ---
 
@@ -57,15 +59,15 @@ Options:
 - `--node`: Node code (e.g. `RESIF`, `NOA`, `ETH`)
 - `--epochs`: Number of random test epochs (default: 10) OR percentage (e.g., `"5%"`, `0.05`)
 - `--duration`: Epoch length in seconds (≥600)
-- `--seed`: Reproducible seed
+- `--seed`: Random seed for sampling. Does **not** reproduce an older run — to re-verify a finding see [Re-run & Re-verify](#-re-run--re-verify)
 - `--delete-old`: Keep only the most recent report
 - `--stdout`: Print JSON report to stdout
-- `--report-dir`: Save reports to a custom folder (default: `reports/`)
+- `--report-dir`: Save reports to a custom folder (default: `reports/`); works before or after the subcommand
 - `--log-level`: Control verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
 
 ### Compare Reports
 
-Compare results across two runs with the same seed:
+Compare two report files (e.g. a before/after pair for the same node):
 
 ```bash
 uvx eida-consistency compare reports/resif_run1.json reports/resif_run2.json
@@ -73,19 +75,16 @@ uvx eida-consistency compare reports/resif_run1.json reports/resif_run2.json
 
 ### Explore Inconsistencies
 
-Drill down into inconsistencies with day-by-day exploration:
+Re-check **only the inconsistencies** of a report, drilling down day-by-day to
+find their exact boundaries. With no report argument it uses the newest report;
+`--index` (repeatable) targets specific findings.
 
 ```bash
-uvx eida-consistency explore reports/nodes/noa/*.json --index 7 --days 15 --verbose
+uvx eida-consistency explore                 # newest report, all inconsistencies
+uvx eida-consistency explore reports/noa_20260621_140111_113496.json --index 7
 ```
 
-You can also use:
-
-```bash
-uvx eida-consistency explore --latest
-```
-
-to automatically use the newest report.
+See [Re-run & Re-verify](#-re-run--re-verify) for when to use this vs `check` vs a fresh run.
 
 ### Manage Node List
 
@@ -107,8 +106,8 @@ uvx eida-consistency list-nodes
 
 Reports are stored in `./reports/` by default, or in a custom folder using `--report-dir`.
 
-- JSON reports: `reports/resif_<seed>.json`
-- Markdown reports: `reports/resif_<seed>.md`
+- JSON reports: `reports/<node>_<YYYYMMDD_HHMMSS>_<seed>.json`
+- Markdown reports: `reports/<node>_<YYYYMMDD_HHMMSS>_<seed>.md`
 - Global summary: [`summary.md`](https://github.com/EIDA/eida-consistency/blob/main/reports/summary.md)
 
 ---
@@ -165,29 +164,53 @@ uv run mkdocs serve
 
 ---
 
+## 🔁 Re-run & Re-verify
+
+There are three distinct ways to "run it again", depending on what you want:
+
+1. **Re-verify the findings of an existing report** — re-check only the
+   inconsistencies that a report recorded, replaying each one's exact window.
+   This is the right way to confirm a node-side fix:
+
+   ```bash
+   uvx eida-consistency explore reports/noa_20260621_140111_113496.json
+   ```
+
+   Add `--index N` (repeatable) to re-check specific inconsistencies only.
+
+2. **Re-check a single stream/window** — for a one-off, targeted check:
+
+   ```bash
+   uvx eida-consistency check --node NOA --net HP --sta SERG --loc "" --cha HHZ \
+       --start 2016-09-20 --end 2016-10-19
+   ```
+
+3. **Run a fresh sampled check** — draw a new random set of streams for a node:
+
+   ```bash
+   uvx eida-consistency consistency --node NOA --epochs 20 --duration 600
+   ```
+
+   > ⚠️ Passing the same `--seed` does **not** reproduce an older run once the
+   > node's live inventory changes. To reproduce a *specific* finding, use option
+   > 1 or 2 above, which replay the exact window rather than re-sampling.
+
+---
+
 ## 🧪 Example Workflow
 
-### 1. Run a check for NOA:
+```bash
+# 1. Run a check (reports land in reports/test_noa/)
+uvx eida-consistency consistency --node NOA --epochs 20 --report-dir reports/test_noa
 
-```bash
-uvx eida-consistency consistency --seed 1234 --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
-```
-### 2. Explore incosistencies:
-If inconsistencies are found:
-```bash
-uvx eida-consistency explore reports/nodes/resif/*.json --verbose
-```
-### 3. Apply fixes
-Investigate the reported service inconsistencies and fix them at node level. Maybe use dmtri command suggested.
+# 2. Re-check the inconsistencies it found
+uvx eida-consistency explore --report-dir reports/test_noa
 
-### 4. Re-run Consistency
-```bash
-uvx eida-consistency consistency --seed 1234 --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
-```
-### 5.Compare Before/After
+# 3. Fix them at node level, then re-verify by replaying the same report
+uvx eida-consistency explore reports/test_noa/<report>.json
 
-```bash
-uv run eida-consistency compare reports/test_noa/old.json reports/test_noa/new.json
+# 4. Compare before/after
+uvx eida-consistency compare reports/test_noa/old.json reports/test_noa/new.json
 ```
 
 ---

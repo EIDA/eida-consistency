@@ -123,6 +123,21 @@ def test_consistency_runs(monkeypatch, tmp_path):
     assert called["node"] == "NOA"
 
 
+def test_consistency_report_dir_after_subcommand(monkeypatch, tmp_path):
+    """--report-dir placed AFTER the subcommand overrides the group default."""
+    target = tmp_path / "custom"
+    called = {}
+    monkeypatch.setattr(cli, "run_consistency_check", lambda **kw: called.update(kw))
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.consistency,
+        ["--node", "NOA", "--report-dir", str(target)],
+        obj={"report_dir": tmp_path},
+    )
+    assert result.exit_code == 0, result.output
+    assert called["report_dir"] == target
+
+
 # -----------------
 # compare command
 # -----------------
@@ -161,6 +176,23 @@ def test_explore_with_latest(monkeypatch, tmp_path):
     result = runner.invoke(cli.explore, [], obj={"report_dir": tmp_path})
     assert result.exit_code == 0
     assert called["report"].name == "rep.json"
+
+def test_explore_report_dir_after_subcommand(monkeypatch, tmp_path):
+    """explore honors --report-dir placed after the subcommand when finding latest."""
+    custom = tmp_path / "custom"
+    custom.mkdir()
+    (custom / "rep.json").write_text("{}")
+    called = {}
+    monkeypatch.setattr(cli, "explore_boundaries",
+                        lambda report, indices, max_days, verbose: called.update({"report": report}))
+    runner = CliRunner()
+    # group default (tmp_path) has no reports; the override (custom) does.
+    result = runner.invoke(cli.explore, ["--report-dir", str(custom)],
+                           obj={"report_dir": tmp_path})
+    assert result.exit_code == 0, result.output
+    assert called["report"].name == "rep.json"
+    assert called["report"].parent == custom
+
 
 def test_explore_no_reports(tmp_path):
     runner = CliRunner()
