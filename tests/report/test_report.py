@@ -60,6 +60,15 @@ def test_create_report_object_basic():
     assert isinstance(summary["timestamp"], str)
 
 
+def test_create_report_object_includes_tool_version():
+    import eida_consistency
+
+    rep = report.create_report_object("NODE", 1, 1, 600, [])
+    assert rep["summary"]["version"] == eida_consistency.__version__
+    assert isinstance(rep["summary"]["version"], str)
+    assert rep["summary"]["version"]
+
+
 def test_create_report_object_empty_records():
     rep = report.create_report_object("NODE", 1, 1, 600, [])
     assert rep["summary"]["score"] == 0.0
@@ -98,6 +107,8 @@ def test_save_report_markdown_with_skipped(tmp_path):
     assert "Quality Breakdown" in text
     assert "Service/Network Errors: `1`" in text
     assert "Scored checks" in text
+    import eida_consistency
+    assert f"Tool version: `{eida_consistency.__version__}`" in text
     assert "Skipped checks" in text
     assert "TransientDataselectFailure" in text
     assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text

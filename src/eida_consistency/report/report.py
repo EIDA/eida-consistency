@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from eida_consistency import __version__
 from eida_consistency.core.coverage import parse_iso
 
 REPORT_DIR = Path("reports")
@@ -182,6 +183,7 @@ def create_report_object(
 
     return {
         "summary": {
+            "version": __version__,
             "node": node,
             "seed": seed,
             "epochs_requested": epochs,
@@ -285,6 +287,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             "",
             "## Run Summary",
             "",
+            f"- Tool version: `{summary.get('version', '?')}`",
             f"- Seed: `{summary['seed']}`",
             f"- Time: `{summary['timestamp']}`",
             f"- Epochs requested: `{summary['epochs_requested']}`",
