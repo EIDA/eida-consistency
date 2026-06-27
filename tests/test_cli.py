@@ -10,6 +10,35 @@ import eida_consistency.cli as cli
 # normalize_log_level / _setup_logging
 # -----------------
 
+def test_check_outputs_timeline_and_direction(monkeypatch, caplog):
+    import eida_consistency.services.availability as avail_mod
+    import eida_consistency.services.dataselect as ds_mod
+    import eida_consistency.utils.nodes as nodes_mod
+
+    monkeypatch.setattr(nodes_mod, "load_node_url", lambda node: "http://fake/")
+    monkeypatch.setattr(avail_mod, "check_availability_query",
+                        lambda *a, **kw: {"ok": False, "status": 200, "matched_span": None,
+                                          "spans": [{"start": "2014-02-15T05:17:09.6",
+                                                     "end": "2014-02-15T05:19:01.6",
+                                                     "samplerate": "100.0"}]})
+    monkeypatch.setattr(ds_mod, "dataselect",
+                        lambda *a, **kw: {"success": True, "status": "OK", "type": "SingleTrace",
+                                          "segments": [("2014-02-15T05:17:09.6",
+                                                        "2014-02-15T05:18:25.0", 100.0)]})
+    caplog.set_level(logging.INFO)
+    runner = CliRunner()
+    result = runner.invoke(cli.check, [
+        "--node", "EPOSFR", "--net", "FR", "--sta", "MLS", "--loc", "00", "--cha", "HHN",
+        "--start", "2014-02-15T05:09:53", "--end", "2014-02-15T05:19:53",
+    ], obj={})
+    assert result.exit_code == 0, result.output
+    out = caplog.text
+    assert "INCONSISTENT" in out
+    assert "Availability: data · Dataselect: NO DATA" in out   # direction label on the gap
+    assert "▼" in out                                          # down-triangle direction
+    assert "█" in out                                          # timeline coverage block
+
+
 def test_normalize_log_level_valid():
     assert cli.normalize_log_level("info") == logging.INFO
     assert cli.normalize_log_level("DEBUG") == logging.DEBUG

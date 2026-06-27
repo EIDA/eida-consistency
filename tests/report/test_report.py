@@ -103,6 +103,11 @@ def test_save_report_markdown_with_skipped(tmp_path):
     assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
 
 
+def test_gap_direction_label():
+    assert report.gap_direction_label("availability") == "▼ Availability: data · Dataselect: NO DATA"
+    assert report.gap_direction_label("dataselect") == "▲ Availability: NO DATA · Dataselect: data"
+
+
 def test_inconsistencies_table_one_row_per_gap_with_direction():
     rec = make_record(False)
     rec["mismatch"] = [

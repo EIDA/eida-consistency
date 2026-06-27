@@ -21,6 +21,14 @@ _DIRECTION_LABEL = {
 }
 
 
+def gap_direction_label(who: str) -> str:
+    """Glyph + plain-language label for a mismatch gap's direction.
+
+    e.g. ``"availability"`` -> ``"▼ Availability: data · Dataselect: NO DATA"``.
+    """
+    return f"{_DIRECTION_SYMBOL.get(who, '')} {_DIRECTION_LABEL.get(who, '')}".strip()
+
+
 def _gap_duration_seconds(start: str, end: str) -> float:
     """Seconds spanned by a mismatch gap, or 0.0 if unparseable."""
     s, e = parse_iso(start), parse_iso(end)
@@ -47,14 +55,11 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
             lines.append(f"| `{chan}` | `{window}` |  |  |  |")
             continue
         for i, m in enumerate(gaps):
-            who = m.get("who", "")
-            sym = _DIRECTION_SYMBOL.get(who, "")
-            label = _DIRECTION_LABEL.get(who, "")
             dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
             span = f"{m.get('start', '?')} → {m.get('end', '?')}"
             c = f"`{chan}`" if i == 0 else ""
             w = f"`{window}`" if i == 0 else ""
-            lines.append(f"| {c} | {w} | `{span}` | {dur:.1f} s | {sym} {label} |")
+            lines.append(f"| {c} | {w} | `{span}` | {dur:.1f} s | {gap_direction_label(m.get('who', ''))} |")
     return lines
 
 
@@ -113,12 +118,9 @@ def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
         f"- Gaps ({len(gaps)}):",
     ]
     for m in gaps:
-        who = m.get("who", "")
-        sym = _DIRECTION_SYMBOL.get(who, "")
-        label = _DIRECTION_LABEL.get(who, "")
         dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
         lines.append(
-            f"  - `{m.get('start', '?')} → {m.get('end', '?')}`  ({dur:.1f} s)  {sym} {label}"
+            f"  - `{m.get('start', '?')} → {m.get('end', '?')}`  ({dur:.1f} s)  {gap_direction_label(m.get('who', ''))}"
         )
     return lines
 
