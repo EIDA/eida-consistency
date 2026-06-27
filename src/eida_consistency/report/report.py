@@ -29,6 +29,30 @@ def gap_direction_label(who: str) -> str:
     return f"{_DIRECTION_SYMBOL.get(who, '')} {_DIRECTION_LABEL.get(who, '')}".strip()
 
 
+def render_gap_table(mismatch: List[Dict[str, Any]]) -> List[str]:
+    """Plain-text, column-aligned table of mismatch gaps (for console output).
+
+    Returns ``[]`` when there are no gaps. Columns: mismatch window, duration,
+    direction label.
+    """
+    rows = []
+    for m in mismatch or []:
+        span = f"{m.get('start', '?')} → {m.get('end', '?')}"
+        dur = f"{_gap_duration_seconds(m.get('start', ''), m.get('end', '')):.1f} s"
+        rows.append((span, dur, gap_direction_label(m.get("who", ""))))
+    if not rows:
+        return []
+    w_span = max(len("Mismatch (UTC)"), *(len(r[0]) for r in rows))
+    w_gap = max(len("Gap"), *(len(r[1]) for r in rows))
+    out = [
+        f"{'Mismatch (UTC)'.ljust(w_span)}  {'Gap'.ljust(w_gap)}  Disagreement",
+        f"{'-' * w_span}  {'-' * w_gap}  {'-' * len('Disagreement')}",
+    ]
+    for span, dur, label in rows:
+        out.append(f"{span.ljust(w_span)}  {dur.ljust(w_gap)}  {label}")
+    return out
+
+
 def _gap_duration_seconds(start: str, end: str) -> float:
     """Seconds spanned by a mismatch gap, or 0.0 if unparseable."""
     s, e = parse_iso(start), parse_iso(end)

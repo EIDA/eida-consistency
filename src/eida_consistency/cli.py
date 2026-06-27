@@ -191,7 +191,7 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     else:
         logging.info(f"  Summary: SKIPPED ({classification['reason']})")
 
-    from eida_consistency.report.report import render_timeline, gap_direction_label
+    from eida_consistency.report.report import render_timeline, render_gap_table
 
     mismatch = classification.get("mismatch", [])
     coverage = classification.get("coverage") or {}
@@ -201,8 +201,9 @@ def check(ctx, node, net, sta, cha, loc, start, end):
         )
         logging.info(f"  {timeline}")
         logging.info("  ▲ Data YES / Avail NO   ▼ Avail YES / Data NO   █ both   · none")
-    for m in mismatch:
-        logging.info(f"  Gap: {m['start']} -> {m['end']}  {gap_direction_label(m.get('who', ''))}")
+        logging.info("")
+        for line in render_gap_table(mismatch):
+            logging.info(f"  {line}")
 
     if not ds_success and ds_res.get("debug"):
         logging.debug(f"  Debug: {ds_res['debug']}")

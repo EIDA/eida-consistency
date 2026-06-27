@@ -103,6 +103,29 @@ def test_save_report_markdown_with_skipped(tmp_path):
     assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
 
 
+def test_render_gap_table_plaintext_aligned():
+    gaps = [
+        {"start": "2014-02-15T05:18:25.006900+00:00",
+         "end": "2014-02-15T05:19:01.606900+00:00", "who": "availability"},
+        {"start": "2014-02-15T05:14:00+00:00",
+         "end": "2014-02-15T05:15:30+00:00", "who": "dataselect"},
+    ]
+    lines = report.render_gap_table(gaps)
+    text = "\n".join(lines)
+    assert "Mismatch (UTC)" in text and "Gap" in text and "Disagreement" in text
+    assert "36.6 s" in text
+    assert "90.0 s" in text
+    assert "▼ Availability: data · Dataselect: NO DATA" in text
+    assert "▲ Availability: NO DATA · Dataselect: data" in text
+    # rows are column-aligned: the duration column starts at the same offset
+    body = [l for l in lines if "▼" in l or "▲" in l]
+    assert body[0].index("36.6 s") == body[1].index("90.0 s")
+
+
+def test_render_gap_table_empty():
+    assert report.render_gap_table([]) == []
+
+
 def test_gap_direction_label():
     assert report.gap_direction_label("availability") == "▼ Availability: data · Dataselect: NO DATA"
     assert report.gap_direction_label("dataselect") == "▲ Availability: NO DATA · Dataselect: data"
