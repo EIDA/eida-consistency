@@ -68,19 +68,18 @@ def run_consistency_check(
     elif percentage is not None:
         epochs = None
 
-    # OPEN ISSUE (seed removal): a seed only reproduces a run while the node's
-    # live station inventory is unchanged; weeks later the same seed selects
-    # different channels, so it cannot reproduce a specific finding. To
-    # re-verify a finding, replay its exact window (see explorer._check_window).
-    # Removal is pending confirmation that the Oculus/dmtri pipeline does not
-    # depend on the seed in the report filename / summary. See report.py.
+    # NOTE: the CLI --seed flag is deprecated and ignored -- a seed cannot
+    # reliably reproduce a run because the node's live inventory changes over
+    # time, so the same seed selects different channels later. To re-verify a
+    # specific finding, replay its exact window with 'explore' (deterministic,
+    # no seed; see explorer._check_window). The value below is an INTERNAL
+    # random discriminator, retained only to keep the report filename
+    # ({node}_{ts}_{seed}) and summary.seed stable for the Oculus/dmtri pipeline
+    # that consumes these reports. Library callers may still pass a seed.
     if seed is None:
         seed = random.randint(0, 999_999)
-        logging.info(f" Using generated seed: {seed}")
-    else:
-        logging.info(f" Using provided seed: {seed}")
-
     random.seed(seed)
+    logging.info(f" Sampling discriminator (internal, not reproducible): {seed}")
     base_url = load_node_url(node)
 
     if percentage is not None:
