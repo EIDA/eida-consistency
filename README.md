@@ -195,6 +195,12 @@ There are three distinct ways to "run it again", depending on what you want:
    > node's live inventory changes. To reproduce a *specific* finding, use option
    > 1 or 2 above, which replay the exact window rather than re-sampling.
 
+   > ℹ️ A fresh run **cannot be limited to only inconsistent streams** — a
+   > stream isn't known to be inconsistent until it's tested. Instead, the
+   > report already lists them on their own under the **"Detected
+   > Inconsistencies"** table, and option 1 (`explore`) re-checks **only** those
+   > inconsistent streams.
+
 ---
 
 ## 🧪 Example Workflow
