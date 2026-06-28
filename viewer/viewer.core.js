@@ -64,3 +64,26 @@ export function timelineModel(windowStart, windowEnd, avail, ds, mismatch) {
   }
   return { segments, boundaries };
 }
+
+export function summariseRequest(kind, status, bodyText, byteLength) {
+  if (kind === 'availability') {
+    const n = (bodyText || '').split('\n').filter(l => l && !l.startsWith('#')).length;
+    return `HTTP ${status} — ${n} span${n === 1 ? '' : 's'}`;
+  }
+  if (status === 204) return `HTTP 204 — no data`;
+  return `HTTP ${status} — ${byteLength} bytes`;
+}
+
+export async function runRequest(kind, url, fetchImpl) {
+  try {
+    const res = await fetchImpl(url);
+    if (kind === 'availability') {
+      const text = await res.text();
+      return { ok: true, status: res.status, summary: summariseRequest(kind, res.status, text, 0) };
+    }
+    const buf = await res.arrayBuffer();
+    return { ok: true, status: res.status, summary: summariseRequest(kind, res.status, '', buf.byteLength) };
+  } catch {
+    return { ok: false, status: 0, summary: 'request failed' };
+  }
+}

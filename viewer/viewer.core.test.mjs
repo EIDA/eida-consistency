@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -81,4 +81,24 @@ test('timelineModel emits a boundary between two gaps', () => {
 
 test('timelineModel is safe on a degenerate window', () => {
   assert.deepEqual(timelineModel('x', 'x', [], [], []), { segments: [], boundaries: [] });
+});
+
+test('summariseRequest counts availability spans and dataselect bytes', () => {
+  assert.match(summariseRequest('availability', 200, '#hdr\nA B\nC D\n', 0), /2 span/);
+  assert.match(summariseRequest('dataselect', 204, '', 0), /no data/i);
+  assert.match(summariseRequest('dataselect', 200, '', 4096), /4096 bytes/);
+});
+
+test('runRequest reports status and summary via injected fetch', async () => {
+  const fakeFetch = async () => ({ status: 200, text: async () => '#h\nX Y\n', arrayBuffer: async () => new ArrayBuffer(8) });
+  const r = await runRequest('availability', 'http://x', fakeFetch);
+  assert.equal(r.ok, true);
+  assert.equal(r.status, 200);
+  assert.match(r.summary, /1 span/);
+});
+
+test('runRequest never throws on network error', async () => {
+  const r = await runRequest('availability', 'http://x', async () => { throw new Error('net'); });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 0);
 });
