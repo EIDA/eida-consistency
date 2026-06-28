@@ -93,11 +93,15 @@ const DIR_LABEL = {
   dataselect: '▲ Availability: NO DATA · Dataselect: data',
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeUrl = u => (/^https?:\/\//i.test(String(u ?? '')) ? String(u) : '');
 
 export function renderSummary(s) {
+  s = s || {};
   return `<header class="summary"><h1>${esc(s.node)}</h1>
     <span class="score">Score ${esc(s.score)}%</span>
-    <span>${esc(s.total_inconsistent)} inconsistent / ${esc(s.total_consistent)} consistent</span></header>`;
+    <span>${esc(s.total_inconsistent)} inconsistent / ${esc(s.total_consistent)} consistent / ${esc(s.total_skipped ?? 0)} skipped</span>
+    <span class="dirtotals">▼ ${esc(s.availability_yes_dataselect_no ?? 0)} · ▲ ${esc(s.availability_no_dataselect_yes ?? 0)}</span>
+    <span class="ts">${esc(s.timestamp ?? '')}</span></header>`;
 }
 
 export function renderResultsTable(results, filter) {
@@ -138,13 +142,16 @@ export function renderDetail(record) {
   }
   const full = ['availability', 'dataselect'].map(k => {
     const u = k === 'availability' ? record.url : record.dataselect_url;
-    return u ? `<button data-kind="${k}" data-url="${esc(u)}">Run ${k}</button> <a href="${esc(u)}" target="_blank">open</a>` : '';
+    const link = safeUrl(u) ? ` <a href="${esc(safeUrl(u))}" target="_blank" rel="noopener noreferrer">open</a>` : '';
+    return u ? `<button data-kind="${k}" data-url="${esc(u)}">Run ${k}</button>${link}` : '';
   }).filter(Boolean).join(' ');
   if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
   for (const m of record.mismatch || []) {
     const q = gapQueries(record, m);
-    const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k =>
-      `<button data-kind="${k}" data-url="${esc(q[k])}">Run ${k}</button> <a href="${esc(q[k])}" target="_blank">open</a>`).join(' ');
+    const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k => {
+      const link = safeUrl(q[k]) ? ` <a href="${esc(safeUrl(q[k]))}" target="_blank" rel="noopener noreferrer">open</a>` : '';
+      return `<button data-kind="${k}" data-url="${esc(q[k])}">Run ${k}</button>${link}`;
+    }).join(' ');
     parts.push(`<div class="gap">${esc(m.start)} → ${esc(m.end)} ${esc(DIR_LABEL[m.who] || '')}<div class="req">${btns}</div></div>`);
   }
   return `<section class="detail">${parts.join('')}</section>`;

@@ -155,3 +155,20 @@ test('sortRecords by channel', () => { assert.equal(sortRecords(_sr,'channel')[0
 test('sortRecords by time', () => { assert.equal(sortRecords(_sr,'time')[0].starttime, '2020-01-01T00:00:00'); });
 test('sortRecords by gap puts the largest gap first', () => { assert.equal(sortRecords(_sr,'gap')[0].network, 'A'); });
 test('sortRecords does not mutate input', () => { const c = JSON.parse(JSON.stringify(_sr)); sortRecords(_sr,'channel'); assert.deepEqual(_sr, c); });
+
+test('renderDetail refuses a javascript: open link but keeps safe https links', () => {
+  const evil = { index:1, network:'X', station:'S', location:'', channel:'B', consistent:false,
+    url:'javascript:alert(1)',
+    dataselect_url:'https://h/dataselect/1/query?net=X&starttime=a&endtime=b',
+    mismatch:[] };
+  const html = renderDetail(evil);
+  assert.doesNotMatch(html, /href="javascript:/);
+  assert.match(html, /rel="noopener noreferrer"/);
+});
+
+test('renderSummary shows skipped + direction totals + timestamp and tolerates undefined', () => {
+  const html = renderSummary({ node:'NOA', score:60, total_inconsistent:8, total_consistent:12,
+    total_skipped:1, availability_yes_dataselect_no:2, availability_no_dataselect_yes:6, timestamp:'2026-06-28T15:00:00+00:00' });
+  assert.match(html, /1 skipped/); assert.match(html, /▼ 2/); assert.match(html, /▲ 6/); assert.match(html, /2026-06-28/);
+  assert.doesNotThrow(() => renderSummary(undefined));
+});
