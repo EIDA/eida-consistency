@@ -316,3 +316,11 @@ def test_delete_old_reports(tmp_path):
 def test_delete_old_reports_nonexistent_dir(tmp_path):
     non_existing = tmp_path / "not_here"
     report.delete_old_reports(non_existing, keep=1)
+
+
+def test_markdown_includes_interactive_view_link(tmp_path):
+    rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec()])
+    md = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert "Interactive view" in md
+    assert "?report=" in md
+    assert ".json" in md.split("Interactive view")[1].split(")")[0]
