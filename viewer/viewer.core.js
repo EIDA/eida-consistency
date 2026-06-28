@@ -111,6 +111,24 @@ export function renderResultsTable(results, filter) {
   return `<table class="results"><thead><tr><th>Channel</th><th>Window</th><th>Dir</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+function _maxGap(record) {
+  let max = 0;
+  for (const m of record.mismatch || []) {
+    const d = (_parseUTC(m.end) - _parseUTC(m.start)) / 1000;
+    if (d > max) max = d;
+  }
+  return max;
+}
+
+export function sortRecords(results, key) {
+  const arr = [...(results || [])];
+  const nslc = r => `${r.network}.${r.station}.${r.location}.${r.channel}`;
+  if (key === 'channel') arr.sort((a, b) => nslc(a).localeCompare(nslc(b)));
+  else if (key === 'gap') arr.sort((a, b) => _maxGap(b) - _maxGap(a)); // largest gap first
+  else arr.sort((a, b) => String(a.starttime).localeCompare(String(b.starttime))); // 'time'
+  return arr;
+}
+
 export function renderDetail(record) {
   const parts = [];
   const cov = record.coverage;

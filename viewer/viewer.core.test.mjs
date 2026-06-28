@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail, sortRecords } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -146,3 +146,12 @@ test('renderResultsTable escapes hostile values (no attribute/tag breakout)', ()
   assert.doesNotMatch(html, /a"'<>/);            // raw hostile string not present
   assert.match(html, /&quot;/); assert.match(html, /&#39;/); assert.match(html, /&lt;/); assert.match(html, /&gt;/);
 });
+
+const _sr = [
+  { network:'B', station:'B', location:'', channel:'B', starttime:'2020-01-02T00:00:00', mismatch:[{start:'2020-01-01T00:00:00+00:00',end:'2020-01-01T00:01:00+00:00'}] },
+  { network:'A', station:'A', location:'', channel:'A', starttime:'2020-01-01T00:00:00', mismatch:[{start:'2020-01-01T00:00:00+00:00',end:'2020-01-01T00:05:00+00:00'}] },
+];
+test('sortRecords by channel', () => { assert.equal(sortRecords(_sr,'channel')[0].network, 'A'); });
+test('sortRecords by time', () => { assert.equal(sortRecords(_sr,'time')[0].starttime, '2020-01-01T00:00:00'); });
+test('sortRecords by gap puts the largest gap first', () => { assert.equal(sortRecords(_sr,'gap')[0].network, 'A'); });
+test('sortRecords does not mutate input', () => { const c = JSON.parse(JSON.stringify(_sr)); sortRecords(_sr,'channel'); assert.deepEqual(_sr, c); });

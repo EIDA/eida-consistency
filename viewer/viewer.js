@@ -1,18 +1,19 @@
 // viewer/viewer.js
-import { renderSummary, renderResultsTable, renderDetail, runRequest } from './viewer.core.js';
+import { renderSummary, renderResultsTable, renderDetail, runRequest, sortRecords } from './viewer.core.js';
 
 const $ = sel => document.querySelector(sel);
-const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', search: '' } };
+const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', search: '' }, sort: 'time' };
 
 function paint() {
   $('#summary').innerHTML = renderSummary(state.report.summary);
-  $('#results').innerHTML = renderResultsTable(state.report.results, state.filter);
+  $('#results').innerHTML = renderResultsTable(sortRecords(state.report.results, state.sort), state.filter);
 }
 
 function wire() {
   $('#onlyInc').addEventListener('change', e => { state.filter.onlyInconsistent = e.target.checked; paint(); });
   $('#dir').addEventListener('change', e => { state.filter.direction = e.target.value; paint(); });
   $('#search').addEventListener('input', e => { state.filter.search = e.target.value; paint(); });
+  $('#sort').addEventListener('change', e => { state.sort = e.target.value; paint(); });
   $('#results').addEventListener('click', e => {
     const tr = e.target.closest('tr[data-index]'); if (!tr) return;
     const rec = state.report.results.find(r => String(r.index) === tr.dataset.index);
