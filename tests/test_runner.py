@@ -14,7 +14,7 @@ def make_fake_result():
     url = "http://fake/fdsnws/availability/1/query?network=N&station=S&channel=C"
     matched_span = {"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "location": ""}
     spans = [{"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "samplerate": "100.0"}]
-    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", matched_span, spans)], {"stat": 1}
+    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", matched_span, spans, 200)], {"stat": 1}
 
 
 def patch_all(monkeypatch, tmp_path):

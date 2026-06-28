@@ -137,6 +137,42 @@ def test_render_gap_table_empty():
     assert report.render_gap_table([]) == []
 
 
+def _inconsistent_rec(index=5):
+    rec = make_record(False)
+    rec["index"] = index
+    rec["starttime"] = "2014-02-15T05:09:53"
+    rec["endtime"] = "2014-02-15T05:19:53"
+    rec["url"] = "https://node/fdsnws/availability/1/query?network=FR&station=MLS"
+    rec["availability_status"] = 200
+    rec["dataselect_url"] = "https://node/fdsnws/dataselect/1/query?network=FR&station=MLS"
+    rec["dataselect_status"] = "OK"
+    rec["mismatch"] = [{"start": "2014-02-15T05:18:25+00:00",
+                        "end": "2014-02-15T05:19:01+00:00", "who": "availability"}]
+    rec["coverage"] = {"availability": [["2014-02-15T05:17:09", "2014-02-15T05:19:01"]],
+                       "dataselect": [["2014-02-15T05:17:09", "2014-02-15T05:18:25"]]}
+    return rec
+
+
+def test_table_channel_links_to_detail_anchor():
+    text = "\n".join(report.build_inconsistencies_table([_inconsistent_rec(index=7)]))
+    assert "[`XX.STA.00.BHZ`](#rec-7)" in text
+
+
+def test_detail_has_anchor_for_record(tmp_path):
+    rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec(index=7)])
+    text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert '<a id="rec-7">' in text
+
+
+def test_detail_shows_requests_and_status_for_inconsistency(tmp_path):
+    rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec(index=5)])
+    text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert "availability/1/query?network=FR&station=MLS" in text
+    assert "dataselect/1/query?network=FR&station=MLS" in text
+    assert "HTTP 200" in text          # availability status
+    assert "Dataselect request" in text and "OK" in text
+
+
 def test_gap_direction_label():
     assert report.gap_direction_label("availability") == "▼ Availability: data · Dataselect: NO DATA"
     assert report.gap_direction_label("dataselect") == "▲ Availability: NO DATA · Dataselect: data"

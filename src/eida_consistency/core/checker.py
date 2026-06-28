@@ -151,7 +151,7 @@ def check_candidate(
         loc = matched_span["location"] if (matched_span and matched_span.get("location")) else sample.get("location", "")
         spans = av_res.get("spans", [])
 
-        results.append((av_res["url"], available, s, e, loc, matched_span, spans))
+        results.append((av_res["url"], available, s, e, loc, matched_span, spans, av_res.get("status")))
         used.add(key)
 
     # Final summary line

@@ -74,15 +74,17 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     ]
     for r in inconsistent_recs:
         chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
+        idx = r.get("index")
+        chan_cell = f"[`{chan}`](#rec-{idx})" if idx is not None else f"`{chan}`"
         window = f"{r['starttime']} → {r['endtime']}"
         gaps = r.get("mismatch") or []
         if not gaps:
-            lines.append(f"| `{chan}` | `{window}` |  |  |  |")
+            lines.append(f"| {chan_cell} | `{window}` |  |  |  |")
             continue
         for i, m in enumerate(gaps):
             dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
             span = f"{m.get('start', '?')} → {m.get('end', '?')}"
-            c = f"`{chan}`" if i == 0 else ""
+            c = chan_cell if i == 0 else ""
             w = f"`{window}`" if i == 0 else ""
             lines.append(f"| {c} | {w} | `{span}` | {dur:.1f} s | {gap_direction_label(m.get('who', ''))} |")
     return lines
@@ -119,6 +121,22 @@ def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str
         a, d = covered(avail_iv, i), covered(ds_iv, i)
         out.append("█" if a and d else "▼" if a else "▲" if d else "·")
     return "".join(out)
+
+
+def render_request_lines(r: Dict[str, Any]) -> List[str]:
+    """The actual availability/dataselect requests + status codes (issue #49).
+
+    Only emitted for inconsistent records, so the report shows exactly what was
+    queried and what each service answered.
+    """
+    if r.get("consistent") is not False:
+        return []
+    lines = []
+    if r.get("url"):
+        lines.append(f"- Availability request: `{r['url']}` → HTTP {r.get('availability_status', '?')}")
+    if r.get("dataselect_url"):
+        lines.append(f"- Dataselect request: `{r['dataselect_url']}` → {r.get('dataselect_status', '?')}")
+    return lines
 
 
 def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
@@ -329,6 +347,9 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         else:
             consistency_text = "Skipped"
 
+        idx = r.get("index")
+        if idx is not None:
+            md_lines.append(f'<a id="rec-{idx}"></a>')
         md_lines.extend(
             [
                 f"### `{r['network']}.{r['station']}.{r['location']}.{r['channel']}`",
@@ -341,6 +362,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
                 f"- Consistent: `{consistency_text}`",
             ]
         )
+        md_lines.extend(render_request_lines(r))
         md_lines.extend(render_detail_gaps(r))
         md_lines.append("")
 

@@ -113,7 +113,7 @@ def run_consistency_check(
     all_logs, all_records = [], []
 
     def worker(args):
-        idx, (url, available, start, end, loc_exact, matched_span, spans), match = args
+        idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status), match = args
         loc_final = loc_exact or match.get("location", "")
         ds_result = dataselect(
             base_url,
@@ -137,8 +137,10 @@ def run_consistency_check(
             "channel": match["channel"],
             "location": loc_final,
             "available": available,
+            "availability_status": avail_status,
             "dataselect_success": ds_result["success"],
             "dataselect_status": ds_result["status"],
+            "dataselect_url": ds_result.get("url"),
             "dataselect_type": ds_result.get("type", "?"),
             "consistent": classification["consistent"],
             "scoreable": classification["scoreable"],
@@ -158,7 +160,7 @@ def run_consistency_check(
         return log, record
 
     args_list = []
-    for idx, (url, available, start, end, loc_exact, matched_span, spans) in enumerate(results, 1):
+    for idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status) in enumerate(results, 1):
         try:
             parts = url.split("?")[1].split("&")
             net = next(p.split("=")[1] for p in parts if p.startswith("network="))
@@ -176,7 +178,7 @@ def run_consistency_check(
             None,
         )
         if match:
-            args_list.append((idx, (url, available, start, end, loc_exact, matched_span, spans), match))
+            args_list.append((idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status), match))
 
     pool_size = max(1, min(max_workers, len(args_list)))
     with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:

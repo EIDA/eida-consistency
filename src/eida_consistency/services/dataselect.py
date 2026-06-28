@@ -96,6 +96,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ No waveform data (ObsPy client).\n{q1}",
+                    "url": q1,
                     "segments": [],
                 }
             info = "\n".join(str(tr) for tr in st)
@@ -105,6 +106,7 @@ def dataselect(
                 "type": "MultiTrace" if n > 1 else "SingleTrace",
                 "error": None,
                 "debug": f"✅ Retrieved {n} trace(s) via ObsPy client.\n{info}\n{q1}",
+                "url": q1,
                 "segments": _segments_from_stream(st),
             }
             if return_stream:
@@ -127,6 +129,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ No waveform bytes (HTTP {r.status_code}).\n{q1}",
+                    "url": q1,
                     "segments": [],
                 }
 
@@ -146,6 +149,7 @@ def dataselect(
                     "type": "NoTrace",
                     "error": None,
                     "debug": f"❌ Could not parse MiniSEED from HTTP bytes.\n{q1}",
+                    "url": q1,
                     "segments": [],
                 }
 
@@ -156,6 +160,7 @@ def dataselect(
                 "type": "MultiTrace" if n > 1 else "SingleTrace",
                 "error": None,
                 "debug": f"✅ Retrieved {n} trace(s) via raw HTTP+read().\n{info}\n{q1}",
+                "url": q1,
                 "segments": _segments_from_stream(st),
             }
             if return_stream:
@@ -184,5 +189,6 @@ def dataselect(
         "type": "Error",
         "error": last_error,
         "debug": f"❌ Dataselect failed after {max_attempts} attempts.\n{q1}",
+        "url": q1,
         "segments": [],
     }

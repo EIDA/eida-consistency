@@ -35,6 +35,14 @@ def test_segments_empty_on_nodata(monkeypatch):
     assert r["segments"] == []
 
 
+def test_dataselect_result_includes_request_url(monkeypatch):
+    monkeypatch.setattr(ds, "Client", lambda *a, **k: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(ds.requests, "get", lambda *a, **k: DummyResp(status=204))
+    r = ds.dataselect("https://h", "N", "S", "C", "2020", "2021", "00")
+    assert "dataselect/1/query?" in r["url"]
+    assert r["url"].endswith("nodata=204")
+
+
 class DummyResp:
     def __init__(self, content=b"", status=200):
         self.content = content
