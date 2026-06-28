@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -55,4 +55,30 @@ test('search matches NSLC case-insensitively', () => {
   const f = { onlyInconsistent: false, direction: 'both', search: 'kava' };
   assert.equal(matchesFilter(inc, f), true);
   assert.equal(matchesFilter(ok, f), false);
+});
+
+test('timelineModel classifies both/none/dataselect-only segments', () => {
+  // window 0..600s; dataselect 60..180; availability empty
+  const m = timelineModel(
+    '2020-01-01T00:00:00+00:00', '2020-01-01T00:10:00+00:00',
+    [], [['2020-01-01T00:01:00+00:00', '2020-01-01T00:03:00+00:00']], []);
+  // expect a 'none' segment, a 'dataselect' segment, a 'none' segment
+  const kinds = m.segments.map(s => s.kind);
+  assert.deepEqual(kinds, ['none', 'dataselect', 'none']);
+  assert.ok(Math.abs(m.segments[1].x0 - 0.1) < 1e-9);   // 60/600
+  assert.ok(Math.abs(m.segments[1].x1 - 0.3) < 1e-9);   // 180/600
+});
+
+test('timelineModel emits a boundary between two gaps', () => {
+  const m = timelineModel(
+    '2020-01-01T00:00:00+00:00', '2020-01-01T00:10:00+00:00',
+    [], [['2020-01-01T00:01:00+00:00','2020-01-01T00:02:00+00:00'], ['2020-01-01T00:06:00+00:00','2020-01-01T00:07:00+00:00']],
+    [{ start: '2020-01-01T00:01:00+00:00', end: '2020-01-01T00:02:00+00:00', who: 'dataselect' },
+     { start: '2020-01-01T00:06:00+00:00', end: '2020-01-01T00:07:00+00:00', who: 'dataselect' }]);
+  assert.equal(m.boundaries.length, 1);
+  assert.ok(m.boundaries[0] > 0.3 && m.boundaries[0] < 0.6);
+});
+
+test('timelineModel is safe on a degenerate window', () => {
+  assert.deepEqual(timelineModel('x', 'x', [], [], []), { segments: [], boundaries: [] });
 });
