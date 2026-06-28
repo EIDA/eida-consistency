@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -123,6 +124,16 @@ def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str
     return "".join(out)
 
 
+def _query_time(iso: str) -> str:
+    """Format an ISO timestamp for an FDSN query string (drop the UTC suffix)."""
+    return str(iso).replace("+00:00", "").replace("Z", "")
+
+
+def _swap_query_time(url: str, key: str, value: str) -> str:
+    """Return ``url`` with the ``key=...`` query parameter set to ``value``."""
+    return re.sub(rf"([?&]{re.escape(key)}=)[^&]*", lambda m: m.group(1) + value, url)
+
+
 def render_request_lines(r: Dict[str, Any]) -> List[str]:
     """The actual availability/dataselect requests + status codes (issue #49).
 
@@ -165,6 +176,14 @@ def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
         lines.append(
             f"  - `{m.get('start', '?')} → {m.get('end', '?')}`  ({dur:.1f} s)  {gap_direction_label(m.get('who', ''))}"
         )
+        # queries narrowed to this exact gap range, so the inconsistency is reproducible
+        gs, ge = _query_time(m.get("start", "")), _query_time(m.get("end", ""))
+        if r.get("url"):
+            aq = _swap_query_time(_swap_query_time(r["url"], "start", gs), "end", ge)
+            lines.append(f"    - availability: `{aq}`")
+        if r.get("dataselect_url"):
+            dq = _swap_query_time(_swap_query_time(r["dataselect_url"], "starttime", gs), "endtime", ge)
+            lines.append(f"    - dataselect: `{dq}`")
     return lines
 
 

@@ -142,9 +142,12 @@ def _inconsistent_rec(index=5):
     rec["index"] = index
     rec["starttime"] = "2014-02-15T05:09:53"
     rec["endtime"] = "2014-02-15T05:19:53"
-    rec["url"] = "https://node/fdsnws/availability/1/query?network=FR&station=MLS"
+    rec["url"] = ("https://node/fdsnws/availability/1/query?network=FR&station=MLS&location=*"
+                  "&channel=HHN&start=2014-02-15T05:09:53&end=2014-02-15T05:19:53"
+                  "&format=text&merge=quality,overlap&includerestricted=FALSE")
     rec["availability_status"] = 200
-    rec["dataselect_url"] = "https://node/fdsnws/dataselect/1/query?network=FR&station=MLS"
+    rec["dataselect_url"] = ("https://node/fdsnws/dataselect/1/query?network=FR&station=MLS&location="
+                             "&channel=HHN&starttime=2014-02-15T05:09:53&endtime=2014-02-15T05:19:53&nodata=204")
     rec["dataselect_status"] = "OK"
     rec["mismatch"] = [{"start": "2014-02-15T05:18:25+00:00",
                         "end": "2014-02-15T05:19:01+00:00", "who": "availability"}]
@@ -162,6 +165,22 @@ def test_detail_has_anchor_for_record(tmp_path):
     rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec(index=7)])
     text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
     assert '<a id="rec-7">' in text
+
+
+def test_detail_gaps_include_gap_scoped_queries():
+    # full-window request stays; each gap also gets queries scoped to the gap range
+    lines = report.render_detail_gaps(_inconsistent_rec())
+    text = "\n".join(lines)
+    # availability query narrowed to the gap window 05:18:25 -> 05:19:01
+    assert "availability/1/query" in text
+    assert "start=2014-02-15T05:18:25" in text
+    assert "end=2014-02-15T05:19:01" in text
+    # dataselect query narrowed to the gap window
+    assert "dataselect/1/query" in text
+    assert "starttime=2014-02-15T05:18:25" in text
+    assert "endtime=2014-02-15T05:19:01" in text
+    # the full window times are NOT what the gap queries use
+    assert "start=2014-02-15T05:09:53" not in text
 
 
 def test_detail_shows_requests_and_status_for_inconsistency(tmp_path):
