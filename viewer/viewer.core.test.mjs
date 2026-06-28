@@ -128,7 +128,7 @@ test('renderDetail includes per-gap run buttons and a timeline payload', () => {
   const html = renderDetail(rec);
   assert.match(html, /data-kind="availability"/);
   assert.match(html, /start=2014-02-15T05:18:25/);          // per-gap narrowed query
-  assert.match(html, /data-timeline=/);
+  assert.match(html, /<pre class="tl">/);                   // ASCII timeline rendered
   assert.match(html, /Requests:/);
   assert.match(html, /start=2014-02-15T05:09:53/);          // full-window availability request present
 });
@@ -136,7 +136,7 @@ test('renderDetail includes per-gap run buttons and a timeline payload', () => {
 test('renderDetail degrades when coverage/urls are absent', () => {
   const old = { index: 1, network: 'X', station: 'S', location: '', channel: 'BHZ', consistent: false };
   const html = renderDetail(old);
-  assert.doesNotMatch(html, /data-timeline=/);             // no timeline without coverage
+  assert.doesNotMatch(html, /class="tl"/);                 // no timeline without coverage
   assert.doesNotMatch(html, /data-kind=/);                 // no run buttons without urls
 });
 
@@ -171,4 +171,14 @@ test('renderSummary shows skipped + direction totals + timestamp and tolerates u
     total_skipped:1, availability_yes_dataselect_no:2, availability_no_dataselect_yes:6, timestamp:'2026-06-28T15:00:00+00:00' });
   assert.match(html, /1 skipped/); assert.match(html, /▼ 2/); assert.match(html, /▲ 6/); assert.match(html, /2026-06-28/);
   assert.doesNotThrow(() => renderSummary(undefined));
+});
+
+import { timelineAscii } from './viewer.core.js';
+test('timelineAscii renders fixed-width glyphs with a gap boundary', () => {
+  const s = timelineAscii('2020-01-01T00:00:00', '2020-01-01T00:10:00', [],
+    [['2020-01-01T00:01:00','2020-01-01T00:02:00'], ['2020-01-01T00:06:00','2020-01-01T00:07:00']],
+    [{start:'2020-01-01T00:01:00+00:00',end:'2020-01-01T00:02:00+00:00'},{start:'2020-01-01T00:06:00+00:00',end:'2020-01-01T00:07:00+00:00'}]);
+  assert.equal([...s].length, 58);
+  assert.match(s, /▲/); assert.match(s, /·/); assert.match(s, /\|/);
+  assert.doesNotMatch(s, /▼/);
 });

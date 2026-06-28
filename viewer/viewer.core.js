@@ -65,6 +65,24 @@ export function timelineModel(windowStart, windowEnd, avail, ds, mismatch) {
   return { segments, boundaries };
 }
 
+export function timelineAscii(windowStart, windowEnd, avail, ds, mismatch, width = 58) {
+  const t0 = _parseUTC(windowStart), t1 = _parseUTC(windowEnd);
+  if (!(t1 > t0)) return '';
+  const total = (t1 - t0) / 1000;
+  const toIv = arr => (arr || []).map(([a, b]) => [_sec(a, t0), _sec(b, t0)]).filter(([a, b]) => b > a);
+  const A = toIv(avail), D = toIv(ds);
+  const cov = (iv, i) => { const cs = i * total / width, ce = (i + 1) * total / width; return iv.some(([a, b]) => Math.max(cs, a) < Math.min(ce, b) - 1e-9); };
+  const out = [];
+  for (let i = 0; i < width; i++) { const a = cov(A, i), d = cov(D, i); out.push(a && d ? '█' : a ? '▼' : d ? '▲' : '·'); }
+  const gaps = [...(mismatch || [])].sort((m, n) => _parseUTC(m.start) - _parseUTC(n.start));
+  for (let i = 0; i < gaps.length - 1; i++) {
+    const e = _sec(gaps[i].end, t0), s = _sec(gaps[i + 1].start, t0);
+    const cell = Math.min(width - 1, Math.max(0, Math.floor(((e + s) / 2) / total * width)));
+    out[cell] = '|';
+  }
+  return out.join('');
+}
+
 export function summariseRequest(kind, status, bodyText, byteLength) {
   if (kind === 'availability') {
     const n = (bodyText || '').split('\n').filter(l => l && !l.startsWith('#')).length;
@@ -137,8 +155,8 @@ export function renderDetail(record) {
   const parts = [];
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
-    const model = timelineModel(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    parts.push(`<div class="timeline" data-timeline="${esc(JSON.stringify(model))}"></div>`);
+    const tl = timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
+    parts.push(`<pre class="tl">${esc(tl)}</pre><div class="legend">▲ Data YES / Avail NO &nbsp; ▼ Avail YES / Data NO &nbsp; █ both &nbsp; · none &nbsp; | gap boundary</div>`);
   }
   const full = ['availability', 'dataselect'].map(k => {
     const u = k === 'availability' ? record.url : record.dataselect_url;

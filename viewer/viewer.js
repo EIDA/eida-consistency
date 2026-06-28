@@ -18,7 +18,8 @@ function wire() {
     const tr = e.target.closest('tr[data-index]'); if (!tr) return;
     const rec = state.report.results.find(r => String(r.index) === tr.dataset.index);
     $('#detail').innerHTML = renderDetail(rec);
-    $('#detail').querySelectorAll('.timeline').forEach(drawTimeline);
+    tr.classList.add('sel');
+    $('#results').querySelectorAll('tr.sel').forEach(o => { if (o !== tr) o.classList.remove('sel'); });
   });
   $('#detail').addEventListener('click', async e => {
     const b = e.target.closest('button[data-kind]'); if (!b) return;
@@ -27,14 +28,6 @@ function wire() {
     b.insertAdjacentHTML('afterend', `<span class="result"> ${r.summary}</span>`);
     b.textContent = `Run ${b.dataset.kind}`;
   });
-}
-
-function drawTimeline(el) {
-  const model = JSON.parse(el.dataset.timeline);
-  const color = { both: '#2e7d32', availability: '#c62828', dataselect: '#1565c0', none: 'transparent' };
-  el.innerHTML = model.segments.map(s =>
-    `<i style="left:${s.x0 * 100}%;width:${(s.x1 - s.x0) * 100}%;background:${color[s.kind]}"></i>`).join('')
-    + model.boundaries.map(x => `<b style="left:${x * 100}%"></b>`).join('');
 }
 
 async function main() {

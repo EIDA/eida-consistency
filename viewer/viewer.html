@@ -2,18 +2,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EIDA Consistency — report viewer</title>
 <style>
-:root{--bg:#fff;--fg:#222;--mut:#666;--line:#e0e0e0}
-@media (prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e0e0e0;--mut:#999;--line:#333}}
-body{font-family:Roboto,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-.wrap{max-width:1100px;margin:0 auto;padding:1rem}
-.summary{display:flex;gap:1rem;align-items:baseline;border-bottom:1px solid var(--line)}
-.toolbar{display:flex;gap:1rem;align-items:center;padding:.6rem 0}
+:root{--bg:#fff;--fg:#1f2328;--mut:#656d76;--line:#d0d7de;--accent:#0969da;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--accent:#4493f8;--card:#161b22}}
+*{box-sizing:border-box}
+body{font-family:Roboto,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg);font-size:14px}
+.wrap{max-width:1100px;margin:0 auto;padding:1.2rem}
+.summary{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;align-items:baseline;padding-bottom:.6rem;border-bottom:1px solid var(--line)}
+.summary h1{font-size:1.5rem;margin:0}
+.summary .score{font-weight:700}
+.summary .ts,.summary .dirtotals{color:var(--mut)}
+.toolbar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;padding:.8rem 0;position:sticky;top:0;background:var(--bg);z-index:1;border-bottom:1px solid var(--line)}
+.toolbar input,.toolbar select{padding:.3rem .4rem;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
 table.results{width:100%;border-collapse:collapse}
-table.results td,table.results th{border-bottom:1px solid var(--line);padding:.3rem .5rem;text-align:left;cursor:pointer}
-.timeline{position:relative;height:14px;background:var(--line);border-radius:3px;margin:.4rem 0}
-.timeline i{position:absolute;top:0;height:100%}
-.timeline b{position:absolute;top:-2px;height:18px;width:2px;background:var(--fg)}
-.gap{margin:.3rem 0;font-size:.9rem}
+table.results th{color:var(--mut);font-weight:600;text-align:left;border-bottom:1px solid var(--line);padding:.4rem .6rem}
+table.results td{border-bottom:1px solid var(--line);padding:.4rem .6rem}
+table.results tbody tr{cursor:pointer}
+table.results tbody tr:hover{background:var(--card)}
+table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(--accent)}
+.detail{margin-top:1rem;padding:.9rem 1rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.detail:empty{display:none}
+.tl{font-family:"Roboto Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.15;letter-spacing:1px;margin:.1rem 0;white-space:pre;overflow-x:auto}
+.legend{color:var(--mut);font-size:.78rem;margin:.1rem 0 .7rem}
+.req{margin:.3rem 0}
+.req.full{font-weight:600}
+.req button{cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:.15rem .5rem;margin-right:.2rem}
+.req a{color:var(--accent);margin-right:.6rem;text-decoration:none}
+.gap{margin:.6rem 0 0;font-size:.9rem;border-top:1px dashed var(--line);padding-top:.5rem}
 .result{color:var(--mut)}
 </style></head>
 <body><div class="wrap">
