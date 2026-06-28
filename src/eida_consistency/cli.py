@@ -94,10 +94,17 @@ def cli(ctx, log_level, report_dir):
     is_flag=True,
     help="Upload report to configured S3 bucket after saving locally.",
 )
+@click.option(
+    "--report-dir",
+    "report_dir_opt",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="Directory to store reports (overrides the global --report-dir).",
+)
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload):
+def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload, report_dir_opt):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
-    report_dir: Path = ctx.obj["report_dir"]
+    report_dir: Path = report_dir_opt or ctx.obj["report_dir"]
 
     if delete_old:
         delete_old_reports(report_dir, keep=1)
@@ -230,10 +237,17 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     help="Emit the discovered fixes as JSON to stdout (machine-readable). "
          "Human logs/progress stay on stderr, so stdout is pure JSON.",
 )
+@click.option(
+    "--report-dir",
+    "report_dir_opt",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="Directory to load reports from (overrides the global --report-dir).",
+)
 @click.pass_context
-def explore(ctx, report, index, days, verbose, as_json):
+def explore(ctx, report, index, days, verbose, as_json, report_dir_opt):
     """Explore day-by-day boundaries of inconsistencies from a report."""
-    report_dir: Path = ctx.obj["report_dir"]
+    report_dir: Path = report_dir_opt or ctx.obj["report_dir"]
 
     if not report:
         try:
