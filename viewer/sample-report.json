@@ -1,0 +1,109 @@
+{
+  "summary": {
+    "version": "0.9.0",
+    "node": "NOA",
+    "seed": 42,
+    "epochs_requested": 5,
+    "candidates_requested": 12,
+    "candidates_tested": 12,
+    "station_queries": 4,
+    "duration": 600,
+    "test_duration_sec": 8.31,
+    "total_checked": 12,
+    "total_evaluated": 12,
+    "total_skipped": 0,
+    "total_consistent": 8,
+    "total_inconsistent": 4,
+    "total_transient": 0,
+    "score": 67.0,
+    "availability_yes_dataselect_no": 3,
+    "availability_no_dataselect_yes": 1,
+    "timestamp": "2026-06-28T00:00:00+00:00"
+  },
+  "results": [
+    {
+      "index": 0,
+      "network": "GR",
+      "station": "BFO",
+      "location": "",
+      "channel": "BHZ",
+      "starttime": "2014-02-15T05:09:53",
+      "endtime": "2014-02-15T05:19:53",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_type": "M",
+      "dataselect_status": "OK",
+      "consistent": false,
+      "scoreable": true,
+      "consistency_reason": null,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=GR&station=BFO&location=*&channel=BHZ&start=2014-02-15T05:09:53&end=2014-02-15T05:19:53&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "availability_status": 200,
+      "dataselect_url": "https://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=GR&station=BFO&location=&channel=BHZ&starttime=2014-02-15T05:09:53&endtime=2014-02-15T05:19:53&nodata=204",
+      "mismatch": [
+        {
+          "start": "2014-02-15T05:18:25+00:00",
+          "end": "2014-02-15T05:19:01+00:00",
+          "who": "availability"
+        }
+      ],
+      "coverage": {
+        "availability": [["2014-02-15T05:17:09", "2014-02-15T05:19:01"]],
+        "dataselect": [["2014-02-15T05:17:09", "2014-02-15T05:18:25"]]
+      }
+    },
+    {
+      "index": 1,
+      "network": "HP",
+      "station": "ATH",
+      "location": "",
+      "channel": "HHZ",
+      "starttime": "2020-06-15T10:00:00",
+      "endtime": "2020-06-15T10:10:00",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_type": "M",
+      "dataselect_status": "OK",
+      "consistent": false,
+      "scoreable": true,
+      "consistency_reason": null,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HP&station=ATH&location=*&channel=HHZ&start=2020-06-15T10:00:00&end=2020-06-15T10:10:00&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "availability_status": 200,
+      "dataselect_url": "https://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HP&station=ATH&location=&channel=HHZ&starttime=2020-06-15T10:00:00&endtime=2020-06-15T10:10:00&nodata=204",
+      "mismatch": [
+        {
+          "start": "2020-06-15T10:03:00+00:00",
+          "end": "2020-06-15T10:04:30+00:00",
+          "who": "dataselect"
+        }
+      ],
+      "coverage": {
+        "availability": [["2020-06-15T10:01:00", "2020-06-15T10:03:00"]],
+        "dataselect": [["2020-06-15T10:01:00", "2020-06-15T10:04:30"]]
+      }
+    },
+    {
+      "index": 2,
+      "network": "HL",
+      "station": "RDO",
+      "location": "00",
+      "channel": "BHN",
+      "starttime": "2023-03-10T08:00:00",
+      "endtime": "2023-03-10T08:10:00",
+      "available": true,
+      "dataselect_success": true,
+      "dataselect_type": "M",
+      "dataselect_status": 200,
+      "consistent": true,
+      "scoreable": true,
+      "consistency_reason": null,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HL&station=RDO&location=00&channel=BHN&start=2023-03-10T08:00:00&end=2023-03-10T08:10:00&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "availability_status": 200,
+      "dataselect_url": "https://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=RDO&location=00&channel=BHN&starttime=2023-03-10T08:00:00&endtime=2023-03-10T08:10:00&nodata=204",
+      "mismatch": [],
+      "coverage": {
+        "availability": [["2023-03-10T08:00:00", "2023-03-10T08:10:00"]],
+        "dataselect": [["2023-03-10T08:00:00", "2023-03-10T08:10:00"]]
+      }
+    }
+  ]
+}
