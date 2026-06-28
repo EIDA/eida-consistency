@@ -115,7 +115,7 @@ const rec = {
 
 test('renderSummary shows score and counts', () => {
   const html = renderSummary({ node: 'NOA', score: 60, total_inconsistent: 8, total_consistent: 12 });
-  assert.match(html, /NOA/); assert.match(html, /60/); assert.match(html, /8/);
+  assert.match(html, /NOA/); assert.match(html, /60/); assert.match(html, /8/); assert.match(html, /12/);
 });
 
 test('renderResultsTable respects the filter and tags rows by index', () => {
@@ -129,6 +129,8 @@ test('renderDetail includes per-gap run buttons and a timeline payload', () => {
   assert.match(html, /data-kind="availability"/);
   assert.match(html, /start=2014-02-15T05:18:25/);          // per-gap narrowed query
   assert.match(html, /data-timeline=/);
+  assert.match(html, /Requests:/);
+  assert.match(html, /start=2014-02-15T05:09:53/);          // full-window availability request present
 });
 
 test('renderDetail degrades when coverage/urls are absent', () => {

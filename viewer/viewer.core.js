@@ -116,8 +116,13 @@ export function renderDetail(record) {
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
     const model = timelineModel(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    parts.push(`<div class="timeline" data-timeline='${esc(JSON.stringify(model))}'></div>`);
+    parts.push(`<div class="timeline" data-timeline="${esc(JSON.stringify(model))}"></div>`);
   }
+  const full = ['availability', 'dataselect'].map(k => {
+    const u = k === 'availability' ? record.url : record.dataselect_url;
+    return u ? `<button data-kind="${k}" data-url="${esc(u)}">Run ${k}</button> <a href="${esc(u)}" target="_blank">open</a>` : '';
+  }).filter(Boolean).join(' ');
+  if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
   for (const m of record.mismatch || []) {
     const q = gapQueries(record, m);
     const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k =>
