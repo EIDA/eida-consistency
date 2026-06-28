@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -27,4 +27,32 @@ test('gapQueries narrows both services to the gap window', () => {
 
 test('gapQueries tolerates a missing base url', () => {
   assert.deepEqual(gapQueries({}, { start: 'a', end: 'b' }), { availability: null, dataselect: null });
+});
+
+const inc = {
+  network: 'HT', station: 'KAVA', location: '', channel: 'HHE', consistent: false,
+  mismatch: [{ who: 'dataselect' }, { who: 'dataselect' }],
+};
+const ok = { network: 'HL', station: 'PRK', location: '00', channel: 'HHZ', consistent: true, mismatch: [] };
+
+test('recordDirections collects gap directions', () => {
+  assert.deepEqual([...recordDirections(inc)], ['dataselect']);
+  assert.deepEqual([...recordDirections(ok)], []);
+});
+
+test('onlyInconsistent hides consistent rows', () => {
+  const f = { onlyInconsistent: true, direction: 'both', search: '' };
+  assert.equal(matchesFilter(inc, f), true);
+  assert.equal(matchesFilter(ok, f), false);
+});
+
+test('direction filter keeps matching gap direction', () => {
+  assert.equal(matchesFilter(inc, { onlyInconsistent: true, direction: 'dataselect', search: '' }), true);
+  assert.equal(matchesFilter(inc, { onlyInconsistent: true, direction: 'availability', search: '' }), false);
+});
+
+test('search matches NSLC case-insensitively', () => {
+  const f = { onlyInconsistent: false, direction: 'both', search: 'kava' };
+  assert.equal(matchesFilter(inc, f), true);
+  assert.equal(matchesFilter(ok, f), false);
 });
