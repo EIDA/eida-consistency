@@ -34,10 +34,12 @@ export function matchesFilter(record, filter) {
   return true;
 }
 
-function _sec(iso, t0) { return (Date.parse(iso) - t0) / 1000; }
+function _parseUTC(iso) { return Date.parse(/[Z+]/.test(iso) ? iso : iso + 'Z'); }
+
+function _sec(iso, t0) { return (_parseUTC(iso) - t0) / 1000; }
 
 export function timelineModel(windowStart, windowEnd, avail, ds, mismatch) {
-  const t0 = Date.parse(windowStart), t1 = Date.parse(windowEnd);
+  const t0 = _parseUTC(windowStart), t1 = _parseUTC(windowEnd);
   if (!(t1 > t0)) return { segments: [], boundaries: [] };
   const total = (t1 - t0) / 1000;
   const toIv = arr => (arr || []).map(([a, b]) => [_sec(a, t0), _sec(b, t0)]).filter(([a, b]) => b > a);
@@ -53,11 +55,12 @@ export function timelineModel(windowStart, windowEnd, avail, ds, mismatch) {
     const kind = inA && inD ? 'both' : inA ? 'availability' : inD ? 'dataselect' : 'none';
     segments.push({ x0: a / total, x1: b / total, kind });
   }
-  const gaps = [...(mismatch || [])].sort((m, n) => String(m.start).localeCompare(String(n.start)));
+  const gaps = [...(mismatch || [])].sort((m, n) => _parseUTC(m.start) - _parseUTC(n.start));
   const boundaries = [];
   for (let i = 0; i < gaps.length - 1; i++) {
     const e = _sec(gaps[i].end, t0), s = _sec(gaps[i + 1].start, t0);
-    boundaries.push(((e + s) / 2) / total);
+    const b = ((e + s) / 2) / total;
+    if (b >= 0 && b <= 1) boundaries.push(b);
   }
   return { segments, boundaries };
 }

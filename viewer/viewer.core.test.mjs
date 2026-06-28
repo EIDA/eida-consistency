@@ -60,8 +60,8 @@ test('search matches NSLC case-insensitively', () => {
 test('timelineModel classifies both/none/dataselect-only segments', () => {
   // window 0..600s; dataselect 60..180; availability empty
   const m = timelineModel(
-    '2020-01-01T00:00:00+00:00', '2020-01-01T00:10:00+00:00',
-    [], [['2020-01-01T00:01:00+00:00', '2020-01-01T00:03:00+00:00']], []);
+    '2020-01-01T00:00:00', '2020-01-01T00:10:00',
+    [], [['2020-01-01T00:01:00', '2020-01-01T00:03:00']], []);
   // expect a 'none' segment, a 'dataselect' segment, a 'none' segment
   const kinds = m.segments.map(s => s.kind);
   assert.deepEqual(kinds, ['none', 'dataselect', 'none']);
@@ -71,8 +71,8 @@ test('timelineModel classifies both/none/dataselect-only segments', () => {
 
 test('timelineModel emits a boundary between two gaps', () => {
   const m = timelineModel(
-    '2020-01-01T00:00:00+00:00', '2020-01-01T00:10:00+00:00',
-    [], [['2020-01-01T00:01:00+00:00','2020-01-01T00:02:00+00:00'], ['2020-01-01T00:06:00+00:00','2020-01-01T00:07:00+00:00']],
+    '2020-01-01T00:00:00', '2020-01-01T00:10:00',
+    [], [['2020-01-01T00:01:00','2020-01-01T00:02:00'], ['2020-01-01T00:06:00','2020-01-01T00:07:00']],
     [{ start: '2020-01-01T00:01:00+00:00', end: '2020-01-01T00:02:00+00:00', who: 'dataselect' },
      { start: '2020-01-01T00:06:00+00:00', end: '2020-01-01T00:07:00+00:00', who: 'dataselect' }]);
   assert.equal(m.boundaries.length, 1);
