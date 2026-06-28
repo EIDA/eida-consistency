@@ -139,3 +139,10 @@ test('renderDetail degrades when coverage/urls are absent', () => {
   assert.doesNotMatch(html, /data-timeline=/);             // no timeline without coverage
   assert.doesNotMatch(html, /data-kind=/);                 // no run buttons without urls
 });
+
+test('renderResultsTable escapes hostile values (no attribute/tag breakout)', () => {
+  const evil = { index: 1, network: 'X', station: `a"'<>`, location: '', channel: 'BHZ', consistent: false, mismatch: [{ who: 'dataselect' }] };
+  const html = renderResultsTable([evil], { onlyInconsistent: false, direction: 'both', search: '' });
+  assert.doesNotMatch(html, /a"'<>/);            // raw hostile string not present
+  assert.match(html, /&quot;/); assert.match(html, /&#39;/); assert.match(html, /&lt;/); assert.match(html, /&gt;/);
+});
