@@ -91,7 +91,7 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     return lines
 
 
-def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str:
+def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=None) -> str:
     """Single-line coverage timeline across ``[window_start, window_end]``.
 
     ``avail`` / ``ds`` are lists of ``(start_iso, end_iso)`` coverage intervals.
@@ -100,6 +100,10 @@ def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str
     - ``█`` data in both        ``·`` no data in either
     - ``▼`` availability only (Avail YES / Data NO)
     - ``▲`` dataselect only (Data YES / Avail NO)
+
+    If ``gaps`` (the mismatch list) is given, a ``|`` is drawn at the boundary
+    between consecutive gaps so distinct gaps stay visible even when the
+    consistent break between them is narrower than one cell.
     """
     w0, w1 = parse_iso(window_start), parse_iso(window_end)
     total = (w1 - w0).total_seconds() if (w0 and w1) else 0.0
@@ -121,6 +125,17 @@ def render_timeline(window_start, window_end, avail, ds, width: int = 58) -> str
     for i in range(width):
         a, d = covered(avail_iv, i), covered(ds_iv, i)
         out.append("█" if a and d else "▼" if a else "▲" if d else "·")
+
+    if gaps and total > 0:
+        ordered = sorted(gaps, key=lambda m: m.get("start", ""))
+        for a, b in zip(ordered, ordered[1:]):
+            ae, bs = parse_iso(a.get("end")), parse_iso(b.get("start"))
+            if ae is None or bs is None:
+                continue
+            mid = (sec(ae) + sec(bs)) / 2
+            cell = min(width - 1, max(0, int(mid / total * width)))
+            out[cell] = "|"
+
     return "".join(out)
 
 
@@ -162,12 +177,12 @@ def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
     cov = r.get("coverage") or {}
     timeline = render_timeline(
         r["starttime"], r["endtime"],
-        cov.get("availability", []), cov.get("dataselect", []),
+        cov.get("availability", []), cov.get("dataselect", []), gaps=gaps,
     )
     lines = [
         "```",
         timeline,
-        "▲ Data YES / Avail NO    ▼ Avail YES / Data NO    █ both    · none",
+        "▲ Data YES / Avail NO    ▼ Avail YES / Data NO    █ both    · none    | gap boundary",
         "```",
         f"- Gaps ({len(gaps)}):",
     ]

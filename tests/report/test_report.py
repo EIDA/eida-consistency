@@ -263,6 +263,29 @@ def test_markdown_detail_includes_timeline_and_gaps(tmp_path):
     assert "36.6 s" in text     # gap listed in the detail
 
 
+def test_render_timeline_separates_gaps_with_pipe():
+    line = report.render_timeline(
+        "2020-01-01T00:00:00", "2020-01-01T00:10:00",
+        [],
+        [("2020-01-01T00:01:00", "2020-01-01T00:03:00"),
+         ("2020-01-01T00:06:00", "2020-01-01T00:08:00")],
+        gaps=[{"start": "2020-01-01T00:01:00+00:00", "end": "2020-01-01T00:03:00+00:00", "who": "dataselect"},
+              {"start": "2020-01-01T00:06:00+00:00", "end": "2020-01-01T00:08:00+00:00", "who": "dataselect"}],
+    )
+    assert line.count("|") == 1     # one boundary between two gaps
+    assert "▲" in line
+
+
+def test_render_timeline_no_pipe_for_single_gap():
+    line = report.render_timeline(
+        "2020-01-01T00:00:00", "2020-01-01T00:10:00",
+        [],
+        [("2020-01-01T00:01:00", "2020-01-01T00:09:00")],
+        gaps=[{"start": "2020-01-01T00:01:00+00:00", "end": "2020-01-01T00:09:00+00:00", "who": "dataselect"}],
+    )
+    assert "|" not in line
+
+
 def test_render_timeline_dataselect_only_uses_up_triangle():
     line = report.render_timeline(
         "2020-01-01T00:00:00", "2020-01-01T00:10:00",

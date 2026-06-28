@@ -204,10 +204,10 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     coverage = classification.get("coverage") or {}
     if mismatch and coverage:
         timeline = render_timeline(
-            start, end, coverage.get("availability", []), coverage.get("dataselect", [])
+            start, end, coverage.get("availability", []), coverage.get("dataselect", []), gaps=mismatch
         )
         logging.info(f"  {timeline}")
-        logging.info("  ▲ Data YES / Avail NO   ▼ Avail YES / Data NO   █ both   · none")
+        logging.info("  ▲ Data YES / Avail NO   ▼ Avail YES / Data NO   █ both   · none   | gap boundary")
         logging.info("")
         for line in render_gap_table(mismatch):
             logging.info(f"  {line}")
