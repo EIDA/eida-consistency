@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -101,4 +101,39 @@ test('runRequest never throws on network error', async () => {
   const r = await runRequest('availability', 'http://x', async () => { throw new Error('net'); });
   assert.equal(r.ok, false);
   assert.equal(r.status, 0);
+});
+
+const rec = {
+  index: 3, network: 'FR', station: 'MLS', location: '00', channel: 'HHN', consistent: false,
+  starttime: '2014-02-15T05:09:53', endtime: '2014-02-15T05:19:53',
+  url: 'https://h/availability/1/query?net=FR&start=2014-02-15T05:09:53&end=2014-02-15T05:19:53',
+  dataselect_url: 'https://h/dataselect/1/query?net=FR&starttime=2014-02-15T05:09:53&endtime=2014-02-15T05:19:53&nodata=204',
+  availability_status: 200, dataselect_status: 'OK',
+  mismatch: [{ start: '2014-02-15T05:18:25+00:00', end: '2014-02-15T05:19:01+00:00', who: 'availability' }],
+  coverage: { availability: [['2014-02-15T05:17:09','2014-02-15T05:19:01']], dataselect: [['2014-02-15T05:17:09','2014-02-15T05:18:25']] },
+};
+
+test('renderSummary shows score and counts', () => {
+  const html = renderSummary({ node: 'NOA', score: 60, total_inconsistent: 8, total_consistent: 12 });
+  assert.match(html, /NOA/); assert.match(html, /60/); assert.match(html, /8/);
+});
+
+test('renderResultsTable respects the filter and tags rows by index', () => {
+  const html = renderResultsTable([rec], { onlyInconsistent: true, direction: 'both', search: '' });
+  assert.match(html, /data-index="3"/);
+  assert.match(html, /FR\.MLS\.00\.HHN/);
+});
+
+test('renderDetail includes per-gap run buttons and a timeline payload', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /data-kind="availability"/);
+  assert.match(html, /start=2014-02-15T05:18:25/);          // per-gap narrowed query
+  assert.match(html, /data-timeline=/);
+});
+
+test('renderDetail degrades when coverage/urls are absent', () => {
+  const old = { index: 1, network: 'X', station: 'S', location: '', channel: 'BHZ', consistent: false };
+  const html = renderDetail(old);
+  assert.doesNotMatch(html, /data-timeline=/);             // no timeline without coverage
+  assert.doesNotMatch(html, /data-kind=/);                 // no run buttons without urls
 });

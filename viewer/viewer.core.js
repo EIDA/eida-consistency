@@ -87,3 +87,42 @@ export async function runRequest(kind, url, fetchImpl) {
     return { ok: false, status: 0, summary: 'request failed' };
   }
 }
+
+const DIR_LABEL = {
+  availability: '▼ Availability: data · Dataselect: NO DATA',
+  dataselect: '▲ Availability: NO DATA · Dataselect: data',
+};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+export function renderSummary(s) {
+  return `<header class="summary"><h1>${esc(s.node)}</h1>
+    <span class="score">Score ${esc(s.score)}%</span>
+    <span>${esc(s.total_inconsistent)} inconsistent / ${esc(s.total_consistent)} consistent</span></header>`;
+}
+
+export function renderResultsTable(results, filter) {
+  const rows = (results || []).filter(r => matchesFilter(r, filter)).map(r => {
+    const nslc = `${r.network}.${r.station}.${r.location}.${r.channel}`;
+    const dir = r.consistent === false ? [...recordDirections(r)].map(w => DIR_LABEL[w] ? DIR_LABEL[w][0] : '').join('') : '✔';
+    return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
+      <td>${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${esc(dir)}</td>
+      <td>${esc(r.dataselect_status ?? '')}</td></tr>`;
+  }).join('');
+  return `<table class="results"><thead><tr><th>Channel</th><th>Window</th><th>Dir</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+export function renderDetail(record) {
+  const parts = [];
+  const cov = record.coverage;
+  if (cov && (cov.availability || cov.dataselect)) {
+    const model = timelineModel(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
+    parts.push(`<div class="timeline" data-timeline='${esc(JSON.stringify(model))}'></div>`);
+  }
+  for (const m of record.mismatch || []) {
+    const q = gapQueries(record, m);
+    const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k =>
+      `<button data-kind="${k}" data-url="${esc(q[k])}">Run ${k}</button> <a href="${esc(q[k])}" target="_blank">open</a>`).join(' ');
+    parts.push(`<div class="gap">${esc(m.start)} → ${esc(m.end)} ${esc(DIR_LABEL[m.who] || '')}<div class="req">${btns}</div></div>`);
+  }
+  return `<section class="detail">${parts.join('')}</section>`;
+}
