@@ -222,3 +222,45 @@ test('renderDetail shows per-gap duration and copy buttons', () => {
   assert.match(html, /class="gdur">36s</);         // 05:18:25 -> 05:19:01 = 36s
   assert.match(html, /data-copy=/);
 });
+
+import { timelineSVG } from './viewer.core.js';
+test('timelineSVG draws both lanes, a gap band, and time labels', () => {
+  const svg = timelineSVG('2020-01-01T00:00:00', '2020-01-01T00:10:00',
+    [['2020-01-01T00:00:00', '2020-01-01T00:06:00']],            // availability has data 0-6m
+    [['2020-01-01T00:00:00', '2020-01-01T00:04:00']],            // dataselect has data 0-4m
+    [{ start: '2020-01-01T00:04:00+00:00', end: '2020-01-01T00:06:00+00:00', who: 'availability' }]);
+  assert.match(svg, /^<svg class="tlsvg"/);
+  assert.match(svg, /class="tl-av"/);
+  assert.match(svg, /class="tl-ds"/);
+  assert.match(svg, /class="tl-gap"/);
+  assert.match(svg, /<title>Availability: 2020-01-01 00:00:00/);
+  assert.match(svg, /2020-01-01 00:10:00<\/text>/);             // end label
+});
+test('timelineSVG is empty on a degenerate window', () => {
+  assert.equal(timelineSVG('x', 'x', [], [], []), '');
+});
+test('renderDetail embeds the SVG timeline alongside the ASCII line', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /<svg class="tlsvg"/);
+  assert.match(html, /<pre class="tl">/);
+});
+
+import { timelineGapsSVG } from './viewer.core.js';
+test('timelineGapsSVG marks gaps on a single window track', () => {
+  const svg = timelineGapsSVG('2009-01-09T04:51:00', '2009-01-09T05:01:00',
+    [{ start: '2009-01-09T04:55:00+00:00', end: '2009-01-09T04:57:00+00:00' }]);
+  assert.match(svg, /class="tl-gap-solid"/);
+  assert.match(svg, /<title>gap: 2009-01-09 04:55:00/);
+});
+test('timelineGapsSVG is empty without a window or gaps', () => {
+  assert.equal(timelineGapsSVG('x', 'x', [{ start: 'a', end: 'b' }]), '');
+  assert.equal(timelineGapsSVG('2009-01-09T04:51:00', '2009-01-09T05:01:00', []), '');
+});
+test('renderDetail falls back to a gaps-only graph when coverage is absent', () => {
+  const old = { index: 2, network: 'HL', station: 'X', location: '', channel: 'HHZ', consistent: false,
+    starttime: '2009-01-09T04:51:07', endtime: '2009-01-09T05:01:07',
+    mismatch: [{ start: '2009-01-09T04:55:00+00:00', end: '2009-01-09T04:57:00+00:00' }] };
+  const html = renderDetail(old);
+  assert.match(html, /class="tl-gap-solid"/);
+  assert.doesNotMatch(html, /class="tl-av"/);   // no two-lane chart without coverage
+});

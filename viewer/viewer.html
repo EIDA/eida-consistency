@@ -49,8 +49,18 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .detail{margin-top:1rem;padding:.9rem 1rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .detail:empty{display:none}
 .detail h2{font-size:.95rem;margin:.6rem 0 .3rem}
-.tl{font-family:"Roboto Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.15;letter-spacing:1px;margin:.1rem 0;white-space:pre;overflow-x:auto}
+.tlsvg{width:100%;height:auto;display:block;max-width:920px;margin:.2rem 0 .4rem}
+.tl-track{fill:var(--line);opacity:.5}
+.tl-av{fill:var(--ok)}
+.tl-ds{fill:var(--accent)}
+.tl-gap{fill:var(--bad);opacity:.16}
+.tl-gap-solid{fill:var(--bad);opacity:.85}
+.tl-axis{stroke:var(--line)}
+.tl-lab,.tl-lane{fill:var(--mut);font-size:11px;font-family:Roboto,system-ui,sans-serif}
+.tl{font-family:"Roboto Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.15;letter-spacing:1px;margin:.1rem 0;white-space:pre;overflow-x:auto;color:var(--mut)}
 .legend{color:var(--mut);font-size:.78rem;margin:.1rem 0 .7rem}
+.legend .lg{font-family:"Roboto Mono",monospace}
+.legend .lg.av{color:var(--ok)} .legend .lg.ds{color:var(--accent)} .legend .lg.gap{color:var(--bad)}
 .req{margin:.3rem 0}
 .req.full{font-weight:600}
 .req button{cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:.15rem .5rem;margin-right:.2rem}

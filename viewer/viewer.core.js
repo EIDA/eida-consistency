@@ -38,6 +38,21 @@ function _parseUTC(iso) { return Date.parse(/[Z+]/.test(iso) ? iso : iso + 'Z');
 
 function _sec(iso, t0) { return (_parseUTC(iso) - t0) / 1000; }
 
+function _fmtTime(iso) { return queryTime(iso).replace('T', ' ').replace(/\.\d+$/, ''); }
+
+// Map [start,end] pairs to clamped {x0,x1} fractions of the window, keeping the
+// original ISO strings for tooltips.
+function _segs(windowStart, windowEnd, pairs) {
+  const t0 = _parseUTC(windowStart), t1 = _parseUTC(windowEnd);
+  if (!(t1 > t0)) return [];
+  const total = t1 - t0;
+  return (pairs || []).map(([a, b]) => ({
+    x0: Math.max(0, Math.min(1, (_parseUTC(a) - t0) / total)),
+    x1: Math.max(0, Math.min(1, (_parseUTC(b) - t0) / total)),
+    a, b,
+  })).filter(s => s.x1 > s.x0);
+}
+
 export function fmtDuration(sec) {
   sec = Math.max(0, Math.round(Number(sec) || 0));
   if (sec < 60) return `${sec}s`;
@@ -107,6 +122,28 @@ export function timelineAscii(windowStart, windowEnd, avail, ds, mismatch, width
   return out.join('');
 }
 
+// Fallback timeline for reports without `coverage`: one "request window" track
+// with the mismatch gaps marked. Returns an SVG string (empty if no usable
+// window or no gaps).
+export function timelineGapsSVG(windowStart, windowEnd, mismatch) {
+  const X0 = 80, X1 = 988, W = X1 - X0, Y = 18, LH = 22;
+  if (!(_parseUTC(windowEnd) > _parseUTC(windowStart))) return '';
+  const gaps = _segs(windowStart, windowEnd, (mismatch || []).map(m => [m.start, m.end]));
+  if (!gaps.length) return '';
+  const xf = f => (X0 + f * W).toFixed(1);
+  const wd = (a, b) => Math.max(1, (b - a) * W).toFixed(1);
+  const bands = gaps.map(s =>
+    `<rect class="tl-gap-solid" x="${xf(s.x0)}" y="${Y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+  return `<svg class="tlsvg" viewBox="0 0 1000 64" role="img" aria-label="gap timeline">
+    <text class="tl-lane" x="8" y="${Y + 15}">Window</text>
+    <rect class="tl-track" x="${X0}" y="${Y}" width="${W}" height="${LH}" rx="2"></rect>
+    ${bands}
+    <line class="tl-axis" x1="${X0}" y1="48" x2="${X1}" y2="48"></line>
+    <text class="tl-lab" x="${X0}" y="60">${esc(_fmtTime(windowStart))}</text>
+    <text class="tl-lab" x="${X1}" y="60" text-anchor="end">${esc(_fmtTime(windowEnd))}</text>
+  </svg>`;
+}
+
 export function summariseRequest(kind, status, bodyText, byteLength) {
   if (kind === 'availability') {
     const n = (bodyText || '').split('\n').filter(l => l && !l.startsWith('#')).length;
@@ -136,6 +173,33 @@ const DIR_LABEL = {
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => (/^https?:\/\//i.test(String(u ?? '')) ? String(u) : '');
+
+// Graphical two-lane coverage timeline: an Availability lane and a Dataselect
+// lane over the request window, with mismatch regions highlighted. Returns an
+// SVG string (empty on a degenerate window). Scales to its container width.
+export function timelineSVG(windowStart, windowEnd, avail, ds, mismatch) {
+  const X0 = 80, X1 = 988, W = X1 - X0, AVY = 16, DSY = 46, LH = 20;
+  if (!(_parseUTC(windowEnd) > _parseUTC(windowStart))) return '';
+  const xf = f => (X0 + f * W).toFixed(1);
+  const wd = (a, b) => Math.max(1, (b - a) * W).toFixed(1);
+  const av = _segs(windowStart, windowEnd, avail);
+  const dsg = _segs(windowStart, windowEnd, ds);
+  const gaps = _segs(windowStart, windowEnd, (mismatch || []).map(m => [m.start, m.end]));
+  const lane = (segs, y, cls, label) => segs.map(s =>
+    `<rect class="${cls}" x="${xf(s.x0)}" y="${y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>${esc(label)}: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+  const bands = gaps.map(s =>
+    `<rect class="tl-gap" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+  return `<svg class="tlsvg" viewBox="0 0 1000 92" role="img" aria-label="coverage timeline">
+    <text class="tl-lane" x="8" y="${AVY + 14}">Avail</text>
+    <text class="tl-lane" x="8" y="${DSY + 14}">Data</text>
+    <rect class="tl-track" x="${X0}" y="${AVY}" width="${W}" height="${LH}" rx="2"></rect>
+    <rect class="tl-track" x="${X0}" y="${DSY}" width="${W}" height="${LH}" rx="2"></rect>
+    ${lane(av, AVY, 'tl-av', 'Availability')}${lane(dsg, DSY, 'tl-ds', 'Dataselect')}${bands}
+    <line class="tl-axis" x1="${X0}" y1="74" x2="${X1}" y2="74"></line>
+    <text class="tl-lab" x="${X0}" y="88">${esc(_fmtTime(windowStart))}</text>
+    <text class="tl-lab" x="${X1}" y="88" text-anchor="end">${esc(_fmtTime(windowEnd))}</text>
+  </svg>`;
+}
 
 export function renderSummary(s) {
   s = s || {};
@@ -216,8 +280,13 @@ export function renderDetail(record) {
   const parts = [];
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
+    const svg = timelineSVG(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
     const tl = timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    parts.push(`<pre class="tl">${esc(tl)}</pre><div class="legend">▲ Data YES / Avail NO &nbsp; ▼ Avail YES / Data NO &nbsp; █ both &nbsp; · none &nbsp; | gap boundary</div>`);
+    parts.push(`${svg}<pre class="tl">${esc(tl)}</pre>
+      <div class="legend"><span class="lg av">█</span> availability has data &nbsp; <span class="lg ds">█</span> dataselect has data &nbsp; <span class="lg gap">█</span> mismatch &nbsp;·&nbsp; ASCII: ▲ data-only ▼ avail-only █ both · none | boundary</div>`);
+  } else {
+    const svg = timelineGapsSVG(record.starttime, record.endtime, record.mismatch || []);
+    if (svg) parts.push(`${svg}<div class="legend"><span class="lg gap">█</span> mismatch (gap) within the requested window — older report without full coverage data</div>`);
   }
   const full = [['availability', record.url], ['dataselect', record.dataselect_url]]
     .filter(([, u]) => u).map(([k, u]) => reqLinks(k, u)).join(' ');
