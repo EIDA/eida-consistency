@@ -24,9 +24,11 @@ function wire() {
     if (th) { setSort(th.dataset.sort); return; }
     const tr = e.target.closest('tr[data-index]'); if (!tr) return;
     const rec = state.report.results.find(r => String(r.index) === tr.dataset.index);
-    $('#detail').innerHTML = renderDetail(rec);
+    const detail = $('#detail');
+    detail.innerHTML = renderDetail(rec);
     tr.classList.add('sel');
     $('#results').querySelectorAll('tr.sel').forEach(o => { if (o !== tr) o.classList.remove('sel'); });
+    detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#detail').addEventListener('click', async e => {
     const copy = e.target.closest('button[data-copy]');
