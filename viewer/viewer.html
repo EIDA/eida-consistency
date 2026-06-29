@@ -68,9 +68,13 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .ilist a{color:var(--accent);text-decoration:none;font-weight:600}
 .iscore{font-weight:700}
 .imeta{color:var(--mut);font-size:.82rem}
-.loader{margin-top:1rem}
-.loader input{padding:.4rem .5rem;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
-.loader button{padding:.4rem .8rem;margin-left:.4rem;border:1px solid var(--line);border-radius:6px;background:var(--accent);color:#fff;cursor:pointer}
+.loader{margin-top:1rem;max-width:640px}
+.loadrow{display:flex;gap:.4rem}
+.loader input[type=url]{flex:1;padding:.45rem .6rem;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.loader button{padding:.45rem .9rem;border:1px solid var(--line);border-radius:6px;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+.drop{margin-top:.7rem;padding:1rem;border:1.5px dashed var(--line);border-radius:8px;color:var(--mut);text-align:center}
+.drop.over{border-color:var(--accent);color:var(--fg);background:var(--card)}
+.filebtn{color:var(--accent);cursor:pointer;text-decoration:underline}
 </style></head>
 <body><div class="wrap">
   <div id="summary"></div>

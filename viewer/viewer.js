@@ -43,43 +43,89 @@ function wire() {
   });
 }
 
-function emptyForm(msg) {
+function loaderHTML(msg) {
   return `<section class="loader">
     <h1>EIDA consistency viewer</h1>
     <p>${msg}</p>
-    <form id="loadForm"><input id="loadUrl" type="url" placeholder="paste a report .json URL (e.g. an Oculus report)" size="60">
-      <button type="submit">Load</button></form>
+    <form id="loadForm" class="loadrow">
+      <input id="loadUrl" type="url" placeholder="paste a report .json URL (e.g. an Oculus report)">
+      <button type="submit">Load URL</button>
+    </form>
+    <div id="drop" class="drop">Drop a report <code>.json</code> here, or
+      <label class="filebtn">choose a file<input id="loadFile" type="file" accept=".json,application/json" hidden></label></div>
   </section>`;
 }
 
+function readFile(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    let obj; try { obj = JSON.parse(r.result); } catch { showError(`“${file.name}” is not valid JSON.`); return; }
+    if (!obj || !obj.summary || !Array.isArray(obj.results)) { showError(`“${file.name}” is not an EIDA consistency report.`); return; }
+    showReport(obj);
+  };
+  r.onerror = () => showError(`Could not read “${file.name}”.`);
+  r.readAsText(file);
+}
+
+function showError(msg) {
+  $('#toolbar').style.display = 'none';
+  $('#summary').innerHTML = '';
+  $('#detail').innerHTML = '';
+  $('#results').innerHTML = loaderHTML(msg);
+  wireLoader();
+}
+
+function showReport(report) {
+  state.report = report;
+  $('#detail').innerHTML = '';
+  $('#toolbar').style.display = '';
+  wire();
+  paint();
+}
+
 function wireLoader() {
-  const form = $('#loadForm'); if (!form) return;
-  form.addEventListener('submit', e => {
+  const form = $('#loadForm');
+  if (form) form.addEventListener('submit', e => {
     e.preventDefault();
     const u = $('#loadUrl').value.trim();
     if (u) location.search = '?report=' + encodeURIComponent(u);
+  });
+  const file = $('#loadFile');
+  if (file) file.addEventListener('change', e => { const f = e.target.files[0]; if (f) readFile(f); });
+}
+
+function wireDragAndDrop() {
+  const stop = e => { e.preventDefault(); };
+  window.addEventListener('dragover', e => { stop(e); const d = $('#drop'); if (d) d.classList.add('over'); });
+  window.addEventListener('dragleave', () => { const d = $('#drop'); if (d) d.classList.remove('over'); });
+  window.addEventListener('drop', e => {
+    stop(e);
+    const d = $('#drop'); if (d) d.classList.remove('over');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) readFile(f);
   });
 }
 
 async function showLanding() {
   $('#toolbar').style.display = 'none';
+  $('#summary').innerHTML = '';
+  let list = '';
   try {
     const idx = await (await fetch('index.json')).json();
     const entries = Array.isArray(idx) ? idx : (idx.reports || []);
-    $('#results').innerHTML = renderIndex(entries) + emptyForm('Or load any report by URL:');
-  } catch {
-    $('#results').innerHTML = emptyForm('No report selected. Open one from Oculus, or load it by URL.');
-  }
+    if (entries.length) list = renderIndex(entries);
+  } catch { /* no manifest yet — Oculus may publish one later */ }
+  $('#results').innerHTML = list + loaderHTML(list ? 'Or load another report:' : 'No reports listed yet. Load one by URL or file, or open one from Oculus.');
   wireLoader();
 }
 
 async function main() {
+  wireDragAndDrop();
   const url = new URLSearchParams(location.search).get('report');
   if (!url) { await showLanding(); return; }
-  try {
-    state.report = await (await fetch(url)).json();
-  } catch { $('#results').innerHTML = emptyForm('Could not load that report. Check the URL (and CORS if it is on another host).'); wireLoader(); return; }
-  $('#toolbar').style.display = '';
-  wire(); paint();
+  let report;
+  try { report = await (await fetch(url)).json(); }
+  catch { showError('Could not load that report. Check the URL (and CORS if it is on another host).'); return; }
+  showReport(report);
 }
 main();
