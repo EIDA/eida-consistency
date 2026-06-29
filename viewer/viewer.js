@@ -36,9 +36,16 @@ function wire() {
       return;
     }
     const b = e.target.closest('button[data-kind]'); if (!b) return;
+    // clear any previous result for this button so re-runs don't stack
+    let sib = b.nextElementSibling;
+    while (sib && sib.classList && (sib.classList.contains('badge-data') || sib.classList.contains('result'))) {
+      const next = sib.nextElementSibling; sib.remove(); sib = next;
+    }
     b.textContent = '…';
     const r = await runRequest(b.dataset.kind, b.dataset.url, fetch);
-    b.insertAdjacentHTML('afterend', `<span class="result"> ${r.summary}</span>`);
+    const label = !r.ok ? 'FAILED' : r.hasData ? 'HAS DATA' : 'NO DATA';
+    const cls = !r.ok ? 'err' : r.hasData ? 'yes' : 'no';
+    b.insertAdjacentHTML('afterend', `<span class="badge-data ${cls}">${label}</span><span class="result"> ${r.summary}</span>`);
     b.textContent = `Run ${b.dataset.kind}`;
   });
 }

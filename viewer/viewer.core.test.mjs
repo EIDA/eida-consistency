@@ -89,12 +89,22 @@ test('summariseRequest counts availability spans and dataselect bytes', () => {
   assert.match(summariseRequest('dataselect', 200, '', 4096), /4096 bytes/);
 });
 
-test('runRequest reports status and summary via injected fetch', async () => {
+test('runRequest reports status, hasData and summary via injected fetch', async () => {
   const fakeFetch = async () => ({ status: 200, text: async () => '#h\nX Y\n', arrayBuffer: async () => new ArrayBuffer(8) });
   const r = await runRequest('availability', 'http://x', fakeFetch);
   assert.equal(r.ok, true);
   assert.equal(r.status, 200);
+  assert.equal(r.hasData, true);
   assert.match(r.summary, /1 span/);
+});
+
+test('runRequest flags no-data for empty availability and 204 dataselect', async () => {
+  const emptyAvail = await runRequest('availability', 'http://x', async () => ({ status: 200, text: async () => '#header only\n', arrayBuffer: async () => new ArrayBuffer(0) }));
+  assert.equal(emptyAvail.hasData, false);
+  const ds200 = await runRequest('dataselect', 'http://x', async () => ({ status: 200, text: async () => '', arrayBuffer: async () => new ArrayBuffer(512) }));
+  assert.equal(ds200.hasData, true);
+  const ds204 = await runRequest('dataselect', 'http://x', async () => ({ status: 204, text: async () => '', arrayBuffer: async () => new ArrayBuffer(0) }));
+  assert.equal(ds204.hasData, false);
 });
 
 test('runRequest never throws on network error', async () => {

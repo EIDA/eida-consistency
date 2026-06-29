@@ -179,12 +179,13 @@ export async function runRequest(kind, url, fetchImpl) {
     const res = await fetchImpl(url);
     if (kind === 'availability') {
       const text = await res.text();
-      return { ok: true, status: res.status, summary: summariseRequest(kind, res.status, text, 0) };
+      const n = (text || '').split('\n').filter(l => l && !l.startsWith('#')).length;
+      return { ok: true, status: res.status, hasData: res.status === 200 && n > 0, summary: summariseRequest(kind, res.status, text, 0) };
     }
     const buf = await res.arrayBuffer();
-    return { ok: true, status: res.status, summary: summariseRequest(kind, res.status, '', buf.byteLength) };
+    return { ok: true, status: res.status, hasData: res.status === 200 && buf.byteLength > 0, summary: summariseRequest(kind, res.status, '', buf.byteLength) };
   } catch {
-    return { ok: false, status: 0, summary: 'request failed' };
+    return { ok: false, status: 0, hasData: false, summary: 'request failed' };
   }
 }
 
