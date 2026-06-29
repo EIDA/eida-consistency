@@ -182,3 +182,43 @@ test('timelineAscii renders fixed-width glyphs with a gap boundary', () => {
   assert.match(s, /▲/); assert.match(s, /·/); assert.match(s, /\|/);
   assert.doesNotMatch(s, /▼/);
 });
+
+import { fmtDuration, gapStats, renderIndex } from './viewer.core.js';
+
+test('fmtDuration shows up to two largest units', () => {
+  assert.equal(fmtDuration(0), '0s');
+  assert.equal(fmtDuration(45), '45s');
+  assert.equal(fmtDuration(95), '1m 35s');
+  assert.equal(fmtDuration(3661), '1h 1m');
+  assert.equal(fmtDuration(90000), '1d 1h');
+});
+
+test('gapStats counts gaps and the largest duration', () => {
+  const s = gapStats({ mismatch: [
+    { start: '2020-01-01T00:00:00+00:00', end: '2020-01-01T00:01:00+00:00' },
+    { start: '2020-01-01T00:00:00+00:00', end: '2020-01-01T00:05:00+00:00' } ] });
+  assert.equal(s.count, 2);
+  assert.equal(s.maxGap, 300);
+  assert.deepEqual(gapStats({}), { count: 0, maxGap: 0 });
+});
+
+test('renderResultsTable shows a gap-count badge, max gap, and sortable headers', () => {
+  const html = renderResultsTable([rec], { onlyInconsistent: true, direction: 'both', search: '' }, { key: 'gap', dir: 'desc' });
+  assert.match(html, /data-sort="gap"/);
+  assert.match(html, /class="badge">1</);          // one gap on rec
+  assert.match(html, /class="sortable active"/);   // active sorted column marked
+});
+
+test('renderIndex builds links that round-trip the report URL', () => {
+  const html = renderIndex([{ name: 'NOA latest', url: 'https://x/a b/r.json', node: 'NOA', score: 76, inconsistent: 7 }]);
+  assert.match(html, /NOA latest/);
+  assert.match(html, /\?report=https%3A%2F%2Fx%2Fa%20b%2Fr\.json/);
+  assert.match(html, /76%/);
+  assert.match(html, /7 inconsistent/);
+});
+
+test('renderDetail shows per-gap duration and copy buttons', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /class="gdur">36s</);         // 05:18:25 -> 05:19:01 = 36s
+  assert.match(html, /data-copy=/);
+});

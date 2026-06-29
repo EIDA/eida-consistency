@@ -38,6 +38,30 @@ function _parseUTC(iso) { return Date.parse(/[Z+]/.test(iso) ? iso : iso + 'Z');
 
 function _sec(iso, t0) { return (_parseUTC(iso) - t0) / 1000; }
 
+export function fmtDuration(sec) {
+  sec = Math.max(0, Math.round(Number(sec) || 0));
+  if (sec < 60) return `${sec}s`;
+  const units = [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]];
+  const parts = [];
+  let r = sec;
+  for (const [label, size] of units) {
+    const v = Math.floor(r / size);
+    if (v) { parts.push(`${v}${label}`); r -= v * size; }
+    if (parts.length === 2) break;
+  }
+  return parts.join(' ') || '0s';
+}
+
+export function gapStats(record) {
+  const ms = record.mismatch || [];
+  let max = 0;
+  for (const m of ms) {
+    const d = (_parseUTC(m.end) - _parseUTC(m.start)) / 1000;
+    if (d > max) max = d;
+  }
+  return { count: ms.length, maxGap: max };
+}
+
 export function timelineModel(windowStart, windowEnd, avail, ds, mismatch) {
   const t0 = _parseUTC(windowStart), t1 = _parseUTC(windowEnd);
   if (!(t1 > t0)) return { segments: [], boundaries: [] };
@@ -115,40 +139,77 @@ const safeUrl = u => (/^https?:\/\//i.test(String(u ?? '')) ? String(u) : '');
 
 export function renderSummary(s) {
   s = s || {};
-  return `<header class="summary"><h1>${esc(s.node)}</h1>
-    <span class="score">Score ${esc(s.score)}%</span>
-    <span>${esc(s.total_inconsistent)} inconsistent / ${esc(s.total_consistent)} consistent / ${esc(s.total_skipped ?? 0)} skipped</span>
-    <span class="dirtotals">▼ ${esc(s.availability_yes_dataselect_no ?? 0)} · ▲ ${esc(s.availability_no_dataselect_yes ?? 0)}</span>
-    <span class="ts">${esc(s.timestamp ?? '')}</span></header>`;
+  const score = Math.max(0, Math.min(100, Number(s.score ?? 0)));
+  const r = 26, C = 2 * Math.PI * r;
+  const off = C * (1 - score / 100);
+  const col = score >= 95 ? 'var(--ok)' : score >= 80 ? 'var(--warn)' : 'var(--bad)';
+  const inc = Number(s.total_inconsistent ?? 0), con = Number(s.total_consistent ?? 0), skp = Number(s.total_skipped ?? 0);
+  const av = Number(s.availability_yes_dataselect_no ?? 0), ds = Number(s.availability_no_dataselect_yes ?? 0);
+  const dmax = Math.max(1, av, ds);
+  const bar = (label, n, cls) => `<div class="dbar"><span class="dlab">${label}</span><span class="dtrack"><span class="dfill ${cls}" style="width:${(n / dmax * 100).toFixed(0)}%"></span></span></div>`;
+  return `<header class="summary">
+    <div class="gauge"><svg viewBox="0 0 64 64" width="68" height="68" role="img" aria-label="score ${esc(s.score)}%">
+      <circle cx="32" cy="32" r="${r}" class="gtrack"></circle>
+      <circle cx="32" cy="32" r="${r}" class="gval" transform="rotate(-90 32 32)" style="stroke:${col};stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${off.toFixed(1)}"></circle>
+      <text x="32" y="37" text-anchor="middle" class="gtext">${esc(s.score)}%</text></svg></div>
+    <div class="smeta">
+      <h1>${esc(s.node)}</h1>
+      <div class="chips"><span class="chip bad">${esc(inc)} inconsistent</span><span class="chip ok">${esc(con)} consistent</span><span class="chip mut">${esc(skp)} skipped</span></div>
+      <div class="ts">${esc(s.timestamp ?? '')}</div>
+    </div>
+    <div class="dirs">${bar(`▲ ${esc(ds)} data-only`, ds, 'up')}${bar(`▼ ${esc(av)} avail-only`, av, 'down')}</div>
+  </header>`;
 }
 
-export function renderResultsTable(results, filter) {
+const COLUMNS = [
+  { label: 'Channel', sort: 'channel' },
+  { label: 'Window', sort: 'time' },
+  { label: 'Dir', sort: null },
+  { label: 'Gaps', sort: 'gap' },
+  { label: 'Max gap', sort: 'gap' },
+  { label: 'Status', sort: 'status' },
+];
+
+export function renderResultsTable(results, filter, sort) {
+  const key = sort && sort.key, dir = sort && sort.dir;
+  const head = COLUMNS.map(c => {
+    if (!c.sort) return `<th>${c.label}</th>`;
+    const active = c.sort === key;
+    const arrow = active ? (dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable${active ? ' active' : ''}" data-sort="${c.sort}">${c.label}${arrow}</th>`;
+  }).join('');
   const rows = (results || []).filter(r => matchesFilter(r, filter)).map(r => {
     const nslc = `${r.network}.${r.station}.${r.location}.${r.channel}`;
-    const dir = r.consistent === false ? [...recordDirections(r)].map(w => DIR_LABEL[w] ? DIR_LABEL[w][0] : '').join('') : '✔';
+    const glyphs = r.consistent === false ? [...recordDirections(r)].map(w => (DIR_LABEL[w] || ' ')[0]).join('') : '✔';
+    const { count, maxGap } = gapStats(r);
+    const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td>${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${esc(dir)}</td>
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${esc(glyphs)}</td>
+      <td>${badge}</td><td>${count ? esc(fmtDuration(maxGap)) : ''}</td>
       <td>${esc(r.dataselect_status ?? '')}</td></tr>`;
   }).join('');
-  return `<table class="results"><thead><tr><th>Channel</th><th>Window</th><th>Dir</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function _maxGap(record) {
-  let max = 0;
-  for (const m of record.mismatch || []) {
-    const d = (_parseUTC(m.end) - _parseUTC(m.start)) / 1000;
-    if (d > max) max = d;
-  }
-  return max;
-}
-
-export function sortRecords(results, key) {
+export function sortRecords(results, key, dir) {
   const arr = [...(results || [])];
   const nslc = r => `${r.network}.${r.station}.${r.location}.${r.channel}`;
-  if (key === 'channel') arr.sort((a, b) => nslc(a).localeCompare(nslc(b)));
-  else if (key === 'gap') arr.sort((a, b) => _maxGap(b) - _maxGap(a)); // largest gap first
-  else arr.sort((a, b) => String(a.starttime).localeCompare(String(b.starttime))); // 'time'
+  let cmp;
+  if (key === 'channel') cmp = (a, b) => nslc(a).localeCompare(nslc(b));
+  else if (key === 'gap') cmp = (a, b) => gapStats(a).maxGap - gapStats(b).maxGap;
+  else if (key === 'status') cmp = (a, b) => String(a.dataselect_status ?? '').localeCompare(String(b.dataselect_status ?? ''));
+  else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
+  arr.sort(cmp);
+  const desc = dir === undefined ? key === 'gap' : dir === 'desc'; // gap defaults largest-first
+  if (desc) arr.reverse();
   return arr;
+}
+
+function reqLinks(kind, url) {
+  const safe = safeUrl(url);
+  const open = safe ? ` <a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">open</a>` : '';
+  const copy = ` <button class="copy" data-copy="${esc(url)}">copy</button>`;
+  return `<button data-kind="${kind}" data-url="${esc(url)}">Run ${kind}</button>${open}${copy}`;
 }
 
 export function renderDetail(record) {
@@ -158,19 +219,30 @@ export function renderDetail(record) {
     const tl = timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
     parts.push(`<pre class="tl">${esc(tl)}</pre><div class="legend">▲ Data YES / Avail NO &nbsp; ▼ Avail YES / Data NO &nbsp; █ both &nbsp; · none &nbsp; | gap boundary</div>`);
   }
-  const full = ['availability', 'dataselect'].map(k => {
-    const u = k === 'availability' ? record.url : record.dataselect_url;
-    const link = safeUrl(u) ? ` <a href="${esc(safeUrl(u))}" target="_blank" rel="noopener noreferrer">open</a>` : '';
-    return u ? `<button data-kind="${k}" data-url="${esc(u)}">Run ${k}</button>${link}` : '';
-  }).filter(Boolean).join(' ');
+  const full = [['availability', record.url], ['dataselect', record.dataselect_url]]
+    .filter(([, u]) => u).map(([k, u]) => reqLinks(k, u)).join(' ');
   if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
-  for (const m of record.mismatch || []) {
-    const q = gapQueries(record, m);
-    const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k => {
-      const link = safeUrl(q[k]) ? ` <a href="${esc(safeUrl(q[k]))}" target="_blank" rel="noopener noreferrer">open</a>` : '';
-      return `<button data-kind="${k}" data-url="${esc(q[k])}">Run ${k}</button>${link}`;
-    }).join(' ');
-    parts.push(`<div class="gap">${esc(m.start)} → ${esc(m.end)} ${esc(DIR_LABEL[m.who] || '')}<div class="req">${btns}</div></div>`);
+  const gaps = record.mismatch || [];
+  if (gaps.length) {
+    const items = gaps.map(m => {
+      const q = gapQueries(record, m);
+      const dur = fmtDuration((_parseUTC(m.end) - _parseUTC(m.start)) / 1000);
+      const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k => reqLinks(k, q[k])).join(' ');
+      return `<div class="gap"><div class="ghead">${esc(m.start)} → ${esc(m.end)} <span class="gdur">${esc(dur)}</span> ${esc(DIR_LABEL[m.who] || '')}</div><div class="req">${btns}</div></div>`;
+    }).join('');
+    parts.push(`<div class="gaps"><h2>${esc(gaps.length)} gap${gaps.length === 1 ? '' : 's'}</h2>${items}</div>`);
   }
   return `<section class="detail">${parts.join('')}</section>`;
+}
+
+export function renderIndex(entries) {
+  const items = (entries || []).map(e => {
+    const u = String(e.url ?? e.report ?? '');
+    const href = `?report=${encodeURIComponent(u)}`;
+    const score = e.score == null ? '' : `<span class="iscore">${esc(e.score)}%</span>`;
+    const meta = [e.node, e.timestamp, e.inconsistent != null ? `${esc(e.inconsistent)} inconsistent` : '']
+      .filter(Boolean).map(x => esc(x)).join(' · ');
+    return `<li><a href="${esc(href)}">${esc(e.name || u)}</a> ${score}<span class="imeta">${meta}</span></li>`;
+  }).join('');
+  return `<section class="index"><h1>Consistency reports</h1><ul class="ilist">${items}</ul></section>`;
 }
