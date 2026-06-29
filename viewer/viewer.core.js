@@ -308,10 +308,11 @@ export function renderIndex(entries) {
   const items = (entries || []).map(e => {
     const u = String(e.url ?? e.report ?? '');
     const href = `?report=${encodeURIComponent(u)}`;
-    const score = e.score == null ? '' : `<span class="iscore">${esc(e.score)}%</span>`;
+    const cls = e.score == null ? '' : e.score >= 95 ? ' ok' : e.score >= 80 ? ' warn' : ' bad';
+    const score = e.score == null ? '' : `<span class="iscore${cls}">${esc(e.score)}%</span>`;
     const meta = [e.node, e.timestamp, e.inconsistent != null ? `${esc(e.inconsistent)} inconsistent` : '']
       .filter(Boolean).map(x => esc(x)).join(' · ');
     return `<li><a href="${esc(href)}">${esc(e.name || u)}</a> ${score}<span class="imeta">${meta}</span></li>`;
   }).join('');
-  return `<section class="index"><h1>Consistency reports</h1><ul class="ilist">${items}</ul></section>`;
+  return `<section class="index"><h1>Latest consistency reports</h1><ul class="ilist">${items}</ul></section>`;
 }
