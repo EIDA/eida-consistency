@@ -7,12 +7,33 @@ export function swapQueryTime(url, key, value) {
   return url.replace(re, (_, p1) => p1 + value);
 }
 
+// The dataselect URL for a record: the stored one, or — for older reports that
+// only kept the availability `url` — derived from it (swap the service path and
+// the start/end param names, narrow location/channel to this stream).
+export function buildDataselectUrl(record) {
+  if (record.dataselect_url) return record.dataselect_url;
+  if (!record.url) return null;
+  let u; try { u = new URL(record.url); } catch { return null; }
+  if (!u.pathname.includes('/availability/')) return null;
+  const host = u.origin + u.pathname.replace('/availability/', '/dataselect/');
+  const p = u.searchParams;
+  const net = record.network ?? p.get('network') ?? '';
+  const sta = record.station ?? p.get('station') ?? '';
+  let loc = record.location ?? p.get('location') ?? '';
+  if (loc === '*') loc = '';
+  const cha = record.channel ?? p.get('channel') ?? '';
+  const start = p.get('start') ?? queryTime(record.starttime);
+  const end = p.get('end') ?? queryTime(record.endtime);
+  return `${host}?network=${net}&station=${sta}&location=${loc}&channel=${cha}&starttime=${start}&endtime=${end}&nodata=204`;
+}
+
 export function gapQueries(record, gap) {
   const gs = queryTime(gap.start), ge = queryTime(gap.end);
   const av = record.url
     ? swapQueryTime(swapQueryTime(record.url, 'start', gs), 'end', ge) : null;
-  const ds = record.dataselect_url
-    ? swapQueryTime(swapQueryTime(record.dataselect_url, 'starttime', gs), 'endtime', ge) : null;
+  const dsBase = buildDataselectUrl(record);
+  const ds = dsBase
+    ? swapQueryTime(swapQueryTime(dsBase, 'starttime', gs), 'endtime', ge) : null;
   return { availability: av, dataselect: ds };
 }
 
@@ -288,7 +309,7 @@ export function renderDetail(record) {
     const svg = timelineGapsSVG(record.starttime, record.endtime, record.mismatch || []);
     if (svg) parts.push(`${svg}<div class="legend"><span class="lg gap">█</span> mismatch (gap) within the requested window — older report without full coverage data</div>`);
   }
-  const full = [['availability', record.url], ['dataselect', record.dataselect_url]]
+  const full = [['availability', record.url], ['dataselect', buildDataselectUrl(record)]]
     .filter(([, u]) => u).map(([k, u]) => reqLinks(k, u)).join(' ');
   if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
   const gaps = record.mismatch || [];

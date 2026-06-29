@@ -264,3 +264,30 @@ test('renderDetail falls back to a gaps-only graph when coverage is absent', () 
   assert.match(html, /class="tl-gap-solid"/);
   assert.doesNotMatch(html, /class="tl-av"/);   // no two-lane chart without coverage
 });
+
+import { buildDataselectUrl } from './viewer.core.js';
+test('buildDataselectUrl returns the stored url when present', () => {
+  assert.equal(buildDataselectUrl({ url: 'https://h/availability/1/query?x', dataselect_url: 'https://h/ds?y' }), 'https://h/ds?y');
+});
+test('buildDataselectUrl derives dataselect from an availability url', () => {
+  const ds = buildDataselectUrl({
+    url: 'https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HP&station=EFP&location=*&channel=HHE&start=2015-04-29T21:29:38&end=2015-04-29T21:39:38&format=text',
+    network: 'HP', station: 'EFP', location: '', channel: 'HHE',
+    starttime: '2015-04-29T21:29:38', endtime: '2015-04-29T21:39:38' });
+  assert.match(ds, /\/fdsnws\/dataselect\/1\/query\?/);
+  assert.match(ds, /network=HP&station=EFP&location=&channel=HHE/);
+  assert.match(ds, /starttime=2015-04-29T21:29:38&endtime=2015-04-29T21:39:38&nodata=204/);
+});
+test('buildDataselectUrl returns null without a usable url', () => {
+  assert.equal(buildDataselectUrl({}), null);
+  assert.equal(buildDataselectUrl({ url: 'https://h/other/1/query?x' }), null);
+});
+test('renderDetail offers a dataselect run button for coverage-less reports', () => {
+  const old = { index: 9, network: 'HP', station: 'EFP', location: '', channel: 'HHE', consistent: false,
+    url: 'https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HP&station=EFP&location=*&channel=HHE&start=2015-04-29T21:29:38&end=2015-04-29T21:39:38&format=text',
+    starttime: '2015-04-29T21:29:38', endtime: '2015-04-29T21:39:38',
+    mismatch: [{ start: '2015-04-29T21:29:38+00:00', end: '2015-04-29T21:39:38+00:00' }] };
+  const html = renderDetail(old);
+  assert.match(html, /data-kind="dataselect"/);
+  assert.match(html, /\/fdsnws\/dataselect\/1\/query/);
+});
