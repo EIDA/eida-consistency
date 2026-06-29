@@ -90,6 +90,9 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .drop{margin-top:.7rem;padding:1rem;border:1.5px dashed var(--line);border-radius:8px;color:var(--mut);text-align:center}
 .drop.over{border-color:var(--accent);color:var(--fg);background:var(--card)}
 .filebtn{color:var(--accent);cursor:pointer;text-decoration:underline}
+.foot{margin-top:1.5rem;padding-top:.8rem;border-top:1px solid var(--line);font-size:.8rem}
+.foot a{color:var(--mut);text-decoration:none}
+.foot a:hover{color:var(--accent)}
 </style></head>
 <body><div class="wrap">
   <div id="summary"></div>
@@ -101,6 +104,7 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
   </div>
   <div id="results"></div>
   <div id="detail"></div>
+  <footer class="foot"><a href="README.md" target="_blank" rel="noopener">How this viewer works</a></footer>
 </div>
 <script type="module" src="viewer.js"></script>
 </body></html>
