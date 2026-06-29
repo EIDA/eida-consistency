@@ -190,3 +190,5 @@ __marimo__/
 
 # Scratch directory
 scratch/
+viewer/index.json
+viewer/reports
