@@ -38,7 +38,6 @@ def test_create_report_object_basic():
     ]
     rep = report.create_report_object(
         "NODE",
-        123,
         5,
         600,
         records,
@@ -61,22 +60,33 @@ def test_create_report_object_basic():
 
 
 def test_create_report_object_empty_records():
-    rep = report.create_report_object("NODE", 1, 1, 600, [])
+    rep = report.create_report_object("NODE", 1, 600, [])
     assert rep["summary"]["score"] == 0.0
     assert rep["summary"]["total_checked"] == 0
     assert rep["summary"]["total_skipped"] == 0
 
 
 def test_make_unique_filename_format():
-    fname = report._make_unique_filename("NODE", 42, "json")
-    assert fname.startswith("node_")
-    assert "_42.json" in fname
+    ts = "2026-04-27T09:58:47.529160+00:00"
+    fname = report._make_unique_filename("NODE", ts, "json")
+    assert fname == "node_20260427_095847_529160.json"
+    # 4-part underscore shape preserved, last field numeric (microseconds)
     assert len(fname.split("_")) == 4
+    assert fname.split("_")[-1].removesuffix(".json").isdigit()
+
+
+def test_report_has_no_seed_and_filenames_pair(tmp_path):
+    rep = report.create_report_object("NODE", 1, 600, [make_record()])
+    assert "seed" not in rep["summary"]
+    json_path = report.save_report_json(rep, report_dir=tmp_path)
+    md_path = report.save_report_markdown(rep, report_dir=tmp_path)
+    # json/md of one run share a stem (both derived from summary.timestamp)
+    assert json_path.stem == md_path.stem
 
 
 def test_save_report_json_and_content(tmp_path):
     recs = [make_record()]
-    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    rep = report.create_report_object("NODE", 1, 600, recs)
     path = report.save_report_json(rep, report_dir=tmp_path)
     assert path.exists()
     data = json.loads(path.read_text())
@@ -89,7 +99,7 @@ def test_save_report_markdown_with_skipped(tmp_path):
         make_record(False, ds_type="B"),
         make_record(None, ds_success=False, ds_type="Error", status="ConnectionError", scoreable=False, reason="TransientDataselectFailure"),
     ]
-    rep = report.create_report_object("NODE", 2, 3, 600, recs)
+    rep = report.create_report_object("NODE", 3, 600, recs)
     path = report.save_report_markdown(rep, report_dir=tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "# EIDA Consistency Report" in text
@@ -190,7 +200,7 @@ def test_markdown_detail_includes_timeline_and_gaps(tmp_path):
         "availability": [["2014-02-15T05:17:09.6", "2014-02-15T05:19:01.6"]],
         "dataselect": [["2014-02-15T05:17:09.6", "2014-02-15T05:18:25.0"]],
     }
-    rep = report.create_report_object("NODE", 1, 1, 600, [rec])
+    rep = report.create_report_object("NODE", 1, 600, [rec])
     text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
     assert "█" in text          # only the ASCII timeline draws coverage blocks
     assert "·" in text          # empty lead-in in the timeline
@@ -210,7 +220,7 @@ def test_render_timeline_dataselect_only_uses_up_triangle():
 
 def test_delete_old_reports(tmp_path):
     recs = [make_record()]
-    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    rep = report.create_report_object("NODE", 1, 600, recs)
     for _ in range(3):
         report.save_report_json(rep, report_dir=tmp_path)
         report.save_report_markdown(rep, report_dir=tmp_path)

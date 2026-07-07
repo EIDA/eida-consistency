@@ -77,7 +77,6 @@ def cli(ctx, log_level, report_dir):
 @click.option("--node", help="EIDA node code (e.g., RESIF, NOA)")
 @click.option("--epochs", type=str, default="10", show_default=True, help="Number of epochs or percentage (e.g. '10', '0.05', '5%')")
 @click.option("--duration", type=int, default=600, show_default=True, help="Duration (s), must be >= 600")
-@click.option("--seed", type=int, help="(Deprecated, ignored) A seed cannot reliably reproduce a run; use 'explore' to re-verify findings.")
 @click.option(
     "--delete-old",
     is_flag=True,
@@ -95,7 +94,7 @@ def cli(ctx, log_level, report_dir):
     help="Upload report to configured S3 bucket after saving locally.",
 )
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload):
+def consistency(ctx, node, epochs, duration, delete_old, print_stdout, upload):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = ctx.obj["report_dir"]
 
@@ -109,20 +108,12 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
     if duration < 600:
         raise click.BadParameter("Duration must be at least 600 seconds (10 minutes).")
 
-    if seed is not None:
-        logging.warning(
-            "--seed is deprecated and ignored: a seed cannot reliably reproduce a "
-            "run (the node's inventory changes over time). To re-verify a finding, "
-            "replay its exact window with 'explore' or 'check'."
-        )
-
     # Run the check and get the report path
     try:
         report_path = run_consistency_check(
             node=node,
             epochs=epochs,
             duration=duration,
-            seed=None,
             print_stdout=print_stdout,
             report_dir=report_dir,
         )

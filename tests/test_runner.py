@@ -39,22 +39,21 @@ def test_no_candidates(monkeypatch):
     assert result is None
 
 
-def test_seed_provided(monkeypatch, tmp_path):
+def test_unseeded_run(monkeypatch, tmp_path):
+    # The seed mechanism was removed; run_consistency_check no longer accepts a seed.
     patch_all(monkeypatch, tmp_path)
-    result = runner.run_consistency_check("FAKE", seed=123, report_dir=tmp_path)
+    result = runner.run_consistency_check("FAKE", report_dir=tmp_path)
     assert result == tmp_path / "out.json"
 
 
-def test_seed_generated(monkeypatch, tmp_path):
-    patch_all(monkeypatch, tmp_path)
-    # seed=None triggers random generation
-    result = runner.run_consistency_check("FAKE", seed=None, report_dir=tmp_path)
-    assert result == tmp_path / "out.json"
+def test_run_consistency_check_rejects_seed_kwarg(tmp_path):
+    with pytest.raises(TypeError):
+        runner.run_consistency_check("FAKE", seed=123, report_dir=tmp_path)
 
 
 def test_print_stdout(monkeypatch, tmp_path, capsys):
     patch_all(monkeypatch, tmp_path)
-    result = runner.run_consistency_check("FAKE", seed=1, report_dir=tmp_path, print_stdout=True)
+    result = runner.run_consistency_check("FAKE", report_dir=tmp_path, print_stdout=True)
     out = capsys.readouterr().out
     assert "summary" in out
     assert result == tmp_path / "out.json"
@@ -81,7 +80,7 @@ def test_transient_dataselect_failure_is_marked_skipped(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "save_report_json", lambda report, report_dir: tmp_path / "out.json")
     monkeypatch.setattr(runner, "save_report_markdown", lambda report, report_dir: tmp_path / "out.md")
 
-    result = runner.run_consistency_check("FAKE", seed=1, report_dir=tmp_path)
+    result = runner.run_consistency_check("FAKE", report_dir=tmp_path)
     assert result == tmp_path / "out.json"
     record = captured["records"][0]
     assert record["consistent"] is None

@@ -23,7 +23,6 @@ eida-consistency consistency --node NOA --epochs 10 --duration 600
 *   `--node TEXT`: EIDA node code (e.g., NOA, RESIF). [Required]
 *   `--epochs INTEGER`: Number of random time to check. [Default: 10]
 *   `--duration INTEGER`: Duration of each check in seconds (>= 600). [Default: 600]
-*   `--seed INTEGER`: Random seed for reproducibility.
 *   `--upload`: Upload the report to the configured S3 bucket.
 
 ### compare

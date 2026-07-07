@@ -57,7 +57,6 @@ Options:
 - `--node`: Node code (e.g. `RESIF`, `NOA`, `ETH`)
 - `--epochs`: Number of random test epochs (default: 10) OR percentage (e.g., `"5%"`, `0.05`)
 - `--duration`: Epoch length in seconds (≥600)
-- `--seed`: Reproducible seed
 - `--delete-old`: Keep only the most recent report
 - `--stdout`: Print JSON report to stdout
 - `--report-dir`: Save reports to a custom folder (default: `reports/`)
@@ -65,7 +64,7 @@ Options:
 
 ### Compare Reports
 
-Compare results across two runs with the same seed:
+Compare results across two runs:
 
 ```bash
 uvx eida-consistency compare reports/resif_run1.json reports/resif_run2.json
@@ -107,8 +106,8 @@ uvx eida-consistency list-nodes
 
 Reports are stored in `./reports/` by default, or in a custom folder using `--report-dir`.
 
-- JSON reports: `reports/resif_<seed>.json`
-- Markdown reports: `reports/resif_<seed>.md`
+- JSON reports: `reports/resif_<YYYYMMDD>_<HHMMSS>_<microseconds>.json`
+- Markdown reports: `reports/resif_<YYYYMMDD>_<HHMMSS>_<microseconds>.md`
 - Global summary: [`summary.md`](https://github.com/EIDA/eida-consistency/blob/main/reports/summary.md)
 
 ---
@@ -170,7 +169,7 @@ uv run mkdocs serve
 ### 1. Run a check for NOA:
 
 ```bash
-uvx eida-consistency consistency --seed 1234 --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
+uvx eida-consistency consistency --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
 ```
 ### 2. Explore incosistencies:
 If inconsistencies are found:
@@ -182,7 +181,7 @@ Investigate the reported service inconsistencies and fix them at node level. May
 
 ### 4. Re-run Consistency
 ```bash
-uvx eida-consistency consistency --seed 1234 --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
+uvx eida-consistency consistency --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
 ```
 ### 5.Compare Before/After
 

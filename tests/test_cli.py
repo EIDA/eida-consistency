@@ -123,19 +123,17 @@ def test_consistency_runs(monkeypatch, tmp_path):
     assert called["node"] == "NOA"
 
 
-def test_consistency_seed_is_deprecated_noop(monkeypatch, tmp_path, caplog):
-    """--seed is accepted for backward compatibility but ignored, with a warning."""
+def test_consistency_seed_option_removed(monkeypatch, tmp_path):
+    """--seed was removed: passing it is a usage error, and it never reaches the runner."""
     called = {}
     monkeypatch.setattr(cli, "run_consistency_check", lambda **kw: called.update(kw))
-    caplog.set_level(logging.WARNING)
     runner = CliRunner()
     result = runner.invoke(
         cli.consistency, ["--node", "NOA", "--seed", "123"], obj={"report_dir": tmp_path}
     )
-    assert result.exit_code == 0, result.output
-    # the provided seed must NOT reach the runner -- it is ignored
-    assert called.get("seed") is None
-    assert "deprecat" in (caplog.text + result.output).lower()
+    assert result.exit_code != 0
+    assert "no such option" in result.output.lower()
+    assert called == {}  # runner not invoked at all
 
 
 # -----------------

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import concurrent.futures
 import json
 import sys
@@ -29,7 +28,6 @@ def run_consistency_check(
     epochs: int | str | None = 10,
     percentage: float | None = None,
     duration: int = 600,
-    seed: int | None = None,
     delete_old: bool = False,
     max_workers: int = 10,
     print_stdout: bool = False,
@@ -68,18 +66,11 @@ def run_consistency_check(
     elif percentage is not None:
         epochs = None
 
-    # NOTE: the CLI --seed flag is deprecated and ignored -- a seed cannot
-    # reliably reproduce a run because the node's live inventory changes over
-    # time, so the same seed selects different channels later. To re-verify a
-    # specific finding, replay its exact window with 'explore' (deterministic,
-    # no seed; see explorer._check_window). The value below is an INTERNAL
-    # random discriminator, retained only to keep the report filename
-    # ({node}_{ts}_{seed}) and summary.seed stable for the Oculus/dmtri pipeline
-    # that consumes these reports. Library callers may still pass a seed.
-    if seed is None:
-        seed = random.randint(0, 999_999)
-    random.seed(seed)
-    logging.info(f" Sampling discriminator (internal, not reproducible): {seed}")
+    # The seed mechanism was removed: a seed cannot reproduce a run because the
+    # node's live inventory changes over time, so the same seed selects
+    # different channels later. To re-verify a specific finding, replay its
+    # exact window with 'explore'/'check' (deterministic; see
+    # explorer._check_window). Sampling is therefore unseeded.
     base_url = load_node_url(node)
 
     if percentage is not None:
@@ -196,7 +187,6 @@ def run_consistency_check(
     # --- Save reports into chosen report_dir ---
     report = create_report_object(
         node=node,
-        seed=seed,
         epochs=epochs,
         duration=duration,
         records=all_records,
