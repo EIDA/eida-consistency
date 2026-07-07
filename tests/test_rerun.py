@@ -119,21 +119,12 @@ def test_rerun_report_empty_when_all_consistent(monkeypatch, tmp_path):
 
 # ----------------------- rendering -----------------------
 
-def test_render_table_alignment_and_crossmidnight():
-    result = {
-        "results": [
-            {"index": 4, "label": "HP.DRO..HHN", "start": "2015-09-15T17:43:32",
-             "end": "2015-09-15T17:53:32", "verdict": "PERSISTS"},
-            {"index": 14, "label": "CQ.DERY..HHZ", "start": "2025-11-10T23:50:10",
-             "end": "2025-11-11T00:00:10", "verdict": "RESOLVED"},
-        ]
-    }
-    lines = rerun_mod.render_table(result)
-    body = [l for l in lines if "PERSISTS" in l or "RESOLVED" in l]
-    # same-day window drops the repeated date on the end side...
-    assert "2015-09-15 17:43:32 → 17:53:32" in body[0]
-    # ...cross-midnight window keeps the end date, with no stray 'T'
-    assert "2025-11-10 23:50:10 → 2025-11-11 00:00:10" in body[1]
-    assert "T00:00:10" not in body[1]
-    # verdict column is aligned across rows
-    assert body[0].index("PERSISTS") == body[1].index("RESOLVED")
+def test_window_same_day_drops_repeated_date():
+    w = rerun_mod._window({"starttime": "2015-09-15T17:43:32", "endtime": "2015-09-15T17:53:32"})
+    assert w == "2015-09-15 17:43:32 → 17:53:32"
+
+
+def test_window_crossmidnight_keeps_end_date_without_stray_t():
+    w = rerun_mod._window({"starttime": "2025-11-10T23:50:10", "endtime": "2025-11-11T00:00:10"})
+    assert w == "2025-11-10 23:50:10 → 2025-11-11 00:00:10"
+    assert "T00:00:10" not in w

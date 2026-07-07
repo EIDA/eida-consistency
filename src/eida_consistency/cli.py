@@ -276,7 +276,7 @@ def explore(ctx, report, index, days, verbose, as_json):
 @click.pass_context
 def rerun(ctx, report, index, all_rows, verbose, as_json):
     """Re-verify a report's inconsistencies (no boundary walk, no dmtri)."""
-    from eida_consistency.rerun import rerun_report, render_table, render_summary
+    from eida_consistency.rerun import rerun_report, render_summary
 
     report_dir: Path = ctx.obj["report_dir"]
     if not report:
@@ -293,8 +293,8 @@ def rerun(ctx, report, index, all_rows, verbose, as_json):
         click.echo(json.dumps(result, indent=2, default=str))
         return
 
-    for line in render_table(result):
-        logging.info(line)
+    # Per-row verdicts already streamed from rerun_report as each finding was
+    # re-checked; just close with the tally (no duplicate table).
     logging.info(f"Summary: {render_summary(result)}")
 
 

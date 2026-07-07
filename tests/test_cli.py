@@ -164,14 +164,15 @@ _RERUN_RESULT = {
 }
 
 
-def test_rerun_prints_table_and_summary(monkeypatch, tmp_path, caplog):
+def test_rerun_prints_summary(monkeypatch, tmp_path, caplog):
+    # rerun_report is mocked, so per-row verdicts (which it streams itself) don't
+    # appear here; the CLI's own output is just the closing tally.
     import eida_consistency.rerun as rerun_mod
     monkeypatch.setattr(rerun_mod, "rerun_report", lambda *a, **k: _RERUN_RESULT)
     caplog.set_level(logging.INFO)
     runner = CliRunner()
     result = runner.invoke(cli.rerun, ["r.json"], obj={"report_dir": tmp_path})
     assert result.exit_code == 0, result.output
-    assert "PERSISTS" in caplog.text
     assert "Summary: 1 re-run — 1 persists" in caplog.text
 
 

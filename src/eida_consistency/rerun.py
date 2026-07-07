@@ -92,31 +92,3 @@ def render_summary(result: dict) -> str:
         counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
     parts = [f"{counts[k]} {k.lower()}" for k in order if counts[k]]
     return f"{len(results)} re-run — " + ", ".join(parts)
-
-
-def render_table(result: dict) -> List[str]:
-    """Aligned verdict table for human output."""
-    results = result["results"]
-    if not results:
-        return []
-    idx_w = max(len(str(r["index"])) for r in results)
-    idx_w = max(idx_w, len("#"))
-    lbl_w = max(len(r["label"]) for r in results)
-    lbl_w = max(lbl_w, len("Stream"))
-    win_w = max(len(_window_from(r)) for r in results)
-    win_w = max(win_w, len("Window (UTC)"))
-
-    lines = [
-        f"  {'#':>{idx_w}}  {'Stream':<{lbl_w}}  {'Window (UTC)':<{win_w}}  Verdict",
-        f"  {'-' * idx_w}  {'-' * lbl_w}  {'-' * win_w}  {'-' * 9}",
-    ]
-    for r in results:
-        lines.append(
-            f"  {r['index']:>{idx_w}}  {r['label']:<{lbl_w}}  "
-            f"{_window_from(r):<{win_w}}  {r['verdict']}"
-        )
-    return lines
-
-
-def _window_from(r: dict) -> str:
-    return _window({"starttime": r["start"], "endtime": r["end"]})
