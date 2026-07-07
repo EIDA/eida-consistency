@@ -41,6 +41,29 @@ Explore the boundaries of inconsistent data found in a report.
 eida-consistency explore --index 0
 ```
 
+### rerun
+
+Re-verify the inconsistencies of a report against the live services — no
+boundary walk, no dmtri commands. Reports a verdict per row: `PERSISTS` (still
+inconsistent), `RESOLVED` (now consistent), `SKIPPED` (transient dataselect
+failure), plus `CONSISTENT` / `REGRESSED` when `--all` re-checks
+previously-consistent rows.
+
+```bash
+eida-consistency rerun reports/noa_latest.json      # all inconsistent rows
+eida-consistency rerun -i 15 reports/noa_latest.json # one specific row
+eida-consistency rerun --all reports/noa_latest.json # every row
+eida-consistency rerun --json reports/noa_latest.json # machine-readable stdout
+```
+
+**Options:**
+
+*   `REPORT`: Report `.json` path or URL. Omitted → latest report in the report dir.
+*   `--index, -i INTEGER`: Result index to re-run (repeatable; overrides scope).
+*   `--all`: Re-verify every row, not just the inconsistent ones.
+*   `--json`: Emit verdicts as JSON to stdout (logs stay on stderr).
+*   `--verbose`: Print query URLs while re-running.
+
 ### list-nodes
 
 List all configured EIDA nodes.

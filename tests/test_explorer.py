@@ -207,7 +207,7 @@ def test_explore_boundaries_url_fetches_json(caplog):
     mock_response.json.return_value = _report_payload(consistent=True)
     mock_response.raise_for_status.return_value = None
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response) as mock_get:
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response) as mock_get:
         caplog.set_level(logging.INFO)
         explorer.explore_boundaries("https://example.com/report.json")
 
@@ -225,7 +225,7 @@ def test_explore_boundaries_url_http_error():
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = req.HTTPError("404 Not Found")
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response):
         with pytest.raises(req.HTTPError):
             explorer.explore_boundaries("https://example.com/missing.json")
 
@@ -240,7 +240,7 @@ def test_explore_boundaries_url_inconsistent(monkeypatch, caplog):
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
     monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response):
         caplog.set_level(logging.INFO)
         explorer.explore_boundaries("https://example.com/report.json", max_days=1)
 

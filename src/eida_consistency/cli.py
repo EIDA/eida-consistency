@@ -249,6 +249,50 @@ def explore(ctx, report, index, days, verbose, as_json):
 
 
 # ----------------------------------------------------------------------
+# rerun command
+# ----------------------------------------------------------------------
+@cli.command()
+@click.argument("report", required=False, type=str)
+@click.option(
+    "--index", "-i",
+    multiple=True, type=int,
+    help="Indices of results to re-run (overrides scope).",
+)
+@click.option(
+    "--all", "all_rows", is_flag=True,
+    help="Re-verify every row, not just the inconsistent ones.",
+)
+@click.option("--verbose", is_flag=True, help="Print query URLs while re-running.")
+@click.option(
+    "--json", "as_json", is_flag=True,
+    help="Emit verdicts as JSON to stdout (logs/progress stay on stderr).",
+)
+@click.pass_context
+def rerun(ctx, report, index, all_rows, verbose, as_json):
+    """Re-verify a report's inconsistencies (no boundary walk, no dmtri)."""
+    from eida_consistency.rerun import rerun_report, render_table, render_summary
+
+    report_dir: Path = ctx.obj["report_dir"]
+    if not report:
+        try:
+            report = max(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
+            logging.info(f"Using latest report: {report}")
+        except ValueError:
+            raise click.UsageError(f"No report files found in {report_dir}")
+
+    indices = list(index) if index else None
+    result = rerun_report(report, indices, all_rows=all_rows, verbose=verbose)
+
+    if as_json:
+        click.echo(json.dumps(result, indent=2, default=str))
+        return
+
+    for line in render_table(result):
+        logging.info(line)
+    logging.info(f"Summary: {render_summary(result)}")
+
+
+# ----------------------------------------------------------------------
 # reload-nodes command
 # ----------------------------------------------------------------------
 @cli.command(name="reload-nodes")

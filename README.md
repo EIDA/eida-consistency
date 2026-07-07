@@ -179,9 +179,13 @@ uvx eida-consistency explore reports/nodes/resif/*.json --verbose
 ### 3. Apply fixes
 Investigate the reported service inconsistencies and fix them at node level. Maybe use dmtri command suggested.
 
-### 4. Re-run Consistency
+### 4. Re-run the report's inconsistencies
+Re-verify the findings against the live services (verdict per row: `PERSISTS` /
+`RESOLVED` / `SKIPPED`, or `CONSISTENT` / `REGRESSED` with `--all`):
 ```bash
-uvx eida-consistency consistency --node NOA --epochs 20 --duration 600 --report-dir reports/test_noa
+uvx eida-consistency rerun reports/test_noa/noa_latest.json
+# or a single finding:
+uvx eida-consistency rerun -i 15 reports/test_noa/noa_latest.json
 ```
 ### 5.Compare Before/After
 

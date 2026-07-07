@@ -150,6 +150,49 @@ def test_compare_invokes(monkeypatch):
 
 
 # -----------------
+# rerun command
+# -----------------
+
+_RERUN_RESULT = {
+    "schema_version": "1.0",
+    "node": "NOA",
+    "report": "r.json",
+    "results": [
+        {"index": 2, "label": "XX.STA..BHZ", "start": "2023-01-01T00:00:00",
+         "end": "2023-01-01T00:10:00", "verdict": "PERSISTS"},
+    ],
+}
+
+
+def test_rerun_prints_table_and_summary(monkeypatch, tmp_path, caplog):
+    import eida_consistency.rerun as rerun_mod
+    monkeypatch.setattr(rerun_mod, "rerun_report", lambda *a, **k: _RERUN_RESULT)
+    caplog.set_level(logging.INFO)
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, ["r.json"], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0, result.output
+    assert "PERSISTS" in caplog.text
+    assert "Summary: 1 re-run — 1 persists" in caplog.text
+
+
+def test_rerun_json_is_pure_stdout(monkeypatch, tmp_path):
+    import eida_consistency.rerun as rerun_mod
+    monkeypatch.setattr(rerun_mod, "rerun_report", lambda *a, **k: _RERUN_RESULT)
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, ["r.json", "--json"], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0, result.output
+    parsed = json.loads(result.output)
+    assert parsed["results"][0]["verdict"] == "PERSISTS"
+
+
+def test_rerun_no_report_found(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, [], obj={"report_dir": tmp_path})
+    assert result.exit_code != 0
+    assert "No report files found" in result.output
+
+
+# -----------------
 # explore command
 # -----------------
 

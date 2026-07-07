@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Added — `rerun` command — #55
+
+Re-verify the inconsistencies of a report against the live services, without the
+boundary walk or dmtri output that `explore` produces:
+
+```
+eida-consistency rerun [REPORT] [-i N ...] [--all] [--json] [--verbose]
+```
+
+Defaults to the latest report and its inconsistent rows; `--all` re-checks every
+row. Reports a verdict per row — `PERSISTS` / `RESOLVED` / `SKIPPED`, plus
+`CONSISTENT` / `REGRESSED` under `--all`. Read-only (`--json` for machine
+output). The report loader and window-check core are now shared with `explore`
+(`reverify.py`); `explore`'s behavior is unchanged.
+
 ### Removed — seeds (breaking) — #52
 
 The seed mechanism is removed entirely. A seed could never reliably reproduce a
