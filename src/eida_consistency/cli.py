@@ -240,6 +240,12 @@ def explore(ctx, report, index, days, verbose, as_json):
         except ValueError:
             raise click.UsageError(f"No report files found in {report_dir}")
 
+    if days == 0:
+        logging.info(
+            "Note: --days 0 only re-verifies each finding's window without "
+            "exploring boundaries. For a plain re-check, use 'rerun' instead."
+        )
+
     indices = list(index) if index else None
     result = explore_boundaries(report, indices, max_days=days, verbose=verbose)
     if as_json:
