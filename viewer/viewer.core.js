@@ -193,6 +193,41 @@ const DIR_LABEL = {
   availability: '▼ Availability: data · Dataselect: NO DATA',
   dataselect: '▲ Availability: NO DATA · Dataselect: data',
 };
+// Short word tags for the results table (which service actually has the data).
+const DIR_TAG = {
+  availability: '▼ Avail only',
+  dataselect: '▲ Data only',
+};
+// Plain-language phrasing for the detail lead sentence.
+const DIR_PHRASE = {
+  availability: 'availability reported data but dataselect returned none',
+  dataselect: 'dataselect returned data but availability reported none',
+};
+
+// The row verdict, in words, so the table never shows a bare glyph or a
+// misleading "OK" for an inconsistent row.
+export function recordVerdict(record) {
+  if (record.consistent === false) return { cls: 'bad', text: 'Inconsistent' };
+  if (record.consistent === true) return { cls: 'ok', text: 'Consistent' };
+  return { cls: 'mut', text: 'Skipped' };
+}
+
+// One plain sentence describing what a record's finding is.
+export function explainRecord(record) {
+  if (record.consistent === true)
+    return { cls: 'ok', text: '✔ Consistent — availability and dataselect agree across the requested window.' };
+  if (record.consistent !== false)
+    return { cls: 'mut', text: `— Skipped${record.consistency_reason ? ': ' + record.consistency_reason : ''}.` };
+  const gaps = record.mismatch || [];
+  const phrase = [...recordDirections(record)].map(w => DIR_PHRASE[w] || w).join('; ')
+    || 'availability and dataselect disagree on whether data exists';
+  if (gaps.length === 1) {
+    const m = gaps[0], dur = fmtDuration((_parseUTC(m.end) - _parseUTC(m.start)) / 1000);
+    return { cls: 'bad', text: `⚠ Inconsistency: for ${dur} (${_fmtTime(m.start)} → ${_fmtTime(m.end)}), ${phrase}.` };
+  }
+  const total = gaps.reduce((s, m) => s + (_parseUTC(m.end) - _parseUTC(m.start)) / 1000, 0);
+  return { cls: 'bad', text: `⚠ Inconsistency: across ${gaps.length} intervals (${fmtDuration(total)} total), ${phrase}.` };
+}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => (/^https?:\/\//i.test(String(u ?? '')) ? String(u) : '');
 
@@ -250,10 +285,10 @@ export function renderSummary(s) {
 const COLUMNS = [
   { label: 'Channel', sort: 'channel' },
   { label: 'Window', sort: 'time' },
-  { label: 'Dir', sort: null },
+  { label: 'Disagreement', sort: null },
   { label: 'Gaps', sort: 'gap' },
   { label: 'Max gap', sort: 'gap' },
-  { label: 'Status', sort: 'status' },
+  { label: 'Result', sort: 'status' },
 ];
 
 export function renderResultsTable(results, filter, sort) {
@@ -266,13 +301,17 @@ export function renderResultsTable(results, filter, sort) {
   }).join('');
   const rows = (results || []).filter(r => matchesFilter(r, filter)).map(r => {
     const nslc = `${r.network}.${r.station}.${r.location}.${r.channel}`;
-    const glyphs = r.consistent === false ? [...recordDirections(r)].map(w => (DIR_LABEL[w] || ' ')[0]).join('') : '✔';
+    const tags = r.consistent === false
+      ? [...recordDirections(r)].map(w =>
+          `<span class="tag ${w === 'availability' ? 'avail' : 'data'}" title="${esc(DIR_LABEL[w] || '')}">${esc(DIR_TAG[w] || w)}</span>`).join(' ')
+      : '';
     const { count, maxGap } = gapStats(r);
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
+    const v = recordVerdict(r);
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${esc(glyphs)}</td>
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>
       <td>${badge}</td><td>${count ? esc(fmtDuration(maxGap)) : ''}</td>
-      <td>${esc(r.dataselect_status ?? '')}</td></tr>`;
+      <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
   return `<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -283,7 +322,7 @@ export function sortRecords(results, key, dir) {
   let cmp;
   if (key === 'channel') cmp = (a, b) => nslc(a).localeCompare(nslc(b));
   else if (key === 'gap') cmp = (a, b) => gapStats(a).maxGap - gapStats(b).maxGap;
-  else if (key === 'status') cmp = (a, b) => String(a.dataselect_status ?? '').localeCompare(String(b.dataselect_status ?? ''));
+  else if (key === 'status') cmp = (a, b) => recordVerdict(a).text.localeCompare(recordVerdict(b).text);
   else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
   arr.sort(cmp);
   const desc = dir === undefined ? key === 'gap' : dir === 'desc'; // gap defaults largest-first
@@ -299,7 +338,8 @@ function reqLinks(kind, url) {
 }
 
 export function renderDetail(record) {
-  const parts = [];
+  const ex = explainRecord(record);
+  const parts = [`<p class="explain ${ex.cls}">${esc(ex.text)}</p>`];
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
     const svg = timelineSVG(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);

@@ -44,6 +44,12 @@ table.results tbody tr{cursor:pointer}
 table.results tbody tr:hover{background:var(--card)}
 table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(--accent)}
 .badge{display:inline-block;min-width:1.4em;text-align:center;background:var(--bad);color:#fff;border-radius:999px;font-size:.75rem;padding:0 .35rem}
+.tag{display:inline-block;font-size:.72rem;padding:.05rem .45rem;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.tag.avail{color:var(--warn)} .tag.data{color:var(--bad)}
+.verdict{font-weight:600;font-size:.85rem}
+.verdict.bad{color:var(--bad)} .verdict.ok{color:var(--ok)} .verdict.mut{color:var(--mut)}
+.explain{margin:.1rem 0 .7rem;font-size:.92rem;font-weight:500}
+.explain.bad{color:var(--bad)} .explain.ok{color:var(--ok)} .explain.mut{color:var(--mut)}
 
 /* detail */
 .detail{margin-top:1rem;padding:.9rem 1rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}

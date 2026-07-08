@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail, sortRecords } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail, sortRecords, recordVerdict, explainRecord } from './viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -148,6 +148,47 @@ test('renderDetail degrades when coverage/urls are absent', () => {
   const html = renderDetail(old);
   assert.doesNotMatch(html, /class="tl"/);                 // no timeline without coverage
   assert.doesNotMatch(html, /data-kind=/);                 // no run buttons without urls
+});
+
+test('recordVerdict states the result in words', () => {
+  assert.equal(recordVerdict({ consistent: false }).text, 'Inconsistent');
+  assert.equal(recordVerdict({ consistent: true }).text, 'Consistent');
+  assert.equal(recordVerdict({ consistent: null }).text, 'Skipped');
+});
+
+test('renderResultsTable shows a word verdict and a labelled disagreement tag (not a bare glyph)', () => {
+  const html = renderResultsTable([rec], { onlyInconsistent: true, direction: 'both', search: '' });
+  assert.match(html, /class="verdict bad">Inconsistent</);   // result in words, not "OK"
+  assert.match(html, /class="tag /);                          // labelled pill...
+  assert.match(html, /Avail only|Data only/);                 // ...with a readable label
+});
+
+test('explainRecord gives a plain single-gap sentence', () => {
+  const html = explainRecord({
+    consistent: false,
+    mismatch: [{ start: '2014-02-15T05:18:25+00:00', end: '2014-02-15T05:19:01+00:00', who: 'availability' }],
+  }).text;
+  assert.match(html, /Inconsistency/);
+  assert.match(html, /availability reported data but dataselect returned none/);
+  assert.match(html, /05:18:25/);
+});
+
+test('explainRecord summarises multiple gaps and marks consistent rows', () => {
+  const multi = explainRecord({
+    consistent: false,
+    mismatch: [
+      { start: '2014-02-15T05:18:25+00:00', end: '2014-02-15T05:19:01+00:00', who: 'availability' },
+      { start: '2014-02-15T05:20:00+00:00', end: '2014-02-15T05:21:00+00:00', who: 'dataselect' },
+    ],
+  }).text;
+  assert.match(multi, /across 2 intervals/);
+  assert.match(explainRecord({ consistent: true }).text, /Consistent/);
+});
+
+test('renderDetail leads with the plain-language explanation', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /class="explain bad">/);
+  assert.match(html, /Inconsistency/);
 });
 
 test('renderResultsTable escapes hostile values (no attribute/tag breakout)', () => {
