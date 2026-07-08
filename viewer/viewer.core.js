@@ -287,7 +287,6 @@ const COLUMNS = [
   { label: 'Window', sort: 'time' },
   { label: 'Disagreement', sort: null },
   { label: 'Gaps', sort: 'gap' },
-  { label: 'Max gap', sort: 'gap' },
   { label: 'Result', sort: 'status' },
 ];
 
@@ -305,12 +304,12 @@ export function renderResultsTable(results, filter, sort) {
       ? [...recordDirections(r)].map(w =>
           `<span class="tag ${w === 'availability' ? 'avail' : 'data'}" title="${esc(DIR_LABEL[w] || '')}">${esc(DIR_TAG[w] || w)}</span>`).join(' ')
       : '';
-    const { count, maxGap } = gapStats(r);
+    const { count } = gapStats(r);
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     const v = recordVerdict(r);
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
       <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>
-      <td>${badge}</td><td>${count ? esc(fmtDuration(maxGap)) : ''}</td>
+      <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
   return `<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -321,7 +320,7 @@ export function sortRecords(results, key, dir) {
   const nslc = r => `${r.network}.${r.station}.${r.location}.${r.channel}`;
   let cmp;
   if (key === 'channel') cmp = (a, b) => nslc(a).localeCompare(nslc(b));
-  else if (key === 'gap') cmp = (a, b) => gapStats(a).maxGap - gapStats(b).maxGap;
+  else if (key === 'gap') cmp = (a, b) => gapStats(a).count - gapStats(b).count;
   else if (key === 'status') cmp = (a, b) => recordVerdict(a).text.localeCompare(recordVerdict(b).text);
   else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
   arr.sort(cmp);
