@@ -12,8 +12,9 @@ from typing import Optional
 
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
+from .services.psd import psd_coverage
 from .core.checker import check_candidate
-from .core.consistency import classify_consistency
+from .core.consistency import classify_consistency, classify_psd
 from .utils.nodes import load_node_url
 from .core.formatter import format_result
 from .report.report import (
@@ -35,6 +36,7 @@ def run_consistency_check(
     print_stdout: bool = False,
     report_dir: Path = REPORT_DIR,
     station_multiplier: int = 3,
+    check_psd: bool = True,
 ) -> Optional[Path]:
     """
     Run the availability + dataselect consistency check and write reports.
@@ -121,6 +123,14 @@ def run_consistency_check(
             start, end, loc_final
         )
         classification = classify_consistency(spans, ds_result, (start, end))
+        psd_result = None
+        psd_class = None
+        if check_psd:
+            psd_result = psd_coverage(
+                base_url, match["network"], match["station"], match["channel"],
+                start, end, loc_final,
+            )
+            psd_class = classify_psd(ds_result, psd_result, (start, end))
         log = format_result(
             idx,
             url,
@@ -156,7 +166,18 @@ def run_consistency_check(
                 "end": matched_span.get("end") if matched_span else None,
                 "location": matched_span.get("location") if matched_span else None,
             },
+            "psd_success": (psd_result["success"] if psd_result else None),
+            "psd_status": (psd_class["status"] if psd_class else None),
+            "psd_present": (psd_class["p_present"] if psd_class else None),
+            "psd_required": (psd_class["psd_required"] if psd_class else None),
+            "psd_consistent": (psd_class["consistent"] if psd_class else None),
+            "psd_url": (psd_result["url"] if psd_result else None),
         }
+        if psd_result is not None:
+            record.setdefault("coverage", {})
+            record["coverage"]["psd"] = [
+                [s, e] for (s, e, _sr, valid) in psd_result["records"] if valid
+            ]
         return log, record
 
     args_list = []
