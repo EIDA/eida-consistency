@@ -110,6 +110,24 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     return lines
 
 
+def build_psd_findings_table(records: List[Dict[str, Any]]) -> List[str]:
+    """Markdown table of 'data present but no PSD' findings (D–P inconsistencies)."""
+    rows = [r for r in records if r.get("psd_consistent") is False]
+    if not rows:
+        return []
+    lines = [
+        "| Channel | Window (UTC) | A D P | Required |",
+        "| :--- | :--- | :---: | :---: |",
+    ]
+    for r in rows:
+        chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
+        window = f"{r['starttime']} → {r['endtime']}"
+        t = triad(r.get("available"), r.get("dataselect_success"), r.get("psd_present"))
+        req = "yes" if r.get("psd_required") else "no"
+        lines.append(f"| `{chan}` | `{window}` | {t} | {req} |")
+    return lines
+
+
 def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=None,
                     psd_present=None) -> str:
     """Single-line coverage timeline across ``[window_start, window_end]``.
@@ -368,6 +386,12 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             ds = "Y" if r["dataselect_success"] else "N"
             status = r.get("consistency_reason") or r["dataselect_status"]
             md_lines.append(f"| `{chan}` | `{window}` | {avail} | {ds} | `{status}` |")
+        md_lines.append("")
+
+    psd_findings = build_psd_findings_table(results)
+    if psd_findings:
+        md_lines.extend(["## PSD Findings (data but no PSD)", ""])
+        md_lines.extend(psd_findings)
         md_lines.append("")
 
     md_lines.extend(

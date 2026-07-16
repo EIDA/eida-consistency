@@ -390,3 +390,24 @@ def test_summary_counts_data_but_no_psd():
     assert summary["psd_required_count"] == 3
     # existing A–D score untouched (all A–D consistent)
     assert summary["score"] == 100.0
+
+
+from eida_consistency.report.report import build_psd_findings_table
+
+
+def test_build_psd_findings_table_lists_data_but_no_psd():
+    recs = [
+        _rec(available=True, dataselect_success=True, psd_present=False,
+             psd_consistent=False, psd_required=True),
+        _rec(psd_consistent=True),  # should be excluded
+    ]
+    lines = build_psd_findings_table(recs)
+    body = "\n".join(lines)
+    assert "HL.A..HNZ" in body            # the offending channel appears
+    assert "▽ ▲ ▷" in body or "▲" in body  # triad rendered (data present, psd absent)
+    # consistent record is not listed
+    assert body.count("HL.A") == 1
+
+
+def test_build_psd_findings_table_empty_when_none():
+    assert build_psd_findings_table([_rec(psd_consistent=True)]) == []
