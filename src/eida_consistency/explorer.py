@@ -12,6 +12,7 @@ import requests
 
 from eida_consistency.services.availability import get_availability_spans
 from eida_consistency.services.dataselect import dataselect
+from eida_consistency.services.psd import psd_coverage
 from eida_consistency.core.consistency import classify_consistency
 from eida_consistency.utils.nodes import load_node_url
 
@@ -95,9 +96,13 @@ def _check_window(
             f"network={net}&station={sta}&location={loc}&channel={cha}"
             f"&starttime={_iso(t0)}&endtime={_iso(t1)}&nodata=204"
         )
+        # PSD (day-granularity); informational alongside the A-D boundary walk.
+        psd_res = psd_coverage(base_url, net, sta, cha, _iso(t0), _iso(t1), loc)
+        psd_present = bool(psd_res.get("day_covered"))
+        logging.info(f"  PSD URL:          {psd_res.get('url')}")
         logging.info(
             f"  Result -> availability window_covered={window_covered}, "
-            f"dataselect success={ds['success']}, "
+            f"dataselect success={ds['success']}, PSD present={psd_present}, "
             f"consistent={consistent}"
         )
     else:

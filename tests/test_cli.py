@@ -25,6 +25,11 @@ def test_check_outputs_timeline_and_direction(monkeypatch, caplog):
                         lambda *a, **kw: {"success": True, "status": "OK", "type": "SingleTrace",
                                           "segments": [("2014-02-15T05:17:09.6",
                                                         "2014-02-15T05:18:25.0", 100.0)]})
+    import eida_consistency.services.psd as psd_mod
+    monkeypatch.setattr(psd_mod, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "NoData",
+                                          "day_covered": False, "records": [],
+                                          "url": "http://fake/eidaws/psd/1/coverage?net=FR"})
     caplog.set_level(logging.INFO)
     runner = CliRunner()
     result = runner.invoke(cli.check, [
@@ -37,6 +42,11 @@ def test_check_outputs_timeline_and_direction(monkeypatch, caplog):
     assert "Availability: data · Dataselect: NO DATA" in out   # direction label on the gap
     assert "▼" in out                                          # down-triangle direction
     assert "█" in out                                          # timeline coverage block
+    # PSD triangle surfaced in the check command
+    assert "PSD:" in out                                       # PSD data line
+    assert "Data vs PSD" in out                                # PSD verdict line
+    assert "pre-2024 gap" in out                               # 2014 window, data but no PSD, not required
+    assert "Triangle:" in out                                  # A/D/P triad line
 
 
 def test_check_availability_line_reports_data_presence_not_legacy_no(monkeypatch, caplog):
@@ -56,6 +66,11 @@ def test_check_availability_line_reports_data_presence_not_legacy_no(monkeypatch
                         lambda *a, **kw: {"success": True, "status": "OK", "type": "SingleTrace",
                                           "segments": [("2014-02-15T05:17:09.6",
                                                         "2014-02-15T05:18:25.0", 100.0)]})
+    import eida_consistency.services.psd as psd_mod
+    monkeypatch.setattr(psd_mod, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "NoData",
+                                          "day_covered": False, "records": [],
+                                          "url": "http://fake/eidaws/psd/1/coverage?net=FR"})
     caplog.set_level(logging.INFO)
     CliRunner().invoke(cli.check, [
         "--node", "EPOSFR", "--net", "FR", "--sta", "MLS", "--loc", "00", "--cha", "HHN",
@@ -320,20 +335,26 @@ def test_check_command_consistent(monkeypatch, caplog):
     
     import eida_consistency.services.availability as av
     import eida_consistency.services.dataselect as ds
+    import eida_consistency.services.psd as psd_mod
+    monkeypatch.setattr(psd_mod, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "NoData",
+                                          "day_covered": False, "records": [],
+                                          "url": "http://fake/psd"})
     monkeypatch.setattr(av, "check_availability_query", fake_av)
     monkeypatch.setattr(ds, "dataselect", fake_ds)
-    
+
     caplog.set_level(logging.INFO)
     runner = CliRunner()
     result = runner.invoke(cli.check, [
-        "--node", "NOA", "--net", "HP", "--sta", "SERG", 
+        "--node", "NOA", "--net", "HP", "--sta", "SERG",
         "--cha", "HHN", "--start", "2016-09-20", "--end", "2016-10-19"
     ])
-    
+
     assert result.exit_code == 0
     assert "Checking Availability" in caplog.text
     assert "Checking Dataselect" in caplog.text
-    assert "Summary: CONSISTENT" in caplog.text
+    assert "Summary (Avail vs Data): CONSISTENT" in caplog.text
+    assert "PSD:" in caplog.text
 
 def test_check_command_inconsistent(monkeypatch, caplog):
     import eida_consistency.utils.nodes as nodes
@@ -350,18 +371,23 @@ def test_check_command_inconsistent(monkeypatch, caplog):
     
     import eida_consistency.services.availability as av
     import eida_consistency.services.dataselect as ds
+    import eida_consistency.services.psd as psd_mod
+    monkeypatch.setattr(psd_mod, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "NoData",
+                                          "day_covered": False, "records": [],
+                                          "url": "http://fake/psd"})
     monkeypatch.setattr(av, "check_availability_query", fake_av)
     monkeypatch.setattr(ds, "dataselect", fake_ds)
-    
+
     caplog.set_level(logging.DEBUG)
     runner = CliRunner()
     result = runner.invoke(cli.check, [
-        "--node", "NOA", "--net", "HP", "--sta", "SERG", 
+        "--node", "NOA", "--net", "HP", "--sta", "SERG",
         "--cha", "HHN", "--start", "2016-09-20", "--end", "2016-10-19"
     ])
-    
+
     assert result.exit_code == 0
-    assert "Summary: INCONSISTENT" in caplog.text
+    assert "Summary (Avail vs Data): INCONSISTENT" in caplog.text
     assert "Debug: NO DATA" in caplog.text
 
 

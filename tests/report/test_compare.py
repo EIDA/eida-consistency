@@ -92,3 +92,31 @@ def test_compare_reports_with_report_dir(tmp_path, caplog):
 
     logs = "\n".join(caplog.messages)
     assert "A vs B" in logs
+
+
+def _psd_report(path: Path, dp, req):
+    path.write_text(json.dumps({"summary": {
+        "node": "N", "total_checked": 5, "total_consistent": 4,
+        "total_inconsistent": 1, "score": 80,
+        "data_yes_psd_no": dp, "psd_required_count": req}}))
+    return path
+
+
+def test_compare_reports_shows_psd_counters(tmp_path, caplog):
+    r1 = _psd_report(tmp_path / "p1.json", 1, 3)
+    r2 = _psd_report(tmp_path / "p2.json", 0, 5)
+    caplog.set_level(logging.INFO)
+    cmp.compare_reports(r1, r2)
+    logs = "\n".join(caplog.messages)
+    assert "PSD data-but-no-PSD: 1 vs 0" in logs
+    assert "PSD required windows (>=2024): 3 vs 5" in logs
+
+
+def test_compare_reports_omits_psd_for_pre_psd_reports(tmp_path, caplog):
+    # reports produced before PSD support have no psd_* summary keys
+    r1 = make_report(tmp_path / "o1.json", "OLD1")
+    r2 = make_report(tmp_path / "o2.json", "OLD2")
+    caplog.set_level(logging.INFO)
+    cmp.compare_reports(r1, r2)
+    logs = "\n".join(caplog.messages)
+    assert "PSD data-but-no-PSD" not in logs

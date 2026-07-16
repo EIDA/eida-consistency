@@ -192,16 +192,46 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     # "is the whole window covered by one span?" boolean — that read as "NO" even
     # when availability returned data, contradicting the timeline below.
     avail_has_data = bool(av_res.get("spans"))
+
+    # 3. Check PSD (Availability / Dataselect / PSD triangle; dataselect = truth)
+    from eida_consistency.services.psd import psd_coverage
+    from eida_consistency.core.consistency import classify_psd
+    from eida_consistency.report.report import triad
+
+    logging.info(f"Checking PSD for {net}.{sta}.{loc}.{cha}...")
+    psd_res = psd_coverage(base_url, net, sta, cha, start, end, loc)
+    psd_cls = classify_psd(ds_res, psd_res, (start, end))
+    psd_present = psd_cls["p_present"]
+
     logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
     logging.info(f"  Availability: {'data present' if avail_has_data else 'no data'} (HTTP {av_res['status']})")
     logging.info(f"  Dataselect:   {'data present' if ds_success else 'no data'} (status {ds_res['status']})")
+    logging.info(f"  PSD:          {'data present' if psd_present else 'no data'} (status {psd_res['status']})")
 
     if classification["consistent"] is True:
-        logging.info("  Summary: CONSISTENT")
+        logging.info("  Summary (Avail vs Data): CONSISTENT")
     elif classification["consistent"] is False:
-        logging.info("  Summary: INCONSISTENT")
+        logging.info("  Summary (Avail vs Data): INCONSISTENT")
     else:
-        logging.info(f"  Summary: SKIPPED ({classification['reason']})")
+        logging.info(f"  Summary (Avail vs Data): SKIPPED ({classification['reason']})")
+
+    # PSD verdict (Dataselect vs PSD), gated by the 2024-01-01 obligation.
+    if psd_res["status"] == "Unsupported":
+        logging.info("  Summary (Data vs PSD):   UNSUPPORTED (node has no PSD coverage service)")
+    elif psd_cls["status"] == "Skipped":
+        logging.info("  Summary (Data vs PSD):   SKIPPED (transient PSD failure)")
+    elif psd_cls["consistent"] is False:
+        if psd_cls["psd_required"]:
+            logging.info("  Summary (Data vs PSD):   VIOLATION (data on/after 2024-01-01 but no PSD)")
+        else:
+            logging.info("  Summary (Data vs PSD):   pre-2024 gap (data but no PSD; PSD not required, informational)")
+    else:
+        logging.info("  Summary (Data vs PSD):   CONSISTENT")
+
+    logging.info(
+        f"  Triangle:     {triad(avail_has_data, ds_success, psd_present)}  "
+        f"(▼ Avail  ▲ Data  ▶ PSD; filled=present, hollow=absent)"
+    )
 
     from eida_consistency.report.report import render_timeline, render_gap_table
 
