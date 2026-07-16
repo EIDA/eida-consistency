@@ -113,7 +113,7 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
 def _psd_bucket(rec: Dict[str, Any]) -> Optional[str]:
     """Classify one record's PSD outcome, or None if PSD was not checked.
 
-    Buckets: ``consistent`` (data + PSD, or no data), ``violation`` (data on/after
+    Buckets: ``consistent`` (data and PSD both present), ``violation`` (data on/after
     2024-01-01 but no PSD — a real fault), ``pregap`` (data before 2024-01-01 but
     no PSD — informational, PSD not required), ``nodata``, ``skipped``,
     ``unsupported``.
