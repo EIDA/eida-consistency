@@ -72,6 +72,7 @@ def psd_coverage(base_url, net, sta, cha, start, end, loc="",
     }
 
     last_status, last_error = "Unknown", None
+    last_url = url
     for attempt in range(1, max_attempts + 1):
         try:
             r = requests.get(url, params=params, timeout=timeout,
@@ -93,6 +94,7 @@ def psd_coverage(base_url, net, sta, cha, start, end, loc="",
                     "day_covered": False, "url": full_url, "error": None}
         if r.status_code >= 500:
             last_status = f"HTTP {r.status_code}"
+            last_url = full_url
             if attempt < max_attempts:
                 time.sleep(attempt)
                 continue
@@ -108,4 +110,4 @@ def psd_coverage(base_url, net, sta, cha, start, end, loc="",
                 "url": full_url, "error": None}
 
     return {"success": False, "status": last_status, "records": [],
-            "day_covered": False, "url": url, "error": last_error}
+            "day_covered": False, "url": last_url, "error": last_error}

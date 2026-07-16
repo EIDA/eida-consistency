@@ -151,3 +151,12 @@ def test_classify_psd_required_flag_false_pre_2024():
     r = classify_psd(ds(), psd(day=False), W2015)
     assert r["psd_required"] is False
     assert r["consistent"] is False  # still reported, scoring deferred
+
+
+def test_classify_psd_unknown_failure_is_skipped_not_a_finding():
+    # Exotic non-transient, non-Unsupported PSD failure (e.g. requests' InvalidURL)
+    # must not be reported as a data-but-no-PSD inconsistency.
+    r = classify_psd(ds(), psd(status="InvalidURL", success=False, day=False), W2024)
+    assert r["status"] == "Skipped"
+    assert r["scoreable"] is False
+    assert r["consistent"] is None

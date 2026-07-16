@@ -99,3 +99,15 @@ def test_psd_coverage_timeout_is_transient(monkeypatch):
     assert res["success"] is False
     assert res["status"] != "Unsupported"
     assert res["day_covered"] is False
+
+
+def test_psd_coverage_5xx_exhaustion_keeps_full_url_with_query(monkeypatch):
+    monkeypatch.setattr(psd_mod.requests, "get",
+                        lambda *a, **k: DummyResp(status=503, text="Service Unavailable"))
+    monkeypatch.setattr(psd_mod.time, "sleep", lambda *_: None)
+    res = psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
+                               "2024-06-02T12:00:00", "2024-06-02T12:10:00", max_attempts=3)
+    assert res["success"] is False
+    assert res["status"] != "Unsupported"
+    assert "net=" in res["url"]
+    assert "coverage?" in res["url"]

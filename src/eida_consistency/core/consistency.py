@@ -113,6 +113,9 @@ def classify_psd(ds_result: Dict[str, Any], psd_result: Dict[str, Any], window) 
     if psd_transient or ds_transient:
         return {**base, "status": "Skipped", "scoreable": False, "consistent": None}
 
+    if not psd_result.get("success"):
+        return {**base, "status": "Skipped", "scoreable": False, "consistent": None}
+
     consistent = not (base["d_present"] and not base["p_present"])
     return {**base, "scoreable": True, "consistent": consistent,
             "status": "Consistent" if consistent else "Inconsistent"}
