@@ -316,3 +316,22 @@ def test_delete_old_reports(tmp_path):
 def test_delete_old_reports_nonexistent_dir(tmp_path):
     non_existing = tmp_path / "not_here"
     report.delete_old_reports(non_existing, keep=1)
+
+
+from eida_consistency.report.report import triad
+
+
+def test_triad_all_present_filled():
+    assert triad(True, True, True) == "▼ ▲ ▶"
+
+
+def test_triad_all_absent_hollow():
+    assert triad(False, False, False) == "▽ △ ▷"
+
+
+def test_triad_data_but_no_psd():
+    assert triad(False, True, False) == "▽ ▲ ▷"
+
+
+def test_triad_psd_none_shows_question():
+    assert triad(True, True, None) == "▼ ▲ ?"

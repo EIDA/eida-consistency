@@ -16,11 +16,30 @@ from eida_consistency.core.coverage import parse_iso
 REPORT_DIR = Path("reports")
 
 # Which service holds the data inside a mismatch gap -> display glyph + label.
-_DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲"}
+_DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲", "psd": "▶"}
 _DIRECTION_LABEL = {
     "availability": "Availability: data · Dataselect: NO DATA",
     "dataselect": "Availability: NO DATA · Dataselect: data",
+    "psd": "Dataselect: data · PSD: NO DATA",
 }
+
+_PRESENCE_GLYPH = {
+    "availability": ("▼", "▽"),
+    "dataselect": ("▲", "△"),
+    "psd": ("▶", "▷"),
+}
+
+
+def triad(a_present, d_present, p_present) -> str:
+    """Filled/hollow triangle triad: filled=present, hollow=absent, '?'=unknown."""
+
+    def g(service, present):
+        if present is None:
+            return "?"
+        filled, hollow = _PRESENCE_GLYPH[service]
+        return filled if present else hollow
+
+    return f"{g('availability', a_present)} {g('dataselect', d_present)} {g('psd', p_present)}"
 
 
 def gap_direction_label(who: str) -> str:
