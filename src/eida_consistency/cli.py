@@ -79,6 +79,10 @@ def cli(ctx, log_level, report_dir):
 @click.option("--duration", type=int, default=600, show_default=True, help="Duration (s), must be >= 600")
 @click.option("--seed", type=int, help="Random seed")
 @click.option(
+    "--psd/--no-psd", "check_psd", default=True, show_default=True,
+    help="Also check PSD (eidaws/psd) coverage vs dataselect.",
+)
+@click.option(
     "--delete-old",
     is_flag=True,
     help="Delete all but the latest report (standalone mode).",
@@ -102,7 +106,7 @@ def cli(ctx, log_level, report_dir):
     help="Directory to store reports (overrides the global --report-dir).",
 )
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload, report_dir_opt):
+def consistency(ctx, node, epochs, duration, seed, check_psd, delete_old, print_stdout, upload, report_dir_opt):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = report_dir_opt or ctx.obj["report_dir"]
 
@@ -123,6 +127,7 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
             epochs=epochs,
             duration=duration,
             seed=seed,
+            check_psd=check_psd,
             print_stdout=print_stdout,
             report_dir=report_dir,
         )

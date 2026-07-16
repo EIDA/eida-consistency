@@ -364,3 +364,28 @@ def test_check_command_inconsistent(monkeypatch, caplog):
     assert "Summary: INCONSISTENT" in caplog.text
     assert "Debug: NO DATA" in caplog.text
 
+
+# -----------------
+# consistency command: --psd/--no-psd flag
+# -----------------
+
+import eida_consistency.cli as cli_mod
+
+
+def test_consistency_no_psd_passes_check_psd_false(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(cli_mod, "run_consistency_check",
+                        lambda **kw: captured.update(kw) or None)
+    res = CliRunner().invoke(cli_mod.cli, ["consistency", "--node", "NOA", "--no-psd"])
+    assert res.exit_code == 0
+    assert captured["check_psd"] is False
+
+
+def test_consistency_defaults_check_psd_true(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(cli_mod, "run_consistency_check",
+                        lambda **kw: captured.update(kw) or None)
+    res = CliRunner().invoke(cli_mod.cli, ["consistency", "--node", "NOA"])
+    assert res.exit_code == 0
+    assert captured["check_psd"] is True
+
