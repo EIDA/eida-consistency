@@ -110,21 +110,122 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     return lines
 
 
-def build_psd_findings_table(records: List[Dict[str, Any]]) -> List[str]:
-    """Markdown table of 'data present but no PSD' findings (D–P inconsistencies)."""
-    rows = [r for r in records if r.get("psd_consistent") is False]
-    if not rows:
-        return []
-    lines = [
-        "| Channel | Window (UTC) | A D P | Required |",
-        "| :--- | :--- | :---: | :---: |",
+def _psd_bucket(rec: Dict[str, Any]) -> Optional[str]:
+    """Classify one record's PSD outcome, or None if PSD was not checked.
+
+    Buckets: ``consistent`` (data + PSD, or no data), ``violation`` (data on/after
+    2024-01-01 but no PSD — a real fault), ``pregap`` (data before 2024-01-01 but
+    no PSD — informational, PSD not required), ``nodata``, ``skipped``,
+    ``unsupported``.
+    """
+    status = rec.get("psd_status")
+    if status is None:
+        return None
+    if status == "Unsupported":
+        return "unsupported"
+    if status == "Skipped":
+        return "skipped"
+    if not rec.get("dataselect_success"):
+        return "nodata"
+    if rec.get("psd_present"):
+        return "consistent"
+    return "violation" if rec.get("psd_required") else "pregap"
+
+
+def _psd_table(rows: List[Dict[str, Any]]) -> List[str]:
+    """Channel / window / triangle table for a list of PSD records."""
+    out = [
+        "| Channel | Window (UTC) | ▼ Avail · ▲ Data · ▶ PSD |",
+        "| :--- | :--- | :---: |",
     ]
     for r in rows:
         chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
         window = f"{r['starttime']} → {r['endtime']}"
         t = triad(r.get("available"), r.get("dataselect_success"), r.get("psd_present"))
-        req = "yes" if r.get("psd_required") else "no"
-        lines.append(f"| `{chan}` | `{window}` | {t} | {req} |")
+        out.append(f"| `{chan}` | `{window}` | {t} |")
+    return out
+
+
+def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
+    """Verbose, self-explanatory PSD (Availability / Dataselect / PSD) section.
+
+    Returns ``[]`` when PSD checking was disabled (no record has a ``psd_status``).
+    Otherwise returns Markdown lines that explain the triangle model, the
+    2024-01-01 obligation, a one-line summary, and separate tables for real
+    violations (data ≥ 2024 without PSD) and informational pre-2024 gaps.
+    """
+    buckets: Dict[str, List[Dict[str, Any]]] = {}
+    checked = False
+    for r in records:
+        b = _psd_bucket(r)
+        if b is None:
+            continue
+        checked = True
+        buckets.setdefault(b, []).append(r)
+    if not checked:
+        return []
+
+    consistent = buckets.get("consistent", [])
+    violations = buckets.get("violation", [])
+    pregaps = buckets.get("pregap", [])
+    nodata = buckets.get("nodata", [])
+    skipped = buckets.get("skipped", []) + buckets.get("unsupported", [])
+
+    lines = [
+        "## PSD Consistency — Availability / Dataselect / PSD",
+        "",
+        "Each tested window is cross-checked across three EIDA services. "
+        "**Dataselect** (the actual waveform bytes) is the ground truth; each "
+        "window is compared against the **Availability** service and against the "
+        "**PSD** service (`eidaws/psd/1/coverage`). PSD is computed once per UTC "
+        "day, so \"PSD present\" means the window's day has a valid PSD record.",
+        "",
+        "Coverage is shown as three triangles per window — **▼ Availability**, "
+        "**▲ Dataselect**, **▶ PSD**. A *filled* triangle means that service has "
+        "data for the window; a *hollow* triangle (▽ △ ▷) means it does not.",
+        "",
+        "EIDA only **requires** PSD for data on or after **2024-01-01**, so a "
+        "missing PSD is judged differently by date:",
+        "",
+        "- **Violation** — a window on/after 2024-01-01 where dataselect has data "
+        "but PSD is missing (`▲ ▷`). The node is not meeting its PSD obligation.",
+        "- **Pre-2024 gap** — the same pattern before 2024-01-01. PSD was not "
+        "required then, so it is only informational and is **not** counted as a "
+        "fault.",
+        "",
+        f"**PSD summary:** {len(consistent)} consistent · "
+        f"{len(violations)} violation(s) — data ≥ 2024 without PSD · "
+        f"{len(pregaps)} pre-2024 gap(s) (informational) · "
+        f"{len(nodata)} window(s) with no data"
+        + (f" · {len(skipped)} skipped/unsupported" if skipped else "")
+        + ".",
+        "",
+        "### PSD Violations — data on/after 2024-01-01 but PSD missing",
+        "",
+        "These are genuine inconsistencies: the node holds the waveform data but "
+        "did not compute or serve the required PSD.",
+        "",
+    ]
+    if violations:
+        lines += _psd_table(violations)
+    else:
+        lines.append(
+            "None — every window on/after 2024-01-01 that had waveform data also "
+            "had a valid PSD. ✅"
+        )
+    lines += [
+        "",
+        "### PSD gaps before 2024-01-01 (informational — PSD not yet required)",
+        "",
+        "Listed for completeness only; these are **not** violations because EIDA "
+        "did not require PSD before 2024-01-01.",
+        "",
+    ]
+    if pregaps:
+        lines += _psd_table(pregaps)
+    else:
+        lines.append("None.")
+    lines.append("")
     return lines
 
 
@@ -388,11 +489,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             md_lines.append(f"| `{chan}` | `{window}` | {avail} | {ds} | `{status}` |")
         md_lines.append("")
 
-    psd_findings = build_psd_findings_table(results)
-    if psd_findings:
-        md_lines.extend(["## PSD Findings (data but no PSD)", ""])
-        md_lines.extend(psd_findings)
-        md_lines.append("")
+    md_lines.extend(build_psd_section(results))
 
     md_lines.extend(
         [

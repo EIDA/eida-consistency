@@ -392,22 +392,42 @@ def test_summary_counts_data_but_no_psd():
     assert summary["score"] == 100.0
 
 
-from eida_consistency.report.report import build_psd_findings_table
+from eida_consistency.report.report import build_psd_section
 
 
-def test_build_psd_findings_table_lists_data_but_no_psd():
+def test_build_psd_section_empty_when_psd_not_checked():
+    # records without a psd_status mean PSD was disabled -> no section at all
+    assert build_psd_section([_rec()]) == []
+
+
+def test_build_psd_section_separates_violations_from_pregaps():
     recs = [
-        _rec(available=True, dataselect_success=True, psd_present=False,
-             psd_consistent=False, psd_required=True),
-        _rec(psd_consistent=True),  # should be excluded
+        _rec(station="V", dataselect_success=True, psd_present=False,
+             psd_required=True, psd_status="Inconsistent"),    # violation (>=2024)
+        _rec(station="G", dataselect_success=True, psd_present=False,
+             psd_required=False, psd_status="Inconsistent"),   # pre-2024 gap
+        _rec(station="C", dataselect_success=True, psd_present=True,
+             psd_required=True, psd_status="Consistent"),      # consistent
     ]
-    lines = build_psd_findings_table(recs)
-    body = "\n".join(lines)
-    assert "HL.A..HNZ" in body            # the offending channel appears
-    assert "▽ ▲ ▷" in body or "▲" in body  # triad rendered (data present, psd absent)
-    # consistent record is not listed
-    assert body.count("HL.A") == 1
+    body = "\n".join(build_psd_section(recs))
+    # explanatory prose is present
+    assert "## PSD Consistency" in body
+    assert "ground truth" in body
+    assert "2024-01-01" in body
+    # summary counts
+    assert "1 consistent" in body
+    assert "1 violation(s)" in body
+    assert "1 pre-2024 gap(s)" in body
+    # the violation is under the Violations heading, the gap under the gaps heading
+    v_head = body.index("### PSD Violations")
+    g_head = body.index("### PSD gaps before 2024")
+    assert v_head < body.index("HL.V..HNZ") < g_head        # violation in violations section
+    assert body.index("HL.G..HNZ") > g_head                 # gap in gaps section
 
 
-def test_build_psd_findings_table_empty_when_none():
-    assert build_psd_findings_table([_rec(psd_consistent=True)]) == []
+def test_build_psd_section_no_violations_shows_all_clear():
+    recs = [_rec(station="C", dataselect_success=True, psd_present=True,
+                 psd_required=True, psd_status="Consistent")]
+    body = "\n".join(build_psd_section(recs))
+    assert "None — every window" in body   # no violations
+    assert "✅" in body
