@@ -335,3 +335,30 @@ def test_triad_data_but_no_psd():
 
 def test_triad_psd_none_shows_question():
     assert triad(True, True, None) == "▼ ▲ ?"
+
+
+from eida_consistency.report.report import render_timeline
+
+WS, WE = "2024-06-02T12:00:00", "2024-06-02T12:10:00"
+
+
+def test_render_timeline_single_line_unchanged_without_psd():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)])
+    assert "\n" not in out  # still one line
+    assert set(out) <= set("█▲▼·|")
+
+
+def test_render_timeline_three_lanes_when_psd_present():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)], psd_present=True)
+    lines = out.splitlines()
+    assert len(lines) == 3
+    assert lines[0].startswith("▼ Avail")
+    assert lines[1].startswith("▲ Data")
+    assert lines[2].startswith("▶ PSD")
+    assert "█" in lines[2] and "░" not in lines[2]  # PSD lane uniform present
+
+
+def test_render_timeline_psd_lane_uniform_absent():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)], psd_present=False)
+    psd_line = out.splitlines()[2]
+    assert "░" in psd_line and "█" not in psd_line

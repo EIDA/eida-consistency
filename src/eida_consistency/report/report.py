@@ -110,7 +110,8 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     return lines
 
 
-def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=None) -> str:
+def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=None,
+                    psd_present=None) -> str:
     """Single-line coverage timeline across ``[window_start, window_end]``.
 
     ``avail`` / ``ds`` are lists of ``(start_iso, end_iso)`` coverage intervals.
@@ -139,6 +140,14 @@ def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=N
         return any(
             s and e and max(cs, sec(s)) < min(ce, sec(e)) - 1e-9 for s, e in iv
         )
+
+    if psd_present is not None:
+        def lane(iv):
+            return "".join("█" if covered(iv, i) else "░" for i in range(width))
+        psd_lane = ("█" if psd_present else "░") * width
+        return (f"▼ Avail  {lane(avail_iv)}\n"
+                f"▲ Data   {lane(ds_iv)}\n"
+                f"▶ PSD    {psd_lane}")
 
     out = []
     for i in range(width):
