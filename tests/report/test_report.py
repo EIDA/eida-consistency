@@ -362,3 +362,31 @@ def test_render_timeline_psd_lane_uniform_absent():
     out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)], psd_present=False)
     psd_line = out.splitlines()[2]
     assert "░" in psd_line and "█" not in psd_line
+
+
+from eida_consistency.report.report import create_report_object
+
+
+def _rec(**kw):
+    base = dict(index=1, network="HL", station="A", channel="HNZ", location="",
+                available=True, dataselect_success=True, dataselect_type="SingleTrace",
+                consistent=True, scoreable=True, starttime="2024-06-02T12:00:00",
+                endtime="2024-06-02T12:10:00")
+    base.update(kw)
+    return base
+
+
+def test_summary_counts_data_but_no_psd():
+    recs = [
+        _rec(psd_consistent=False, psd_status="Inconsistent", psd_required=True),
+        _rec(psd_consistent=True, psd_status="Consistent", psd_required=True),
+        _rec(psd_consistent=None, psd_status="Unsupported", psd_required=True),
+        _rec(psd_consistent=None, psd_status="Skipped", psd_required=False),
+    ]
+    summary = create_report_object("NOA", 1, 1, 600, recs)["summary"]
+    assert summary["data_yes_psd_no"] == 1
+    assert summary["psd_unsupported"] == 1
+    assert summary["psd_skipped"] == 1
+    assert summary["psd_required_count"] == 3
+    # existing A–D score untouched (all A–D consistent)
+    assert summary["score"] == 100.0

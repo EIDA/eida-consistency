@@ -261,6 +261,11 @@ def create_report_object(
         if r["consistent"] is False and (not r["available"]) and r["dataselect_success"]
     )
 
+    data_yes_psd_no = sum(1 for r in records if r.get("psd_consistent") is False)
+    psd_unsupported = sum(1 for r in records if r.get("psd_status") == "Unsupported")
+    psd_skipped = sum(1 for r in records if r.get("psd_status") == "Skipped")
+    psd_required_count = sum(1 for r in records if r.get("psd_required") is True)
+
     return {
         "summary": {
             "version": __version__,
@@ -281,6 +286,10 @@ def create_report_object(
             "score": round(score, 2),
             "availability_yes_dataselect_no": avail_yes_ds_no,
             "availability_no_dataselect_yes": avail_no_ds_yes,
+            "data_yes_psd_no": data_yes_psd_no,
+            "psd_unsupported": psd_unsupported,
+            "psd_skipped": psd_skipped,
+            "psd_required_count": psd_required_count,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         },
         "results": records,
