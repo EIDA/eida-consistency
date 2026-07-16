@@ -131,3 +131,14 @@ def test_runner_skips_psd_when_disabled(monkeypatch, tmp_path):
     _stub_pipeline(monkeypatch, calls)
     runner_mod.run_consistency_check(node="NOA", epochs=1, check_psd=False, report_dir=tmp_path)
     assert calls == []  # psd_coverage NOT called
+
+
+def test_runner_report_json_contains_psd_fields(monkeypatch, tmp_path):
+    calls = []
+    _stub_pipeline(monkeypatch, calls)
+    path = runner_mod.run_consistency_check(node="NOA", epochs=1, check_psd=True, report_dir=tmp_path)
+    report = json.loads(path.read_text())
+    rec = report["results"][0]
+    assert "psd_status" in rec and "psd_present" in rec and "psd_required" in rec
+    assert "psd" in rec["coverage"]
+    assert "data_yes_psd_no" in report["summary"]
