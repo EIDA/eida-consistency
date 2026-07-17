@@ -228,6 +228,50 @@ export function explainRecord(record) {
   const total = gaps.reduce((s, m) => s + (_parseUTC(m.end) - _parseUTC(m.start)) / 1000, 0);
   return { cls: 'bad', text: `⚠ Inconsistency: across ${gaps.length} intervals (${fmtDuration(total)} total), ${phrase}.` };
 }
+// ── PSD (Availability / Dataselect / PSD triangle) ────────────────────────
+// A record has PSD info only when the run checked it (psd_status set).
+export function psdChecked(record) {
+  return record && record.psd_status != null;
+}
+
+// The PSD verdict, in words, gated by the 2024-01-01 obligation: a missing PSD
+// on/after 2024 is a violation; before 2024 it's an informational gap.
+export function psdVerdict(record) {
+  if (!psdChecked(record)) return null;
+  const st = record.psd_status;
+  if (st === 'Unsupported') return { cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
+  if (st === 'Skipped') return { cls: 'mut', text: 'PSD skipped (transient)' };
+  if (record.psd_consistent === false)
+    return record.psd_required
+      ? { cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
+      : { cls: 'warn', text: 'pre-2024 PSD gap (informational)' };
+  return { cls: 'ok', text: 'PSD consistent' };
+}
+
+const _TRI = { av: ['▼', '▽'], ds: ['▲', '△'], psd: ['▶', '▷'] };
+// Filled/hollow triangle triad string: filled=present, hollow=absent, '?'=unknown.
+export function psdTriad(record) {
+  const g = (pair, present) => present == null ? '?' : (present ? pair[0] : pair[1]);
+  return `${g(_TRI.av, !!record.available)} ${g(_TRI.ds, !!record.dataselect_success)} `
+    + `${g(_TRI.psd, psdChecked(record) ? !!record.psd_present : null)}`;
+}
+
+// Roll up the PSD dimension across the records for the summary header.
+export function psdCounts(results) {
+  const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, unsupported: 0, skipped: 0 };
+  for (const r of results || []) {
+    if (!psdChecked(r)) continue;
+    c.checked++;
+    const t = psdVerdict(r).text;
+    if (t.startsWith('PSD violation')) c.violations++;
+    else if (t.startsWith('pre-2024')) c.pregaps++;
+    else if (t.startsWith('PSD n/a')) c.unsupported++;
+    else if (t.startsWith('PSD skipped')) c.skipped++;
+    else c.consistent++;
+  }
+  return c;
+}
+
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => (/^https?:\/\//i.test(String(u ?? '')) ? String(u) : '');
 
@@ -258,7 +302,7 @@ export function timelineSVG(windowStart, windowEnd, avail, ds, mismatch) {
   </svg>`;
 }
 
-export function renderSummary(s) {
+export function renderSummary(s, results) {
   s = s || {};
   const score = Math.max(0, Math.min(100, Number(s.score ?? 0)));
   const r = 26, C = 2 * Math.PI * r;
@@ -279,7 +323,21 @@ export function renderSummary(s) {
       <div class="ts">${esc(s.timestamp ?? '')}</div>
     </div>
     <div class="dirs">${bar(`▲ ${esc(ds)} data-only`, ds, 'up')}${bar(`▼ ${esc(av)} avail-only`, av, 'down')}</div>
+    ${psdChips(results)}
   </header>`;
+}
+
+// PSD chip row for the summary header; empty when the run didn't check PSD.
+function psdChips(results) {
+  const c = psdCounts(results);
+  if (!c.checked) return '';
+  const extra = (c.unsupported || c.skipped)
+    ? `<span class="chip mut">${esc(c.unsupported + c.skipped)} PSD n/a</span>` : '';
+  return `<div class="chips psd" title="Availability/Dataselect/PSD triangle — PSD required only for data on/after 2024-01-01">
+    <span class="chip lbl">PSD</span>
+    <span class="chip bad">${esc(c.violations)} violations (≥2024)</span>
+    <span class="chip warn">${esc(c.pregaps)} pre-2024 gaps</span>
+    <span class="chip ok">${esc(c.consistent)} consistent</span>${extra}</div>`;
 }
 
 const COLUMNS = [
@@ -292,7 +350,13 @@ const COLUMNS = [
 
 export function renderResultsTable(results, filter, sort) {
   const key = sort && sort.key, dir = sort && sort.dir;
-  const head = COLUMNS.map(c => {
+  const hasPsd = (results || []).some(psdChecked);
+  // Insert the PSD column after "Disagreement" only when the report has PSD data,
+  // so pre-PSD reports render exactly as before.
+  const cols = hasPsd
+    ? [...COLUMNS.slice(0, 3), { label: '▼▲▶ PSD', sort: null }, ...COLUMNS.slice(3)]
+    : COLUMNS;
+  const head = cols.map(c => {
     if (!c.sort) return `<th>${c.label}</th>`;
     const active = c.sort === key;
     const arrow = active ? (dir === 'asc' ? ' ▲' : ' ▼') : '';
@@ -307,8 +371,13 @@ export function renderResultsTable(results, filter, sort) {
     const { count } = gapStats(r);
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     const v = recordVerdict(r);
+    let psdCell = '';
+    if (hasPsd) {
+      const pv = psdVerdict(r);
+      psdCell = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pv ? pv.text : 'PSD not checked')}">${esc(psdTriad(r))}</span></td>`;
+    }
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCell}
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
@@ -339,6 +408,16 @@ function reqLinks(kind, url) {
 export function renderDetail(record) {
   const ex = explainRecord(record);
   const parts = [`<p class="explain ${ex.cls}">${esc(ex.text)}</p>`];
+  if (psdChecked(record)) {
+    const pv = psdVerdict(record);
+    const req = record.psd_required ? 'required (data on/after 2024-01-01)' : 'not required (pre-2024)';
+    const covPsd = (record.coverage && record.coverage.psd) || [];
+    const covNote = covPsd.length
+      ? ` · PSD day record: ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}` : '';
+    parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> `
+      + `${esc(pv.text)} — ${esc(req)}${covNote}<br>`
+      + `<span class="mut">▼ Availability · ▲ Dataselect (ground truth) · ▶ PSD — filled = present, hollow = absent</span></p>`);
+  }
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
     const svg = timelineSVG(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);

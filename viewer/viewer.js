@@ -5,7 +5,7 @@ const $ = sel => document.querySelector(sel);
 const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', search: '' }, sort: { key: 'gap', dir: 'desc' } };
 
 function paint() {
-  $('#summary').innerHTML = renderSummary(state.report.summary);
+  $('#summary').innerHTML = renderSummary(state.report.summary, state.report.results);
   $('#results').innerHTML = renderResultsTable(sortRecords(state.report.results, state.sort.key, state.sort.dir), state.filter, state.sort);
 }
 

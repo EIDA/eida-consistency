@@ -342,3 +342,76 @@ test('renderDetail offers a dataselect run button for coverage-less reports', ()
   assert.match(html, /data-kind="dataselect"/);
   assert.match(html, /\/fdsnws\/dataselect\/1\/query/);
 });
+
+// ── PSD triangle (Availability / Dataselect / PSD) ────────────────────────
+import { psdChecked, psdVerdict, psdTriad, psdCounts } from './viewer.core.js';
+
+const psdViolation = {
+  index: 9, network: 'IV', station: 'CESX', location: '', channel: 'HHZ',
+  available: true, dataselect_success: true, consistent: true, mismatch: [],
+  psd_status: 'Inconsistent', psd_present: false, psd_required: true, psd_consistent: false,
+  starttime: '2025-01-05T05:55:50', endtime: '2025-01-05T06:05:50',
+  coverage: { availability: [], dataselect: [] },
+};
+const psdPregap = { ...psdViolation, index: 10, psd_required: false,
+  starttime: '2011-01-01T00:00:00', endtime: '2011-01-01T00:10:00' };
+const psdOk = { ...psdViolation, index: 11, psd_present: true, psd_consistent: true,
+  psd_status: 'Consistent',
+  coverage: { availability: [], dataselect: [], psd: [['2025-01-05T00:00:00Z', '2025-01-06T00:00:01Z']] } };
+const noPsd = { index: 12, network: 'HL', station: 'X', location: '', channel: 'HHZ',
+  available: true, dataselect_success: true, consistent: true, mismatch: [] };
+
+test('psdChecked true only when psd_status present', () => {
+  assert.equal(psdChecked(psdOk), true);
+  assert.equal(psdChecked(noPsd), false);
+});
+
+test('psdVerdict distinguishes violation, pre-2024 gap, consistent, none', () => {
+  assert.equal(psdVerdict(psdViolation).cls, 'bad');
+  assert.match(psdVerdict(psdViolation).text, /violation/);
+  assert.equal(psdVerdict(psdPregap).cls, 'warn');
+  assert.match(psdVerdict(psdPregap).text, /pre-2024/);
+  assert.equal(psdVerdict(psdOk).cls, 'ok');
+  assert.equal(psdVerdict(noPsd), null);
+});
+
+test('psdTriad renders filled/hollow triangles', () => {
+  assert.equal(psdTriad(psdViolation), '▼ ▲ ▷');  // avail+data present, PSD absent
+  assert.equal(psdTriad(psdOk), '▼ ▲ ▶');
+});
+
+test('psdCounts rolls up the PSD dimension', () => {
+  const c = psdCounts([psdViolation, psdPregap, psdOk, noPsd]);
+  assert.equal(c.checked, 3);
+  assert.equal(c.violations, 1);
+  assert.equal(c.pregaps, 1);
+  assert.equal(c.consistent, 1);
+});
+
+test('renderSummary shows PSD chips when records carry PSD', () => {
+  const html = renderSummary({ node: 'IV', score: 70 }, [psdViolation, psdPregap, psdOk]);
+  assert.match(html, /1 violations/);
+  assert.match(html, /pre-2024 gaps/);
+});
+
+test('renderSummary omits PSD chips for pre-PSD reports', () => {
+  const html = renderSummary({ node: 'X', score: 80 }, [noPsd]);
+  assert.doesNotMatch(html, /PSD/);
+});
+
+test('renderResultsTable adds a PSD column with the triad when data present', () => {
+  const html = renderResultsTable([psdViolation], { onlyInconsistent: false, direction: 'both', search: '' });
+  assert.match(html, /PSD/);
+  assert.match(html, /▼ ▲ ▷/);
+});
+
+test('renderResultsTable has no PSD column for pre-PSD reports', () => {
+  const html = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
+  assert.doesNotMatch(html, /PSD/);
+});
+
+test('renderDetail shows the PSD line when checked', () => {
+  const html = renderDetail(psdOk);
+  assert.match(html, /psd-line/);
+  assert.match(html, /PSD consistent/);
+});

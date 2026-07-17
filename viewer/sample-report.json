@@ -21,7 +21,11 @@
     "timestamp": "2026-06-28T21:54:48.146511+00:00",
     "candidates_generated": 30,
     "candidates_pool": 385,
-    "queries_performed": 36
+    "queries_performed": 36,
+    "data_yes_psd_no": 17,
+    "psd_unsupported": 0,
+    "psd_skipped": 0,
+    "psd_required_count": 7
   },
   "results": [
     {
@@ -44,7 +48,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2025-12-26T09:18:18",
       "endtime": "2025-12-26T09:28:18",
@@ -53,7 +58,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": true,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=SMTH&loc=--&cha=HHZ&start=2025-12-26T00:00:00&end=2025-12-26T23:59:59"
     },
     {
       "index": 7,
@@ -85,7 +96,8 @@
             "2015-07-05T09:09:09+00:00",
             "2015-07-05T09:19:09+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2015-07-05T09:09:09",
       "endtime": "2015-07-05T09:19:09",
@@ -94,7 +106,13 @@
         "start": "2015-07-05T09:09:09.000000Z",
         "end": "2015-07-05T09:19:09.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=IACM&loc=--&cha=HNN&start=2015-07-05T00:00:00&end=2015-07-05T23:59:59"
     },
     {
       "index": 3,
@@ -126,7 +144,8 @@
             "2021-04-15T18:25:20+00:00",
             "2021-04-15T18:35:20+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2021-04-15T18:25:20",
       "endtime": "2021-04-15T18:35:20",
@@ -135,7 +154,13 @@
         "start": "2021-04-15T18:25:20.000000Z",
         "end": "2021-04-15T18:35:20.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HT&sta=TYR6&loc=--&cha=HHZ&start=2021-04-15T00:00:00&end=2021-04-15T23:59:59"
     },
     {
       "index": 5,
@@ -168,7 +193,8 @@
             "2021-02-02T03:13:51+00:00",
             "2021-02-02T03:23:50.997999+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2021-02-02T03:13:51",
       "endtime": "2021-02-02T03:23:51",
@@ -177,7 +203,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=5S&sta=R84DA&loc=00&cha=ENE&start=2021-02-02T00:00:00&end=2021-02-02T23:59:59"
     },
     {
       "index": 10,
@@ -209,7 +241,8 @@
             "2020-08-16T21:25:47+00:00",
             "2020-08-16T21:35:47+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2020-08-16T21:25:47",
       "endtime": "2020-08-16T21:35:47",
@@ -218,7 +251,13 @@
         "start": "2020-08-16T21:25:47.000000Z",
         "end": "2020-08-16T21:35:47.000000Z",
         "location": "00"
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=EFSA&loc=00&cha=HNZ&start=2020-08-16T00:00:00&end=2020-08-16T23:59:59"
     },
     {
       "index": 4,
@@ -251,7 +290,8 @@
             "2015-01-28T10:54:32.003000+00:00",
             "2015-01-28T11:04:32+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2015-01-28T10:54:32",
       "endtime": "2015-01-28T11:04:32",
@@ -260,7 +300,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HT&sta=DRAG&loc=--&cha=HHN&start=2015-01-28T00:00:00&end=2015-01-28T23:59:59"
     },
     {
       "index": 6,
@@ -293,7 +339,8 @@
             "2024-11-04T17:50:04+00:00",
             "2024-11-04T18:00:04+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2024-11-04T17:50:04",
       "endtime": "2024-11-04T18:00:04",
@@ -302,7 +349,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": true,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=ME&sta=PLAV0&loc=--&cha=HNZ&start=2024-11-04T00:00:00&end=2024-11-04T23:59:59"
     },
     {
       "index": 8,
@@ -335,7 +388,8 @@
             "2009-07-23T08:01:46.005000+00:00",
             "2009-07-23T08:11:45.995000+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2009-07-23T08:01:46",
       "endtime": "2009-07-23T08:11:46",
@@ -344,7 +398,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HA&sta=LAKA&loc=--&cha=HHZ&start=2009-07-23T00:00:00&end=2009-07-23T23:59:59"
     },
     {
       "index": 14,
@@ -376,7 +436,8 @@
             "2014-12-21T12:02:22+00:00",
             "2014-12-21T12:12:22+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2014-12-21T12:02:22",
       "endtime": "2014-12-21T12:12:22",
@@ -385,7 +446,13 @@
         "start": "2014-12-21T12:02:22.000000Z",
         "end": "2014-12-21T12:12:22.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=PRK&loc=--&cha=HHE&start=2014-12-21T00:00:00&end=2014-12-21T23:59:59"
     },
     {
       "index": 15,
@@ -407,7 +474,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2022-01-12T17:13:11",
       "endtime": "2022-01-12T17:23:11",
@@ -416,7 +484,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=5S&sta=R4267&loc=00&cha=ENZ&start=2022-01-12T00:00:00&end=2022-01-12T23:59:59"
     },
     {
       "index": 1,
@@ -448,7 +522,8 @@
             "2019-08-11T08:53:28+00:00",
             "2019-08-11T09:03:28+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2019-08-11T08:53:28",
       "endtime": "2019-08-11T09:03:28",
@@ -457,7 +532,13 @@
         "start": "2019-08-11T08:53:28.000000Z",
         "end": "2019-08-11T09:03:28.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HA&sta=FYLH&loc=--&cha=HHE&start=2019-08-11T00:00:00&end=2019-08-11T23:59:59"
     },
     {
       "index": 18,
@@ -489,6 +570,12 @@
             "2025-07-17T00:19:43+00:00",
             "2025-07-17T00:29:43+00:00"
           ]
+        ],
+        "psd": [
+          [
+            "2025-07-17T00:00:00.100000Z",
+            "2025-07-17T23:59:59.900000Z"
+          ]
         ]
       },
       "starttime": "2025-07-17T00:19:43",
@@ -498,7 +585,13 @@
         "start": "2025-07-17T00:19:43.000000Z",
         "end": "2025-07-17T00:29:43.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": true,
+      "psd_present": true,
+      "psd_consistent": true,
+      "psd_status": "Consistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HT&sta=CHRI&loc=--&cha=HHE&start=2025-07-17T00:00:00&end=2025-07-17T23:59:59"
     },
     {
       "index": 11,
@@ -531,7 +624,8 @@
             "2015-12-14T12:12:21+00:00",
             "2015-12-14T12:22:21+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2015-12-14T12:12:21",
       "endtime": "2015-12-14T12:22:21",
@@ -540,7 +634,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=MTHA&loc=00&cha=HNN&start=2015-12-14T00:00:00&end=2015-12-14T23:59:59"
     },
     {
       "index": 16,
@@ -572,7 +672,8 @@
             "2017-04-17T23:51:02+00:00",
             "2017-04-18T00:01:02+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2017-04-17T23:51:02",
       "endtime": "2017-04-18T00:01:02",
@@ -581,7 +682,13 @@
         "start": "2017-04-17T23:51:02.000000Z",
         "end": "2017-04-18T00:01:02.000000Z",
         "location": "00"
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=NGRA&loc=00&cha=HNE&start=2017-04-17T00:00:00&end=2017-04-17T23:59:59"
     },
     {
       "index": 12,
@@ -613,7 +720,8 @@
             "2016-05-24T04:01:17.004999+00:00",
             "2016-05-24T04:11:17+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2016-05-24T04:01:17",
       "endtime": "2016-05-24T04:11:17",
@@ -622,7 +730,13 @@
         "start": "2016-05-24T04:01:17.000000Z",
         "end": "2016-05-24T04:11:17.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HC&sta=KLMT&loc=--&cha=HHZ&start=2016-05-24T00:00:00&end=2016-05-24T23:59:59"
     },
     {
       "index": 13,
@@ -644,7 +758,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2018-02-25T09:34:40",
       "endtime": "2018-02-25T09:44:40",
@@ -653,7 +768,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HC&sta=LENT&loc=--&cha=HNN&start=2018-02-25T00:00:00&end=2018-02-25T23:59:59"
     },
     {
       "index": 20,
@@ -685,7 +806,8 @@
             "2014-08-24T19:21:52+00:00",
             "2014-08-24T19:31:52+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2014-08-24T19:21:52",
       "endtime": "2014-08-24T19:31:52",
@@ -694,7 +816,13 @@
         "start": "2014-08-24T19:21:52.000000Z",
         "end": "2014-08-24T19:31:52.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HA&sta=LAKA&loc=--&cha=HHN&start=2014-08-24T00:00:00&end=2014-08-24T23:59:59"
     },
     {
       "index": 17,
@@ -716,7 +844,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2017-05-25T07:58:33",
       "endtime": "2017-05-25T08:08:33",
@@ -725,7 +854,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=KEF5&loc=--&cha=HHE&start=2017-05-25T00:00:00&end=2017-05-25T23:59:59"
     },
     {
       "index": 19,
@@ -758,7 +893,8 @@
             "2021-01-02T01:14:47+00:00",
             "2021-01-02T01:24:46.997999+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2021-01-02T01:14:47",
       "endtime": "2021-01-02T01:24:47",
@@ -767,7 +903,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=5S&sta=R7F9F&loc=00&cha=ENE&start=2021-01-02T00:00:00&end=2021-01-02T23:59:59"
     },
     {
       "index": 21,
@@ -800,7 +942,8 @@
             "2020-05-15T06:32:50+00:00",
             "2020-05-15T06:42:50+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2020-05-15T06:32:50",
       "endtime": "2020-05-15T06:42:50",
@@ -809,7 +952,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=KIAA&loc=00&cha=HNE&start=2020-05-15T00:00:00&end=2020-05-15T23:59:59"
     },
     {
       "index": 27,
@@ -831,7 +980,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2017-10-17T05:41:33",
       "endtime": "2017-10-17T05:51:33",
@@ -840,7 +990,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HC&sta=LENT&loc=--&cha=HNE&start=2017-10-17T00:00:00&end=2017-10-17T23:59:59"
     },
     {
       "index": 26,
@@ -862,7 +1018,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2018-03-04T02:11:00",
       "endtime": "2018-03-04T02:21:00",
@@ -871,7 +1028,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HI&sta=AST1&loc=--&cha=HNE&start=2018-03-04T00:00:00&end=2018-03-04T23:59:59"
     },
     {
       "index": 24,
@@ -903,7 +1066,8 @@
             "2011-12-20T00:23:11+00:00",
             "2011-12-20T00:33:11+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2011-12-20T00:23:11",
       "endtime": "2011-12-20T00:33:11",
@@ -912,7 +1076,13 @@
         "start": "2011-12-20T00:23:11.000000Z",
         "end": "2011-12-20T00:33:11.000000Z",
         "location": "00"
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=JAN&loc=00&cha=HNZ&start=2011-12-20T00:00:00&end=2011-12-20T23:59:59"
     },
     {
       "index": 29,
@@ -934,7 +1104,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2023-04-19T05:31:20",
       "endtime": "2023-04-19T05:41:20",
@@ -943,7 +1114,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=5S&sta=R689F&loc=00&cha=ENE&start=2023-04-19T00:00:00&end=2023-04-19T23:59:59"
     },
     {
       "index": 25,
@@ -965,7 +1142,8 @@
       "mismatch": [],
       "coverage": {
         "availability": [],
-        "dataselect": []
+        "dataselect": [],
+        "psd": []
       },
       "starttime": "2023-10-06T02:31:49",
       "endtime": "2023-10-06T02:41:49",
@@ -974,7 +1152,13 @@
         "start": null,
         "end": null,
         "location": null
-      }
+      },
+      "psd_required": false,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_consistent": true,
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HC&sta=NERO&loc=--&cha=HNE&start=2023-10-06T00:00:00&end=2023-10-06T23:59:59"
     },
     {
       "index": 30,
@@ -1006,7 +1190,8 @@
             "2022-02-17T22:04:20.005000+00:00",
             "2022-02-17T22:14:19.995000+00:00"
           ]
-        ]
+        ],
+        "psd": []
       },
       "starttime": "2022-02-17T22:04:20",
       "endtime": "2022-02-17T22:14:20",
@@ -1015,7 +1200,13 @@
         "start": "2022-02-17T22:04:20.000000Z",
         "end": "2022-02-17T22:14:20.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": false,
+      "psd_present": false,
+      "psd_consistent": false,
+      "psd_status": "Inconsistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HT&sta=FNA2&loc=--&cha=HHE&start=2022-02-17T00:00:00&end=2022-02-17T23:59:59"
     },
     {
       "index": 22,
@@ -1047,6 +1238,12 @@
             "2025-02-09T03:20:28+00:00",
             "2025-02-09T03:30:28+00:00"
           ]
+        ],
+        "psd": [
+          [
+            "2025-02-09T00:00:00.100000Z",
+            "2025-02-09T23:59:59.900000Z"
+          ]
         ]
       },
       "starttime": "2025-02-09T03:20:28",
@@ -1056,7 +1253,13 @@
         "start": "2025-02-09T03:20:28.000000Z",
         "end": "2025-02-09T03:30:28.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": true,
+      "psd_present": true,
+      "psd_consistent": true,
+      "psd_status": "Consistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=IACM&loc=--&cha=HHZ&start=2025-02-09T00:00:00&end=2025-02-09T23:59:59"
     },
     {
       "index": 23,
@@ -1088,6 +1291,12 @@
             "2025-06-08T13:54:43+00:00",
             "2025-06-08T14:04:43+00:00"
           ]
+        ],
+        "psd": [
+          [
+            "2025-06-08T00:00:00.100000Z",
+            "2025-06-08T23:59:59.900000Z"
+          ]
         ]
       },
       "starttime": "2025-06-08T13:54:43",
@@ -1097,7 +1306,13 @@
         "start": "2025-06-08T13:54:43.000000Z",
         "end": "2025-06-08T14:04:43.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": true,
+      "psd_present": true,
+      "psd_consistent": true,
+      "psd_status": "Consistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HA&sta=THIV&loc=--&cha=HHE&start=2025-06-08T00:00:00&end=2025-06-08T23:59:59"
     },
     {
       "index": 28,
@@ -1129,6 +1344,12 @@
             "2025-12-29T21:40:20+00:00",
             "2025-12-29T21:50:19.999999+00:00"
           ]
+        ],
+        "psd": [
+          [
+            "2025-12-29T00:00:00.100000Z",
+            "2025-12-29T23:59:59.900000Z"
+          ]
         ]
       },
       "starttime": "2025-12-29T21:40:20",
@@ -1138,7 +1359,13 @@
         "start": "2025-12-29T21:40:20.000000Z",
         "end": "2025-12-29T21:50:20.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": true,
+      "psd_present": true,
+      "psd_consistent": true,
+      "psd_status": "Consistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HL&sta=SANT&loc=--&cha=HHZ&start=2025-12-29T00:00:00&end=2025-12-29T23:59:59"
     },
     {
       "index": 2,
@@ -1170,6 +1397,12 @@
             "2025-11-11T21:22:41+00:00",
             "2025-11-11T21:32:41+00:00"
           ]
+        ],
+        "psd": [
+          [
+            "2025-11-11T00:00:00.100000Z",
+            "2025-11-11T23:59:59.900000Z"
+          ]
         ]
       },
       "starttime": "2025-11-11T21:22:41",
@@ -1179,7 +1412,13 @@
         "start": "2025-11-11T21:22:41.000000Z",
         "end": "2025-11-11T21:32:41.000000Z",
         "location": ""
-      }
+      },
+      "psd_required": true,
+      "psd_present": true,
+      "psd_consistent": true,
+      "psd_status": "Consistent",
+      "psd_success": true,
+      "psd_url": "https://example.org/eidaws/psd/1/coverage?net=HA&sta=THIV&loc=--&cha=HHN&start=2025-11-11T00:00:00&end=2025-11-11T23:59:59"
     }
   ]
 }
