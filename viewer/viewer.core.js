@@ -239,13 +239,13 @@ export function psdChecked(record) {
 export function psdVerdict(record) {
   if (!psdChecked(record)) return null;
   const st = record.psd_status;
-  if (st === 'Unsupported') return { cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
-  if (st === 'Skipped') return { cls: 'mut', text: 'PSD skipped (transient)' };
+  if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
+  if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', text: 'PSD skipped (transient)' };
   if (record.psd_consistent === false)
     return record.psd_required
-      ? { cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
-      : { cls: 'warn', text: 'pre-2024 PSD gap (informational)' };
-  return { cls: 'ok', text: 'PSD consistent' };
+      ? { kind: 'violation', cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
+      : { kind: 'pregap', cls: 'warn', text: 'pre-2024 PSD gap (informational)' };
+  return { kind: 'ok', cls: 'ok', text: 'PSD consistent' };
 }
 
 const _TRI = { av: ['▼', '▽'], ds: ['▲', '△'], psd: ['▶', '▷'] };
@@ -257,17 +257,13 @@ export function psdTriad(record) {
 }
 
 // Roll up the PSD dimension across the records for the summary header.
+const _PSD_BUCKET = { violation: 'violations', pregap: 'pregaps', unsupported: 'unsupported', skipped: 'skipped', ok: 'consistent' };
 export function psdCounts(results) {
   const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, unsupported: 0, skipped: 0 };
   for (const r of results || []) {
     if (!psdChecked(r)) continue;
     c.checked++;
-    const t = psdVerdict(r).text;
-    if (t.startsWith('PSD violation')) c.violations++;
-    else if (t.startsWith('pre-2024')) c.pregaps++;
-    else if (t.startsWith('PSD n/a')) c.unsupported++;
-    else if (t.startsWith('PSD skipped')) c.skipped++;
-    else c.consistent++;
+    c[_PSD_BUCKET[psdVerdict(r).kind]]++;
   }
   return c;
 }
@@ -322,8 +318,7 @@ export function renderSummary(s, results) {
       <div class="chips"><span class="chip bad">${esc(inc)} inconsistent</span><span class="chip ok">${esc(con)} consistent</span><span class="chip mut">${esc(skp)} skipped</span></div>
       <div class="ts">${esc(s.timestamp ?? '')}</div>
     </div>
-    <div class="dirs">${bar(`▲ ${esc(ds)} data-only`, ds, 'up')}${bar(`▼ ${esc(av)} avail-only`, av, 'down')}</div>
-    ${psdChips(results)}
+    <div class="dirs">${bar(`▲ ${esc(ds)} data-only`, ds, 'up')}${bar(`▼ ${esc(av)} avail-only`, av, 'down')}</div>${psdChips(results)}
   </header>`;
 }
 
