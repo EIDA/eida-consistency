@@ -2,7 +2,7 @@
 import { renderSummary, renderResultsTable, renderDetail, renderIndex, runRequest, sortRecords } from './viewer.core.js';
 
 const $ = sel => document.querySelector(sel);
-const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', search: '' }, sort: { key: 'gap', dir: 'desc' } };
+const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', psd: 'all', search: '' }, sort: { key: 'gap', dir: 'desc' } };
 
 function paint() {
   $('#summary').innerHTML = renderSummary(state.report.summary, state.report.results);
@@ -18,6 +18,7 @@ function setSort(key) {
 function wire() {
   $('#onlyInc').addEventListener('change', e => { state.filter.onlyInconsistent = e.target.checked; paint(); });
   $('#dir').addEventListener('change', e => { state.filter.direction = e.target.value; paint(); });
+  $('#psd').addEventListener('change', e => { state.filter.psd = e.target.value; paint(); });
   $('#search').addEventListener('input', e => { state.filter.search = e.target.value; paint(); });
   $('#results').addEventListener('click', e => {
     const th = e.target.closest('th[data-sort]');
@@ -88,6 +89,8 @@ function showReport(report) {
   state.report = report;
   $('#detail').innerHTML = '';
   $('#toolbar').style.display = '';
+  // The PSD filter only applies when the report carries PSD data.
+  $('#psd').style.display = report.results.some(r => r.psd_status != null) ? '' : 'none';
   wire();
   paint();
 }

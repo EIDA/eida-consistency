@@ -44,7 +44,19 @@ export function recordDirections(record) {
 }
 
 export function matchesFilter(record, filter) {
-  if (filter.onlyInconsistent && record.consistent !== false) return false;
+  // An explicit PSD filter takes over from "only inconsistent" (a PSD violation
+  // can be availability/dataselect-consistent), so picking a PSD category shows
+  // all rows in it regardless of the A–D verdict.
+  const psdSel = filter.psd && filter.psd !== 'all' ? filter.psd : null;
+  if (!psdSel && filter.onlyInconsistent && record.consistent !== false) return false;
+  if (psdSel) {
+    const v = psdVerdict(record);
+    const kind = v ? v.kind : null;
+    const ok = psdSel === 'na'
+      ? (kind === 'unsupported' || kind === 'skipped')
+      : kind === (psdSel === 'consistent' ? 'ok' : psdSel);
+    if (!ok) return false;
+  }
   if (filter.direction && filter.direction !== 'both') {
     if (!recordDirections(record).has(filter.direction)) return false;
   }
@@ -376,7 +388,18 @@ export function renderResultsTable(results, filter, sort) {
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
-  return `<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  return `${hasPsd ? psdLegend() : ''}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// Legend for the PSD triangle column: what each triangle means and how colour
+// encodes the verdict.
+export function psdLegend() {
+  return `<div class="psd-legend"><strong>PSD triangle</strong> — `
+    + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD · `
+    + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing). `
+    + `<span class="psd bad">▶ violation</span> data ≥ 2024 without PSD · `
+    + `<span class="psd warn">▶ pre-2024 gap</span> not required · `
+    + `<span class="psd ok">▶ consistent</span></div>`;
 }
 
 export function sortRecords(results, key, dir) {

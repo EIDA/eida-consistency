@@ -53,6 +53,9 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .psd.ok{color:var(--ok)} .psd.bad{color:var(--bad)} .psd.warn{color:var(--warn)} .psd.mut{color:var(--mut)}
 .psd-line{margin:.3rem 0;font-size:.9rem} .psd-tri{font-weight:700;letter-spacing:1px;margin-right:.3rem}
 .psd-line.bad{color:var(--bad)} .psd-line.ok{color:var(--ok)} .psd-line.warn{color:var(--warn)} .psd-line.mut{color:var(--mut)}
+.psd-legend{color:var(--mut);font-size:.8rem;line-height:1.5;margin:.6rem 0 .3rem;padding:.5rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.psd-legend b{color:var(--fg);font-weight:700}
+.psd-legend .psd{margin:0 .1rem}
 .explain{margin:.1rem 0 .7rem;font-size:.92rem;font-weight:500}
 .explain.bad{color:var(--bad)} .explain.ok{color:var(--ok)} .explain.mut{color:var(--mut)}
 
@@ -107,6 +110,7 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
   <div class="toolbar" id="toolbar">
     <label><input type="checkbox" id="onlyInc" checked> only inconsistent</label>
     <select id="dir"><option value="both">all ▲▼</option><option value="dataselect">▲ Data only</option><option value="availability">▼ Avail only</option></select>
+    <select id="psd"><option value="all">PSD: all</option><option value="violation">▶ PSD violations (≥2024)</option><option value="pregap">▶ pre-2024 PSD gaps</option><option value="consistent">▶ PSD consistent</option><option value="na">PSD n/a</option></select>
     <input id="search" placeholder="search NET.STA.CHA">
     <span class="hint">click a column header to sort</span>
   </div>

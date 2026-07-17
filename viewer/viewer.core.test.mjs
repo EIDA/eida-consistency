@@ -415,3 +415,39 @@ test('renderDetail shows the PSD line when checked', () => {
   assert.match(html, /psd-line/);
   assert.match(html, /PSD consistent/);
 });
+
+import { psdLegend } from './viewer.core.js';
+
+test('matchesFilter psd=violation shows >=2024 data-without-PSD even when A-D consistent', () => {
+  const f = { onlyInconsistent: true, direction: 'both', psd: 'violation', search: '' };
+  assert.equal(matchesFilter(psdViolation, f), true);
+  assert.equal(matchesFilter(psdPregap, f), false);
+  assert.equal(matchesFilter(psdOk, f), false);
+});
+
+test('matchesFilter psd=pregap / psd=consistent select their categories', () => {
+  assert.equal(matchesFilter(psdPregap, { psd: 'pregap' }), true);
+  assert.equal(matchesFilter(psdViolation, { psd: 'pregap' }), false);
+  assert.equal(matchesFilter(psdOk, { psd: 'consistent' }), true);
+  assert.equal(matchesFilter(psdViolation, { psd: 'consistent' }), false);
+});
+
+test('matchesFilter psd=all keeps the normal onlyInconsistent behavior', () => {
+  assert.equal(matchesFilter(psdOk, { onlyInconsistent: true, psd: 'all' }), false);
+  assert.equal(matchesFilter(psdOk, { onlyInconsistent: false, psd: 'all' }), true);
+});
+
+test('renderResultsTable includes the PSD legend when data present, omits it otherwise', () => {
+  const withPsd = renderResultsTable([psdViolation], { onlyInconsistent: false, direction: 'both', search: '' });
+  assert.match(withPsd, /psd-legend/);
+  assert.match(withPsd, /PSD triangle/);
+  const without = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
+  assert.doesNotMatch(without, /psd-legend/);
+});
+
+test('psdLegend explains the glyphs', () => {
+  const l = psdLegend();
+  assert.match(l, /Availability/);
+  assert.match(l, /Dataselect/);
+  assert.match(l, /filled = has data/);
+});
