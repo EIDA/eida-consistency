@@ -484,3 +484,32 @@ def test_psd_scores_rounds_to_two_dp():
     recs = [_pr(psd_present=True), _pr(psd_present=False), _pr(psd_present=False)]  # 1/3 >=2024
     s = psd_scores(recs)
     assert s["psd_compliance_score"] == 33.33
+
+
+from eida_consistency.report.report import create_report_object
+
+
+def _rec_score(**kw):
+    base = dict(index=1, network="HL", station="A", channel="HNZ", location="",
+                available=True, dataselect_success=True, dataselect_type="SingleTrace",
+                consistent=True, scoreable=True, starttime="2024-06-02T12:00:00",
+                endtime="2024-06-02T12:10:00")
+    base.update(kw)
+    return base
+
+
+def test_summary_carries_psd_scores_without_touching_ad_score():
+    recs = [
+        _rec_score(psd_status="Inconsistent", psd_present=False, psd_required=True,
+                   psd_consistent=False),                                    # >=2024 miss
+        _rec_score(psd_status="Consistent", psd_present=True, psd_required=True,
+                   psd_consistent=True),                                     # >=2024 hit
+    ]
+    summary = create_report_object("NOA", 1, 1, 600, recs)["summary"]
+    assert summary["psd_evaluated"] == 2
+    assert summary["psd_present"] == 1
+    assert summary["psd_evaluated_2024"] == 2
+    assert summary["psd_compliance_score"] == 50.0
+    assert summary["psd_coverage_score"] == 50.0
+    # A/D score is unaffected by PSD misses (both records are A/D consistent)
+    assert summary["score"] == 100.0

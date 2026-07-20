@@ -416,6 +416,7 @@ def create_report_object(
     psd_unsupported = sum(1 for r in records if r.get("psd_status") == "Unsupported")
     psd_skipped = sum(1 for r in records if r.get("psd_status") == "Skipped")
     psd_required_count = sum(1 for r in records if r.get("psd_required") is True)
+    _pscores = psd_scores(records)
 
     return {
         "summary": {
@@ -441,6 +442,7 @@ def create_report_object(
             "psd_unsupported": psd_unsupported,
             "psd_skipped": psd_skipped,
             "psd_required_count": psd_required_count,
+            **_pscores,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         },
         "results": records,
