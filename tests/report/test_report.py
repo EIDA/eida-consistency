@@ -513,3 +513,33 @@ def test_summary_carries_psd_scores_without_touching_ad_score():
     assert summary["psd_coverage_score"] == 50.0
     # A/D score is unaffected by PSD misses (both records are A/D consistent)
     assert summary["score"] == 100.0
+
+
+from eida_consistency.report.report import build_psd_section
+
+
+def test_psd_section_shows_scores_and_network_note():
+    recs = [
+        _rec_score(station="V", psd_status="Inconsistent", psd_present=False,
+                   psd_required=True, psd_consistent=False),        # >=2024 miss
+        _rec_score(station="C", psd_status="Consistent", psd_present=True,
+                   psd_required=True, psd_consistent=True),         # >=2024 hit
+        _rec_score(station="S", dataselect_success=True, psd_status="Skipped",
+                   psd_present=False, psd_consistent=None),         # skipped
+        _rec_score(station="U", dataselect_success=True, psd_status="Unsupported",
+                   psd_present=False, psd_consistent=None),         # unsupported
+    ]
+    body = "\n".join(build_psd_section(recs))
+    assert "PSD compliance (≥2024): 50.0%" in body
+    assert "PSD coverage (all dates): 50.0%" in body
+    assert "1 window(s) skipped" in body
+    assert "1 unsupported" in body
+
+
+def test_psd_section_na_and_no_note_when_clean():
+    recs = [_rec_score(psd_status="Consistent", psd_present=True,
+                       psd_required=False, psd_consistent=True)]   # pre-2024 hit only
+    body = "\n".join(build_psd_section(recs))
+    assert "PSD compliance (≥2024): N/A" in body     # no >=2024 windows
+    assert "PSD coverage (all dates): 100.0%" in body
+    assert "skipped" not in body                     # note omitted when none
