@@ -431,3 +431,56 @@ def test_build_psd_section_no_violations_shows_all_clear():
     body = "\n".join(build_psd_section(recs))
     assert "None — every window" in body   # no violations
     assert "✅" in body
+
+
+from eida_consistency.report.report import psd_scores
+
+
+def _pr(**kw):
+    """A minimal record for PSD scoring."""
+    base = dict(dataselect_success=True, psd_status="Consistent",
+                psd_present=True, psd_required=True)
+    base.update(kw)
+    return base
+
+
+def test_psd_scores_population_excludes_nodata_skipped_unsupported():
+    recs = [
+        _pr(psd_status="Consistent", psd_present=True, psd_required=True),          # hit >=2024
+        _pr(psd_status="Inconsistent", psd_present=False, psd_required=True),       # miss >=2024
+        _pr(psd_status="Consistent", psd_present=True, psd_required=False),         # hit pre-2024
+        _pr(psd_status="Inconsistent", psd_present=False, psd_required=False),      # miss pre-2024
+        _pr(dataselect_success=False, psd_status="Consistent", psd_present=False),  # no data -> excluded
+        _pr(psd_status="Skipped", psd_present=False),                               # skipped -> excluded
+        _pr(psd_status="Unsupported", psd_present=False),                           # unsupported -> excluded
+    ]
+    s = psd_scores(recs)
+    assert s["psd_evaluated"] == 4          # 4 data-bearing definitive windows
+    assert s["psd_present"] == 2            # 2 hits
+    assert s["psd_evaluated_2024"] == 2     # 2 required windows
+    assert s["psd_present_2024"] == 1       # 1 hit among them
+    assert s["psd_coverage_score"] == 50.0
+    assert s["psd_compliance_score"] == 50.0
+
+
+def test_psd_scores_na_when_no_required_windows():
+    recs = [_pr(psd_required=False, psd_present=True),
+            _pr(psd_required=False, psd_present=False)]
+    s = psd_scores(recs)
+    assert s["psd_compliance_score"] is None      # no >=2024 windows -> N/A
+    assert s["psd_coverage_score"] == 50.0
+
+
+def test_psd_scores_na_when_nothing_scoreable():
+    recs = [_pr(dataselect_success=False, psd_status="Consistent"),
+            _pr(psd_status="Unsupported")]
+    s = psd_scores(recs)
+    assert s["psd_evaluated"] == 0
+    assert s["psd_coverage_score"] is None
+    assert s["psd_compliance_score"] is None
+
+
+def test_psd_scores_rounds_to_two_dp():
+    recs = [_pr(psd_present=True), _pr(psd_present=False), _pr(psd_present=False)]  # 1/3 >=2024
+    s = psd_scores(recs)
+    assert s["psd_compliance_score"] == 33.33

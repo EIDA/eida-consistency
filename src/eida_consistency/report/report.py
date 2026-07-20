@@ -229,6 +229,38 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
     return lines
 
 
+def psd_scores(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Two PSD scores over PSD-scoreable windows (see design 2026-07-21).
+
+    Scoreable = dataselect returned data AND the PSD check got a definitive
+    answer (status Consistent/Inconsistent). Skipped, Unsupported, and no-data
+    windows are excluded — mirroring how A/D excludes transient failures.
+    Returns the four counts and two nullable scores (None => N/A).
+    """
+    def scoreable(r):
+        return bool(r.get("dataselect_success")) and \
+            r.get("psd_status") in ("Consistent", "Inconsistent")
+
+    pool = [r for r in records if scoreable(r)]
+    evaluated = len(pool)
+    present = sum(1 for r in pool if r.get("psd_present"))
+    pool_2024 = [r for r in pool if r.get("psd_required") is True]
+    evaluated_2024 = len(pool_2024)
+    present_2024 = sum(1 for r in pool_2024 if r.get("psd_present"))
+
+    coverage = round(present / evaluated * 100.0, 2) if evaluated else None
+    compliance = round(present_2024 / evaluated_2024 * 100.0, 2) if evaluated_2024 else None
+
+    return {
+        "psd_evaluated": evaluated,
+        "psd_present": present,
+        "psd_evaluated_2024": evaluated_2024,
+        "psd_present_2024": present_2024,
+        "psd_compliance_score": compliance,
+        "psd_coverage_score": coverage,
+    }
+
+
 def render_timeline(window_start, window_end, avail, ds, width: int = 58, gaps=None,
                     psd_present=None) -> str:
     """Single-line coverage timeline across ``[window_start, window_end]``.
