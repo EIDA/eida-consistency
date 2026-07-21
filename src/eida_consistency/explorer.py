@@ -1,14 +1,11 @@
 """Explore inconsistency boundaries around reported results."""
 
-import json
 import logging
 import random
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
-
-import requests
 
 from eida_consistency.services.availability import get_availability_spans
 from eida_consistency.services.dataselect import dataselect
@@ -175,21 +172,13 @@ def explore_boundaries(
     rows are reported with null window so a consumer can see they were evaluated
     but need no action. The ``--json`` CLI flag dumps this dict to stdout.
     """
-    report_path = str(report_path)
-    if report_path.startswith("http://") or report_path.startswith("https://"):
-        from eida_consistency.utils.constants import USER_AGENT
-        logging.info(f"Fetching report from URL: {report_path}")
-        response = requests.get(report_path, headers={"User-Agent": USER_AGENT}, timeout=30)
-        response.raise_for_status()
-        report = response.json()
-    else:
-        report = json.loads(Path(report_path).read_text())
-    results = report["results"]
+    # Shared report loader / target selector (function-local import avoids a
+    # circular import: reverify imports the window-check primitives from here).
+    from eida_consistency.reverify import load_report, select_targets
 
-    if indices:
-        targets = [r for r in results if r["index"] in indices]
-    else:
-        targets = [r for r in results if r.get("consistent") is False]
+    report_path = str(report_path)
+    report = load_report(report_path)
+    targets = select_targets(report, indices)
 
     if not targets:
         logging.info("No targets to explore (all consistent or no matching index).")

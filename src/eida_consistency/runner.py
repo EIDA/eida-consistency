@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import concurrent.futures
 import json
 import sys
@@ -30,7 +29,6 @@ def run_consistency_check(
     epochs: int | str | None = 10,
     percentage: float | None = None,
     duration: int = 600,
-    seed: int | None = None,
     delete_old: bool = False,
     max_workers: int = 10,
     print_stdout: bool = False,
@@ -70,19 +68,11 @@ def run_consistency_check(
     elif percentage is not None:
         epochs = None
 
-    # OPEN ISSUE (seed removal): a seed only reproduces a run while the node's
-    # live station inventory is unchanged; weeks later the same seed selects
-    # different channels, so it cannot reproduce a specific finding. To
-    # re-verify a finding, replay its exact window (see explorer._check_window).
-    # Removal is pending confirmation that the Oculus/dmtri pipeline does not
-    # depend on the seed in the report filename / summary. See report.py.
-    if seed is None:
-        seed = random.randint(0, 999_999)
-        logging.info(f" Using generated seed: {seed}")
-    else:
-        logging.info(f" Using provided seed: {seed}")
-
-    random.seed(seed)
+    # The seed mechanism was removed: a seed cannot reproduce a run because the
+    # node's live inventory changes over time, so the same seed selects
+    # different channels later. To re-verify a specific finding, replay its
+    # exact window with 'explore'/'check' (deterministic; see
+    # explorer._check_window). Sampling is therefore unseeded.
     base_url = load_node_url(node)
 
     if percentage is not None:
@@ -220,7 +210,6 @@ def run_consistency_check(
     # --- Save reports into chosen report_dir ---
     report = create_report_object(
         node=node,
-        seed=seed,
         epochs=epochs,
         duration=duration,
         records=all_records,

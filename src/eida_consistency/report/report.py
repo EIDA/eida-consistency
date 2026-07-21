@@ -404,7 +404,6 @@ def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
 
 def create_report_object(
     node: str,
-    seed: int,
     epochs: int,
     duration: int,
     records: List[Dict[str, Any]],
@@ -443,7 +442,6 @@ def create_report_object(
         "summary": {
             "version": __version__,
             "node": node,
-            "seed": seed,
             "epochs_requested": epochs,
             "candidates_requested": candidates_requested,
             "candidates_tested": candidates_tested,
@@ -470,24 +468,29 @@ def create_report_object(
     }
 
 
-def _make_unique_filename(node: str, seed: int, extension: str) -> str:
-    """Create a unique file name for the report.
+def _make_unique_filename(node: str, timestamp: str, extension: str) -> str:
+    """Create a unique file name for the report, derived from its timestamp.
 
-    OPEN ISSUE (seed removal): the trailing ``_{seed}`` here, and the ``seed``
-    field in the run summary, are slated for removal because a seed does not
-    reproduce a finding across time (the live station inventory drifts, so the
-    same seed picks different channels later). Before removing, confirm the
-    Oculus / dmtri pipeline does not parse the seed from the filename or read
-    ``summary.seed`` — those consume these report files. Until then, kept as-is.
+    Scheme: ``{node}_{YYYYMMDD}_{HHMMSS}_{ffffff}.{ext}`` where the last field is
+    microseconds. This replaces the former trailing ``_{seed}`` slot (the seed
+    mechanism was removed -- a seed cannot reproduce a finding once the node's
+    live inventory drifts; reproduce via ``explore``/``check`` instead). The
+    4-part underscore shape and numeric last field are preserved so downstream
+    filename parsers keep working.
+
+    Deriving the stem from ``summary.timestamp`` (rather than a fresh clock read)
+    keeps the ``.json`` and ``.md`` of one run a matched pair, since microsecond
+    precision would otherwise differ between two ``datetime.now()`` calls.
     """
-    short_time = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    return f"{node.lower()}_{short_time}_{seed}.{extension}"
+    dt = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+    stamp = dt.astimezone(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    return f"{node.lower()}_{stamp}.{extension}"
 
 
 def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
     """Save the full report as pretty-printed JSON and return the file path."""
     report_dir.mkdir(parents=True, exist_ok=True)
-    filename = _make_unique_filename(report["summary"]["node"], report["summary"]["seed"], "json")
+    filename = _make_unique_filename(report["summary"]["node"], report["summary"]["timestamp"], "json")
     filepath = report_dir / filename
     filepath.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     return filepath
@@ -496,7 +499,7 @@ def save_report_json(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> P
 def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) -> Path:
     """Save the report as a human-readable Markdown file."""
     report_dir.mkdir(parents=True, exist_ok=True)
-    filename = _make_unique_filename(report["summary"]["node"], report["summary"]["seed"], "md")
+    filename = _make_unique_filename(report["summary"]["node"], report["summary"]["timestamp"], "md")
     filepath = report_dir / filename
 
     summary = report["summary"]
@@ -553,7 +556,6 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             "## Run Summary",
             "",
             f"- Tool version: `{summary.get('version', '?')}`",
-            f"- Seed: `{summary['seed']}`",
             f"- Time: `{summary['timestamp']}`",
             f"- Epochs requested: `{summary['epochs_requested']}`",
             f"- Candidates requested: `{summary.get('candidates_requested', '?')}`",

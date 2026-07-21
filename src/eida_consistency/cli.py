@@ -77,7 +77,6 @@ def cli(ctx, log_level, report_dir):
 @click.option("--node", help="EIDA node code (e.g., RESIF, NOA)")
 @click.option("--epochs", type=str, default="10", show_default=True, help="Number of epochs or percentage (e.g. '10', '0.05', '5%')")
 @click.option("--duration", type=int, default=600, show_default=True, help="Duration (s), must be >= 600")
-@click.option("--seed", type=int, help="Random seed")
 @click.option(
     "--psd/--no-psd", "check_psd", default=True, show_default=True,
     help="Also check PSD (eidaws/psd) coverage vs dataselect.",
@@ -106,7 +105,7 @@ def cli(ctx, log_level, report_dir):
     help="Directory to store reports (overrides the global --report-dir).",
 )
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, check_psd, delete_old, print_stdout, upload, report_dir_opt):
+def consistency(ctx, node, epochs, duration, check_psd, delete_old, print_stdout, upload, report_dir_opt):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = report_dir_opt or ctx.obj["report_dir"]
 
@@ -126,7 +125,6 @@ def consistency(ctx, node, epochs, duration, seed, check_psd, delete_old, print_
             node=node,
             epochs=epochs,
             duration=duration,
-            seed=seed,
             check_psd=check_psd,
             print_stdout=print_stdout,
             report_dir=report_dir,
@@ -291,12 +289,62 @@ def explore(ctx, report, index, days, verbose, as_json, report_dir_opt):
         except ValueError:
             raise click.UsageError(f"No report files found in {report_dir}")
 
+    if days == 0:
+        logging.info(
+            "Note: --days 0 only re-verifies each finding's window without "
+            "exploring boundaries. For a plain re-check, use 'rerun' instead."
+        )
+
     indices = list(index) if index else None
     result = explore_boundaries(report, indices, max_days=days, verbose=verbose)
     if as_json:
         # stdout only -- logging/progress already went to stderr -- so a caller
         # (e.g. `dmtri fix`) can parse stdout as JSON directly.
         click.echo(json.dumps(result, indent=2, default=str))
+
+
+# ----------------------------------------------------------------------
+# rerun command
+# ----------------------------------------------------------------------
+@cli.command()
+@click.argument("report", required=False, type=str)
+@click.option(
+    "--index", "-i",
+    multiple=True, type=int,
+    help="Indices of results to re-run (overrides scope).",
+)
+@click.option(
+    "--all", "all_rows", is_flag=True,
+    help="Re-verify every row, not just the inconsistent ones.",
+)
+@click.option("--verbose", is_flag=True, help="Print query URLs while re-running.")
+@click.option(
+    "--json", "as_json", is_flag=True,
+    help="Emit verdicts as JSON to stdout (logs/progress stay on stderr).",
+)
+@click.pass_context
+def rerun(ctx, report, index, all_rows, verbose, as_json):
+    """Re-verify a report's inconsistencies (no boundary walk, no dmtri)."""
+    from eida_consistency.rerun import rerun_report, render_summary
+
+    report_dir: Path = ctx.obj["report_dir"]
+    if not report:
+        try:
+            report = max(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
+            logging.info(f"Using latest report: {report}")
+        except ValueError:
+            raise click.UsageError(f"No report files found in {report_dir}")
+
+    indices = list(index) if index else None
+    result = rerun_report(report, indices, all_rows=all_rows, verbose=verbose)
+
+    if as_json:
+        click.echo(json.dumps(result, indent=2, default=str))
+        return
+
+    # Per-row verdicts already streamed from rerun_report as each finding was
+    # re-checked; just close with the tally (no duplicate table).
+    logging.info(f"Summary: {render_summary(result)}")
 
 
 # ----------------------------------------------------------------------

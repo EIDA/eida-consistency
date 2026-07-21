@@ -55,7 +55,6 @@ def main():
                 node=name,
                 epochs=20,        # 20 epochs per node
                 duration=600,     # 10 minutes per epoch
-                seed=None,        # random seed
                 report_dir=node_dir,
             )
 

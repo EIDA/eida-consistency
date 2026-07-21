@@ -153,6 +153,19 @@ def test_consistency_report_dir_after_subcommand(monkeypatch, tmp_path):
     assert called["report_dir"] == target
 
 
+def test_consistency_seed_option_removed(monkeypatch, tmp_path):
+    """--seed was removed: passing it is a usage error, and it never reaches the runner."""
+    called = {}
+    monkeypatch.setattr(cli, "run_consistency_check", lambda **kw: called.update(kw))
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.consistency, ["--node", "NOA", "--seed", "123"], obj={"report_dir": tmp_path}
+    )
+    assert result.exit_code != 0
+    assert "no such option" in result.output.lower()
+    assert called == {}  # runner not invoked at all
+
+
 # -----------------
 # compare command
 # -----------------
@@ -164,6 +177,50 @@ def test_compare_invokes(monkeypatch):
     result = runner.invoke(cli.compare, ["r1.json", "r2.json"], obj={"report_dir": Path(".")})
     assert result.exit_code == 0
     assert called == {"a": "r1.json", "b": "r2.json"}
+
+
+# -----------------
+# rerun command
+# -----------------
+
+_RERUN_RESULT = {
+    "schema_version": "1.0",
+    "node": "NOA",
+    "report": "r.json",
+    "results": [
+        {"index": 2, "label": "XX.STA..BHZ", "start": "2023-01-01T00:00:00",
+         "end": "2023-01-01T00:10:00", "verdict": "PERSISTS"},
+    ],
+}
+
+
+def test_rerun_prints_summary(monkeypatch, tmp_path, caplog):
+    # rerun_report is mocked, so per-row verdicts (which it streams itself) don't
+    # appear here; the CLI's own output is just the closing tally.
+    import eida_consistency.rerun as rerun_mod
+    monkeypatch.setattr(rerun_mod, "rerun_report", lambda *a, **k: _RERUN_RESULT)
+    caplog.set_level(logging.INFO)
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, ["r.json"], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0, result.output
+    assert "Summary: 1 re-run — 1 persists" in caplog.text
+
+
+def test_rerun_json_is_pure_stdout(monkeypatch, tmp_path):
+    import eida_consistency.rerun as rerun_mod
+    monkeypatch.setattr(rerun_mod, "rerun_report", lambda *a, **k: _RERUN_RESULT)
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, ["r.json", "--json"], obj={"report_dir": tmp_path})
+    assert result.exit_code == 0, result.output
+    parsed = json.loads(result.output)
+    assert parsed["results"][0]["verdict"] == "PERSISTS"
+
+
+def test_rerun_no_report_found(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(cli.rerun, [], obj={"report_dir": tmp_path})
+    assert result.exit_code != 0
+    assert "No report files found" in result.output
 
 
 # -----------------

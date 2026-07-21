@@ -63,7 +63,8 @@ def build_markdown(reports: List[Tuple[Path, Dict[str, Any]]]) -> str:
         node = s.get("node", "?")
         lines.append(f"## Node: {node}")
         lines.append("")
-        lines.append(f"- Seed: `{s.get('seed', '?')}`")
+        if "seed" in s:  # legacy reports only; the seed mechanism was removed
+            lines.append(f"- Seed: `{s['seed']}`")
         lines.append(f"- Epochs requested: `{s.get('candidates_requested', s.get('epochs', '?'))}`")
         lines.append(f"- Epochs usable: `{s.get('candidates_generated', s.get('epochs', '?'))}`")
         lines.append(f"- Candidate pool: `{s.get('candidates_pool', '?')}`")
