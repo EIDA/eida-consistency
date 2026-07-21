@@ -553,3 +553,11 @@ def test_psd_section_na_and_no_note_when_clean():
     assert "**PSD compliance (≥2024):** N/A — over 0 data-bearing window(s)." in body  # no >=2024 windows
     assert "**PSD coverage (all dates):** 100.0% — over 1 data-bearing window(s)." in body
     assert "skipped" not in body                     # note omitted when none
+
+
+def test_markdown_includes_interactive_view_link(tmp_path):
+    rep = report.create_report_object("NODE", 1, 600, [_inconsistent_rec()])
+    md = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert "Interactive view" in md
+    assert "?report=" in md
+    assert ".json" in md.split("Interactive view")[1].split(")")[0]

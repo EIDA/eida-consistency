@@ -1,0 +1,363 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EIDA consistency — instrument</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#121a22; --panel2:#0e151c; --line:#233039; --line2:#2f3d48;
+  --fg:#dfe8ef; --mut:#7f8f9c; --accent:#39c0c8; --accent-dim:#1c6a70;
+  --ok:#46c76a; --warn:#e0a52a; --bad:#f2585f;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#eef2f5; --panel:#ffffff; --panel2:#e7edf1; --line:#d3dbe1; --line2:#c3ccd4;
+  --fg:#0f1720; --mut:#5b6a76; --accent:#0c8f97; --accent-dim:#8fd3d7;
+  --ok:#1a7f37; --warn:#9a6c14; --bad:#cf3038;
+}}
+:root[data-theme="dark"]{--bg:#0b0f14;--panel:#121a22;--panel2:#0e151c;--line:#233039;--line2:#2f3d48;--fg:#dfe8ef;--mut:#7f8f9c;--accent:#39c0c8;--accent-dim:#1c6a70;--ok:#46c76a;--warn:#e0a52a;--bad:#f2585f}
+:root[data-theme="light"]{--bg:#eef2f5;--panel:#ffffff;--panel2:#e7edf1;--line:#d3dbe1;--line2:#c3ccd4;--fg:#0f1720;--mut:#5b6a76;--accent:#0c8f97;--accent-dim:#8fd3d7;--ok:#1a7f37;--warn:#9a6c14;--bad:#cf3038}
+*{box-sizing:border-box}
+html{scrollbar-color:var(--line2) transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:2rem 1.3rem 5rem}
+.tnum{font-variant-numeric:tabular-nums}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── masthead: node · score · one meta line · one counts line ── */
+.mast{display:flex;flex-direction:column;gap:.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--line)}
+.mrow{display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap}
+.node{font-size:1.7rem;font-weight:700;letter-spacing:.04em;line-height:1}
+.scores{margin-left:auto;display:flex;gap:1.5rem;align-items:baseline}
+.scoretile{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.scoretile b{font-size:1.6rem;font-weight:700;line-height:1}
+.scoretile.sub b{font-size:1.15rem}
+.scoretile .lab{font-size:.62rem;font-weight:400;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;margin-top:.15rem}
+.substamp{font-size:.75rem;color:var(--mut)}
+.readout{font-size:.75rem;color:var(--mut);display:flex;flex-wrap:wrap;gap:.1rem .9rem}
+.readout b{color:var(--fg);font-weight:600}
+.counts{font-size:.8rem;display:flex;flex-wrap:wrap;gap:.15rem 1.6rem;margin-top:.2rem}
+.counts .grp{display:flex;flex-wrap:wrap;gap:.1rem .8rem}
+.counts .glab{color:var(--mut);font-weight:600;letter-spacing:.04em}
+.counts b{font-weight:700}
+.counts .ok{color:var(--ok)} .counts .bad{color:var(--bad)} .counts .warn{color:var(--warn)} .counts .mut{color:var(--mut)}
+.counts .k{color:var(--mut)}
+
+/* ── controls: one quiet row ─────────────────────────────── */
+.controls{display:flex;flex-wrap:wrap;gap:.5rem .8rem;align-items:center;margin:1.3rem 0 .3rem;
+  position:sticky;top:0;z-index:5;background:var(--bg);padding:.4rem 0}
+.controls input[type=search],.controls select{font-family:var(--mono);font-size:.78rem;color:var(--fg);
+  background:transparent;border:0;border-bottom:1px solid var(--line2);padding:.25rem .1rem;min-width:0}
+.controls input[type=search]{min-width:210px}
+.controls select{cursor:pointer}
+.seg{display:inline-flex;gap:1rem}
+.seg button{font-family:var(--mono);font-size:.78rem;color:var(--mut);background:none;border:0;padding:.2rem 0;cursor:pointer;border-bottom:1.5px solid transparent}
+.seg button.on{color:var(--fg);border-bottom-color:var(--accent)}
+.count{margin-left:auto;font-size:.75rem;color:var(--mut)}
+.themebtn{font-family:var(--mono);font-size:.78rem;color:var(--mut);background:none;border:0;cursor:pointer}
+.themebtn:hover{color:var(--fg)}
+
+/* ── table: hairlines only, no frame ─────────────────────── */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+thead th{text-align:left;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);
+  font-weight:600;padding:.4rem .7rem .5rem;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th.sortable{cursor:pointer;user-select:none} thead th.sortable:hover{color:var(--fg)}
+tbody td{padding:.5rem .7rem;border-bottom:1px solid var(--line);vertical-align:baseline}
+tbody tr{cursor:pointer} tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+tbody tr.sel{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+tbody tr td:first-child{box-shadow:inset 3px 0 0 transparent}
+tbody tr.iss-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+tbody tr.iss-warn td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.nslc{font-weight:600;letter-spacing:.01em}
+.win{font-size:.76rem;color:var(--mut);white-space:nowrap}
+.tri{font-size:1rem;letter-spacing:3px;white-space:nowrap}
+.tri .on{color:var(--accent)} .tri .g{color:var(--mut);opacity:.55}
+.verdict{font-size:.78rem;font-weight:600;white-space:nowrap}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)} .verdict.mut{color:var(--mut)} .verdict.warn{color:var(--warn)}
+.s{color:var(--mut);font-size:.72rem}
+
+/* ── detail: quiet, no cards ─────────────────────────────── */
+.detail{margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid var(--line)}
+.detail:empty{display:none}
+.dhead{display:flex;gap:1.4rem;align-items:flex-start;flex-wrap:wrap}
+.dtitle .nslc{font-size:1.05rem} .dtitle .win{font-size:.8rem;margin-top:.15rem}
+.dlead{font-size:.88rem;font-weight:600;margin:.4rem 0 0;max-width:60ch}
+.dlead.ok{color:var(--ok)} .dlead.bad{color:var(--bad)} .dlead.mut{color:var(--mut)}
+.tribox{display:flex;flex-direction:column;align-items:center;gap:.25rem}
+.trisvg{width:150px;height:auto}
+.tricap{font-size:.62rem;line-height:1.5;color:var(--mut);text-align:center;max-width:170px}
+.tricap i{font-style:normal;font-weight:700}
+.tricap .cok{color:var(--ok)} .tricap .cbad{color:var(--bad)} .tricap .cwarn{color:var(--warn)}
+.dbody{display:grid;gap:1.4rem;margin-top:1.2rem}
+.svcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.9rem 1.4rem}
+.svccard h4{margin:0 0 .2rem;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.svccard .big{font-weight:700;font-size:.85rem}
+.svccard .meta{font-size:.73rem;color:var(--mut);margin-top:.1rem}
+.svccard .u{margin-top:.35rem;display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
+.u button{font-family:var(--mono);font-size:.72rem;color:var(--mut);background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
+.sec h3{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:0 0 .6rem;font-weight:600}
+.tl-lane{fill:var(--mut);font-size:11px;font-family:var(--mono)}
+.tl-track{fill:var(--line);opacity:.55}.tl-av,.tl-ds,.tl-psd{fill:var(--accent)}
+.tl-gap{fill:var(--bad);opacity:.18}.tl-axis{stroke:var(--line2)}.tl-lab{fill:var(--mut);font-size:11px;font-family:var(--mono)}
+.tlsvg{width:100%;max-width:1000px;height:auto;display:block}
+.gap{border-top:1px solid var(--line);padding:.5rem 0 .1rem;font-size:.8rem}
+.gap .gh{color:var(--fg)} .gap .gd{color:var(--mut)}
+.gap .q{margin:.2rem 0 0;display:flex;gap:.7rem;flex-wrap:wrap}
+.kv{font-size:.76rem;color:var(--mut);margin-top:.5rem} .kv b{color:var(--fg)}
+details.debug summary{cursor:pointer;font-size:.74rem;color:var(--mut)}
+details.debug pre{white-space:pre-wrap;font-size:.72rem;color:var(--mut);margin:.4rem 0 0;overflow-x:auto}
+.badge-data{font-size:.68rem;font-weight:700;padding:.02rem .4rem;border-radius:3px;margin-left:.4rem;color:var(--bg)}
+.badge-data.yes{background:var(--ok)}.badge-data.no{background:var(--bad)}.badge-data.err{background:var(--mut)}
+.empty{padding:3rem 1rem;text-align:center;color:var(--mut)}
+.legendbar{font-size:.72rem;color:var(--mut);margin:.4rem 0 .2rem;line-height:1.6}
+.legendbar b{color:var(--fg)}
+</style></head>
+<body><div class="wrap">
+  <div id="app"><div class="empty">Loading report…</div></div>
+</div>
+<script>
+// ── data helpers ──────────────────────────────────────────
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>/^https?:\/\//i.test(String(u??''))?String(u):'';
+const qtime=iso=>String(iso??'').replace('+00:00','').replace('Z','');
+const fmtT=iso=>qtime(iso).replace('T',' ').replace(/\.\d+$/,'');
+const P=iso=>Date.parse(/[Z+]/.test(iso)?iso:iso+'Z');
+function fmtDur(sec){sec=Math.max(0,Math.round(+sec||0));if(sec<60)return sec+'s';const u=[['d',86400],['h',3600],['m',60],['s',1]];let r=sec,o=[];for(const[l,s]of u){const v=Math.floor(r/s);if(v){o.push(v+l);r-=v*s;}if(o.length===2)break;}return o.join(' ')||'0s';}
+
+// ── verdict model ─────────────────────────────────────────
+const adVerdict=r=>r.consistent===false?{cls:'bad',text:'inconsistent'}:r.consistent===true?{cls:'ok',text:'consistent'}:{cls:'mut',text:'skipped'};
+const psdChecked=r=>r&&r.psd_status!=null;
+function psdVerdict(r){if(!psdChecked(r))return null;const st=r.psd_status;
+  if(st==='Unsupported')return{kind:'unsupported',cls:'mut',text:'PSD n/a'};
+  if(st==='Skipped')return{kind:'skipped',cls:'mut',text:'PSD skipped'};
+  if(r.psd_consistent===false)return r.psd_required?{kind:'violation',cls:'bad',text:'PSD violation (≥2024)'}:{kind:'pregap',cls:'warn',text:'PSD violation (pre-2024)'};
+  // Consistent = data + PSD both present, OR no data at all and no PSD (they agree
+  // there's nothing). The triad (▼▲▶ vs ▽△▷) distinguishes the two visually.
+  return{kind:'ok',cls:'ok',text:'consistent'};}
+function triad(r){const g=(f,h,p)=>`<span class="${p?'on':'g'}">${p?f:h}</span>`;
+  // Drop the PSD glyph entirely for reports without PSD (pre-PSD Oculus reports).
+  const psd=psdChecked(r)?` ${g('▶','▷',!!r.psd_present)}`:'';
+  return `${g('▼','▽',!!r.available)} ${g('▲','△',!!r.dataselect_success)}${psd}`;}
+const nslc=r=>`${r.network}.${r.station}.${r.location}.${r.channel}`;
+function dsUrl(r){if(r.dataselect_url)return r.dataselect_url;if(!r.url)return null;let u;try{u=new URL(r.url);}catch{return null;}if(!u.pathname.includes('/availability/'))return null;const p=u.searchParams,loc=(r.location??p.get('location')??'').replace('*','');return `${u.origin+u.pathname.replace('/availability/','/dataselect/')}?network=${r.network}&station=${r.station}&location=${loc}&channel=${r.channel}&starttime=${p.get('start')??qtime(r.starttime)}&endtime=${p.get('end')??qtime(r.endtime)}&nodata=204`;}
+
+// ── SVG: coverage timeline (3 lanes) ──────────────────────
+function segs(ws,we,pairs){const t0=P(ws),t1=P(we);if(!(t1>t0))return[];const T=t1-t0;return(pairs||[]).map(([a,b])=>({x0:Math.max(0,Math.min(1,(P(a)-t0)/T)),x1:Math.max(0,Math.min(1,(P(b)-t0)/T)),a,b})).filter(s=>s.x1>s.x0);}
+// PSD lane segments, snapped to whole UTC days. PSD is a per-day yes/no, so for
+// each UTC day the window touches we fill that day's slice of the window iff a
+// valid PSD record covers that day. This removes the false partial gap at a day
+// boundary AND correctly shows a window that spans two days where only one has
+// PSD (one day filled, the other empty).
+function psdDaySegs(r){
+  if(!psdChecked(r))return[];
+  const DAY=86400000, ws=P(r.starttime), we=P(r.endtime);
+  const recs=(r.coverage?.psd||[]).map(([a,b])=>[P(a),P(b)]);
+  // A PSD daily record starts at ~00:00 of the day it represents, and its tail
+  // bleeds ~1s past the next midnight — so a day "has PSD" when a record STARTS
+  // within it, not merely overlaps it (overlap would false-positive the next day).
+  const dayHasPsd=d0=>{const d1=d0+DAY;return recs.length?recs.some(([a])=>a>=d0&&a<d1):!!r.psd_present;};
+  const out=[];
+  for(let d0=Math.floor(ws/DAY)*DAY; d0<we; d0+=DAY){
+    const s=Math.max(ws,d0), e=Math.min(we,d0+DAY);
+    if(s<e && dayHasPsd(d0)) out.push([new Date(s).toISOString(), new Date(e).toISOString()]);
+  }
+  return out;
+}
+function timelineSVG(r){const ws=r.starttime,we=r.endtime;const X0=94,X1=988,W=X1-X0,LH=16;
+  const rows=[['Avail','tl-av',r.coverage?.availability],['Data','tl-ds',r.coverage?.dataselect],['PSD','tl-psd',psdDaySegs(r)]];
+  if(!(P(we)>P(ws)))return'';const xf=f=>(X0+f*W).toFixed(1),wd=(a,b)=>Math.max(1.5,(b-a)*W).toFixed(1);
+  const gaps=segs(ws,we,(r.mismatch||[]).map(m=>[m.start,m.end]));
+  let y=12,body='';rows.forEach(([lab,cls,cov])=>{
+    body+=`<text class="tl-lane" x="8" y="${y+12}">${lab}</text><rect class="tl-track" x="${X0}" y="${y}" width="${W}" height="${LH}" rx="2"></rect>`;
+    body+=segs(ws,we,cov||[]).map(s=>`<rect class="${cls}" x="${xf(s.x0)}" y="${y}" width="${wd(s.x0,s.x1)}" height="${LH}" rx="2"><title>${esc(lab==='PSD'?`PSD present · ${fmtT(s.a)} → ${fmtT(s.b)}`:`${lab}: ${fmtT(s.a)} → ${fmtT(s.b)}`)}</title></rect>`).join('');
+    y+=LH+8;});
+  const bands=gaps.map(s=>`<rect class="tl-gap" x="${xf(s.x0)}" y="6" width="${wd(s.x0,s.x1)}" height="${y-10}"></rect>`).join('');
+  return `<svg class="tlsvg" viewBox="0 0 1000 ${y+22}" role="img" aria-label="coverage timeline">${bands}${body}<line class="tl-axis" x1="${X0}" y1="${y+2}" x2="${X1}" y2="${y+2}"></line><text class="tl-lab" x="${X0}" y="${y+16}">${esc(fmtT(ws))}</text><text class="tl-lab" x="${X1}" y="${y+16}" text-anchor="end">${esc(fmtT(we))}</text></svg>`;}
+
+// ── SVG: the consistency triangle (signature) ─────────────
+function triangleSVG(r){const D=[110,62],A=[40,158],Pv=[180,158];const col=c=>`var(--${c})`;
+  const adC=adVerdict(r).cls, pv=psdVerdict(r);
+  const psdP=psdChecked(r)?!!r.psd_present:false;
+  // Both edges that touch the PSD vertex carry the PSD's date-aware severity when
+  // they disagree (amber pre-2024, red >=2024) — a missing PSD reads the same on
+  // either edge. Green when the two ends agree.
+  const dpC=!pv?'mut':(!!r.dataselect_success===psdP?'ok':pv.cls);
+  const apC=!pv?'mut':(!!r.available===psdP?'ok':pv.cls);
+  const edge=(a,b,c)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col(c)}" stroke-width="4" stroke-linecap="round"/>`;
+  const node=(pt,present,gl)=>`<circle cx="${pt[0]}" cy="${pt[1]}" r="16" fill="${present?col('accent'):'var(--panel2)'}" stroke="${present?col('accent'):col('mut')}" stroke-width="2.5"/><text x="${pt[0]}" y="${pt[1]+6}" text-anchor="middle" font-size="16" font-family="var(--mono)" fill="${present?'var(--bg)':col('mut')}">${gl}</text>`;
+  // top label sits ABOVE its node (name then sublabel); bottom labels sit BELOW.
+  const labTop=(x,y,name,present)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="10" font-family="var(--mono)" letter-spacing=".08em" fill="var(--mut)">${name}</text><text x="${x}" y="${y+12}" text-anchor="middle" font-size="9.5" font-family="var(--mono)" fill="${present?col('ok'):col('mut')}">${present?'has data':'missing'}</text>`;
+  const labBot=(x,y,name,present)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="10" font-family="var(--mono)" letter-spacing=".08em" fill="var(--mut)">${name}</text><text x="${x}" y="${y+12}" text-anchor="middle" font-size="9.5" font-family="var(--mono)" fill="${present?col('ok'):col('mut')}">${present?'has data':'missing'}</text>`;
+  return `<svg class="trisvg" viewBox="0 0 220 214" role="img" aria-label="Availability/Dataselect/PSD consistency triangle">
+    ${edge(A,D,adC)}${edge(D,Pv,dpC)}${edge(A,Pv,apC)}
+    ${node(D,!!r.dataselect_success,'▲')}${node(A,!!r.available,'▼')}${node(Pv,psdP,'▶')}
+    ${labTop(110,20,'DATASELECT',!!r.dataselect_success)}
+    ${labBot(40,192,'AVAIL',!!r.available)}
+    ${labBot(180,192,'PSD',psdP)}</svg>`;}
+
+// ── request line for a service ────────────────────────────
+function reqLine(kind,url){const s=safeUrl(url);const open=s?`<a href="${esc(s)}" target="_blank" rel="noopener noreferrer">open ↗</a>`:'';const copy=url?`<button data-copy="${esc(url)}">copy</button>`:'';const run=url?`<button data-kind="${kind}" data-url="${esc(url)}">run</button>`:'';return `<div class="u">${run}${open}${copy}</div>`;}
+
+// ── masthead ──────────────────────────────────────────────
+function psdCounts(res){const c={checked:0,ok:0,violation:0,pregap:0,na:0};for(const r of res){if(!psdChecked(r))continue;c.checked++;const k=psdVerdict(r).kind;if(k==='violation')c.violation++;else if(k==='pregap')c.pregap++;else if(k==='ok')c.ok++;else c.na++;}return c;}
+// Color a percentage score by band; N/A (null) is muted.
+function scoreColor(v){return v==null?'mut':v>=95?'ok':v>=80?'warn':'bad';}
+function scoreTile(v,lab,sub){const col=scoreColor(v);const txt=v==null?'N/A':`${(+v).toFixed(v%1?1:0)}%`;
+  return `<span class="scoretile${sub?' sub':''}"><b style="color:var(--${col})">${esc(txt)}</b><span class="lab">${esc(lab)}</span></span>`;}
+function masthead(s,res){
+  const pc=psdCounts(res);
+  const nTested=s.candidates_generated??s.candidates_tested;
+  const tested=nTested!=null?(s.candidates_pool!=null?`${nTested}/${s.candidates_pool}`:`${nTested}`):'?';
+  const meta=[['epochs',s.epochs_requested],['window',(s.duration||0)+'s'],['tested',tested],['queries',s.queries_performed??'?'],['runtime',fmtDur(s.test_duration_sec)],['v',s.version??'?']];
+  // PSD scores come from the report summary; fall back to computing from records
+  // if an older report lacks them (denominators mirror the scoring spec).
+  const comp = s.psd_compliance_score!==undefined ? s.psd_compliance_score
+    : (pc.ok+pc.violation>0 ? +(pc.ok/(pc.ok+pc.violation)*100).toFixed(2) : null);
+  const cov = s.psd_coverage_score!==undefined ? s.psd_coverage_score
+    : (pc.ok+pc.violation+pc.pregap>0 ? +(pc.ok/(pc.ok+pc.violation+pc.pregap)*100).toFixed(2) : null);
+  const b=(cls,n)=>`<b class="${cls}">${esc(n)}</b>`;
+  // Reports produced before the PSD feature carry no psd_* fields — hide all PSD
+  // UI so an old Oculus report renders exactly like the A/D-only viewer.
+  const hasPsd=res.some(psdChecked);
+  const psdScoreTiles=hasPsd?`${scoreTile(comp,'PSD ≥2024',true)}${scoreTile(cov,'PSD all dates',true)}`:'';
+  const psdCounts_=hasPsd?`
+      <span class="grp"><span class="glab">PSD</span> ${b('ok',pc.ok)} consistent · ${b('bad',pc.violation)} violations ≥2024 · ${b('warn',pc.pregap)} pre-2024${pc.na?' · '+b('mut',pc.na)+' n/a':''}</span>`:'';
+  return `<section class="mast">
+    <div class="mrow"><span class="node">${esc(s.node)}</span>
+      <span class="substamp">${esc(fmtT(s.timestamp))} UTC</span>
+      <span class="scores">${scoreTile(s.score,'A/D score')}${psdScoreTiles}</span></div>
+    <div class="readout">${meta.map(([k,v])=>`<span>${k} <b>${esc(v)}</b></span>`).join('')}</div>
+    <div class="counts">
+      <span class="grp"><span class="glab">A/D</span> ${b('ok',s.total_consistent)} consistent · ${b('bad',s.total_inconsistent)} inconsistent${s.total_skipped?' · '+b('mut',s.total_skipped)+' skipped':''}</span>${psdCounts_}
+    </div>
+  </section>`;}
+
+// ── table ─────────────────────────────────────────────────
+const psdShort={ok:'consistent',violation:'✗ violation (≥2024)',pregap:'✗ violation (pre-2024)',unsupported:'n/a',skipped:'skipped'};
+function cols(hasPsd){return hasPsd
+  ? [['Channel','channel'],['Window','time'],['▼▲▶','tri'],['Avail vs Data','status'],['Data vs PSD','psd']]
+  : [['Channel','channel'],['Window','time'],['▼▲','tri'],['Avail vs Data','status']];}
+function rowHTML(r,hasPsd){const pv=psdVerdict(r),pvk=pv?.kind;
+  const isIssue=r.consistent===false||pvk==='violation'||pvk==='pregap';
+  const red=r.consistent===false||pvk==='violation';
+  const sev=red?' iss-bad':(pvk==='pregap'?' iss-warn':'');
+  const dir=r.consistent===false?[...new Set((r.mismatch||[]).map(m=>m.who))].map(w=>w==='dataselect'?'▲ data-only':'▼ avail-only').join(' '):'';
+  // A/D verdict: honest per its own dimension — green consistent, red inconsistent.
+  // Row severity (incl. PSD-only issues) is carried by the left stripe + PSD column.
+  const ad=adVerdict(r);  // {cls:'ok'|'bad'|'mut', text}
+  const adCell=`<span class="verdict ${ad.cls}">${ad.text}</span>${dir?` <span class="s">${dir}</span>`:''}`;
+  const psdCell=hasPsd?`<td>${pv?`<span class="verdict ${pv.cls}">${esc(psdShort[pv.kind])}</span>`:'<span class="s">— not checked</span>'}</td>`:'';
+  return `<tr tabindex="0" class="${sev.trim()}" data-index="${esc(r.index)}">
+    <td class="nslc">${esc(nslc(r))}</td>
+    <td class="win">${esc(fmtT(r.starttime))}<br>${esc(fmtT(r.endtime))}</td>
+    <td class="tri" title="▼ availability · ▲ dataselect${hasPsd?' · ▶ PSD':''} (filled = has data)">${triad(r)}</td>
+    <td>${adCell}</td>
+    ${psdCell}</tr>`;}
+
+// ── detail ────────────────────────────────────────────────
+function detailHTML(r){const ad=adVerdict(r),pv=psdVerdict(r);
+  let lead,lcls;
+  if(r.consistent===false){const g=r.mismatch||[];const who=[...new Set(g.map(m=>m.who))].map(w=>w==='dataselect'?'dataselect returned data but availability reported none':'availability reported data but dataselect returned none').join('; ');lead=`Inconsistency across ${g.length} interval${g.length===1?'':'s'} — ${who||'availability and dataselect disagree'}.`;lcls='bad';}
+  else if(r.consistent===true){lead='Availability and dataselect agree across the window.';lcls='ok';}
+  else{lead='Skipped'+(r.consistency_reason?': '+r.consistency_reason:'')+'.';lcls='mut';}
+  const svc=(name,gl,present,lines,url,kind)=>`<div class="svccard"><h4>${gl} ${name}</h4><div class="big">${present?'data present':'no data'}</div><div class="meta">${lines.filter(Boolean).map(esc).join(' · ')}</div>${url?reqLine(kind,url):''}</div>`;
+  const nSpans=(r.coverage?.dataselect||[]).length;
+  const psdLine=pv?`<div class="svccard"><h4>▶ PSD <span class="pill ${pv.cls}">${esc(pv.text)}</span></h4><div class="big">${r.psd_present?'PSD present':'no PSD'}</div><div class="meta">${esc(r.psd_status)} · ${r.psd_required?'required (≥2024-01-01)':'not required (pre-2024)'}${(r.coverage?.psd?.length)?' · day record '+esc(fmtT(r.coverage.psd[0][0]))+' → '+esc(fmtT(r.coverage.psd[0][1])):''}</div>${r.psd_url?reqLine('psd',r.psd_url):''}</div>`:'';
+  const gaps=(r.mismatch||[]).map(m=>{const dur=fmtDur((P(m.end)-P(m.start))/1000);const gs=qtime(m.start),ge=qtime(m.end);
+    const aq=r.url?r.url.replace(/([?&]start=)[^&]*/,'$1'+gs).replace(/([?&]end=)[^&]*/,'$1'+ge):null;
+    const dq=dsUrl(r);const dqq=dq?dq.replace(/([?&]starttime=)[^&]*/,'$1'+gs).replace(/([?&]endtime=)[^&]*/,'$1'+ge):null;
+    return `<div class="gap"><div class="gh">${esc(fmtT(m.start))} → ${esc(fmtT(m.end))} <span class="gd">(${esc(dur)}, ${esc(m.who)} has data)</span></div>${(aq||dqq)?`<div class="q">${aq?reqLine('availability',aq):''}${dqq?reqLine('dataselect',dqq):''}</div>`:''}</div>`;}).join('');
+  const ms=r.matched_span&&r.matched_span.start?`<div class="kv">matched span <b>${esc(fmtT(r.matched_span.start))}</b> → <b>${esc(fmtT(r.matched_span.end))}</b> @ loc <b>${esc(r.matched_span.location??'')}</b></div>`:'';
+  return `<div class="detail"><div class="dhead">
+      <div class="tribox">${triangleSVG(r)}<div class="tricap">each edge is a pairwise check — <i class="cok">green</i> agree · <i class="cbad">red</i> disagree (≥2024 PSD) · <i class="cwarn">amber</i> pre-2024 PSD</div></div>
+      <div class="dtitle"><div class="nslc">${esc(nslc(r))}</div><div class="win">${esc(fmtT(r.starttime))} → ${esc(fmtT(r.endtime))}</div>
+        <p class="dlead ${lcls}">${esc(lead)}</p></div></div>
+    <div class="dbody">
+      <div class="sec"><h3>Services</h3><div class="svcgrid">
+        ${svc('Availability','▼',!!r.available,['HTTP '+(r.availability_status??'?'),(r.coverage?.availability||[]).length+' span(s)'],r.url,'availability')}
+        ${svc('Dataselect','▲',!!r.dataselect_success,[r.dataselect_status,r.dataselect_type,nSpans+' segment(s)'],dsUrl(r),'dataselect')}
+        ${psdLine}</div>${ms}</div>
+      <div class="sec"><h3>Coverage timeline</h3>${timelineSVG(r)||'<div class="kv">no coverage intervals</div>'}
+        <div class="legendbar"><b style="color:var(--accent)">▬</b> has data &nbsp; <b style="color:var(--bad)">▬</b> mismatch &nbsp;·&nbsp; each lane is one service across the window</div></div>
+      ${gaps?`<div class="sec"><h3>Mismatch gaps · reproduction queries</h3>${gaps}</div>`:''}
+      ${r.debug?`<details class="debug"><summary>raw debug</summary><pre>${esc(r.debug)}</pre></details>`:''}
+    </div></div>`;}
+
+// ── app state ─────────────────────────────────────────────
+const state={report:null,filter:{issues:true,dir:'both',psd:'all',q:''},sort:{key:'time',dir:'asc'},sel:null};
+function matches(r){const f=state.filter;const psd=f.psd!=='all'?f.psd:null;
+  // "issues" = a problem: A–D inconsistent, or a PSD violation (data without PSD).
+  // Both dates count; the date only sets severity (red >=2024, orange pre-2024).
+  if(!psd&&f.issues&&!(r.consistent===false||(psdChecked(r)&&r.psd_consistent===false)))return false;
+  if(psd){const v=psdVerdict(r),k=v?v.kind:null;const want=psd==='consistent'?'ok':psd;const ok=psd==='na'?(k==='unsupported'||k==='skipped'):k===want;if(!ok)return false;}
+  if(f.dir!=='both'){const s=new Set((r.mismatch||[]).map(m=>m.who));if(!s.has(f.dir))return false;}
+  if(f.q&&!nslc(r).toLowerCase().includes(f.q.toLowerCase()))return false;
+  return true;}
+const _psdRank={violation:0,pregap:1,skipped:2,unsupported:3,ok:4};
+function sorted(res){const a=[...res],k=state.sort.key;let c;
+  const pr=r=>{const v=psdVerdict(r);return v?_psdRank[v.kind]:9;};
+  if(k==='channel')c=(x,y)=>nslc(x).localeCompare(nslc(y));
+  else if(k==='tri'||k==='psd')c=(x,y)=>pr(x)-pr(y);
+  else if(k==='status')c=(x,y)=>(x.consistent===false?0:1)-(y.consistent===false?0:1);
+  else c=(x,y)=>String(x.starttime).localeCompare(String(y.starttime));
+  a.sort(c);if(state.sort.dir==='desc')a.reverse();return a;}
+function render(){const r=state.report,res=r.results||[];
+  const rows=sorted(res.filter(matches));
+  const hasPsd=res.some(psdChecked);
+  const cs=cols(hasPsd);
+  const th=cs.map(([lab,key])=>{if(!key)return `<th>${lab}</th>`;const on=key===state.sort.key;return `<th class="sortable${on?' active':''}" data-sort="${key}">${lab}${on?(state.sort.dir==='asc'?' ▲':' ▼'):''}</th>`;}).join('');
+  $('#app').innerHTML=masthead(r.summary,res)+`
+    <div class="controls">
+      <div class="seg"><button data-issues="0" class="${state.filter.issues?'':'on'}">all</button><button data-issues="1" class="${state.filter.issues?'on':''}">issues only</button></div>
+      <label class="field">dir <select id="fdir"><option value="both">▲▼ all</option><option value="dataselect">▲ data-only</option><option value="availability">▼ avail-only</option></select></label>
+      ${hasPsd?`<label class="field">PSD <select id="fpsd"><option value="all">all</option><option value="violation">▶ violations ≥2024 (red)</option><option value="pregap">▶ violations pre-2024 (orange)</option><option value="consistent">▶ consistent</option><option value="na">n/a</option></select></label>`:''}
+      <input id="fq" type="search" placeholder="search NET.STA.LOC.CHA" value="${esc(state.filter.q)}">
+      <button class="themebtn" id="themebtn">◐ theme</button>
+      <span class="count">${rows.length} of ${res.length}</span>
+    </div>
+    <div class="legendbar" style="margin-top:0">
+      ${hasPsd
+        ? '<span>Two checks per window &nbsp;·&nbsp; <b>Avail vs Data</b> drives the score &nbsp;·&nbsp; <b>Data vs PSD</b> — a missing PSD is a violation: <b style="color:var(--bad)">red</b> for data on/after 2024-01-01, <b style="color:var(--warn)">orange</b> for earlier data.</span><span><b>▼</b> availability <b>▲</b> dataselect <b>▶</b> PSD — filled = has data, hollow = missing. Click a row for its triangle.</span>'
+        : '<span><b>Avail vs Data</b> — availability and dataselect must agree on whether data exists. <b>▼</b> availability <b>▲</b> dataselect (filled = has data). Click a row for details.</span>'}</div>
+    <div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${rows.map(x=>rowHTML(x,hasPsd)).join('')||`<tr><td colspan="${cs.length}" class="empty">Nothing matches — every window here is consistent. Switch to “all” to browse them.</td></tr>`}</tbody></table></div>
+    <div id="detail">${state.sel!=null?detailHTML(res.find(x=>String(x.index)===String(state.sel))||{}):''}</div>`;
+  if($('#fdir'))$('#fdir').value=state.filter.dir;
+  if($('#fpsd'))$('#fpsd').value=state.filter.psd;
+}
+document.addEventListener('click',e=>{
+  const seg=e.target.closest('[data-issues]');if(seg){state.filter.issues=seg.dataset.issues==='1';render();return;}
+  const th=e.target.closest('th[data-sort]');if(th){const k=th.dataset.sort;if(state.sort.key===k)state.sort.dir=state.sort.dir==='asc'?'desc':'asc';else state.sort={key:k,dir:'asc'};render();return;}
+  const cp=e.target.closest('button[data-copy]');if(cp){navigator.clipboard?.writeText(cp.dataset.copy).then(()=>{cp.textContent='copied';setTimeout(()=>cp.textContent='copy',1200);}).catch(()=>{});return;}
+  const rn=e.target.closest('button[data-kind]');if(rn){runReq(rn);return;}
+  const th2=e.target.closest('#themebtn');if(th2){const cur=document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',cur==='dark'?'light':'dark');return;}
+  const tr=e.target.closest('tr[data-index]');if(tr){state.sel=tr.dataset.index;render();$('#detail').scrollIntoView({behavior:'smooth',block:'start'});}
+});
+document.addEventListener('change',e=>{if(e.target.id==='fdir'){state.filter.dir=e.target.value;render();}if(e.target.id==='fpsd'){state.filter.psd=e.target.value;render();}});
+document.addEventListener('input',e=>{if(e.target.id==='fq'){state.filter.q=e.target.value;const a=document.activeElement;render();const n=$('#fq');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tr[data-index]')){state.sel=e.target.dataset.index;render();}});
+async function runReq(b){const url=b.dataset.url,kind=b.dataset.kind;
+  if(b.dataset.busy)return;                 // ignore rapid re-clicks while in flight
+  b.dataset.busy='1';
+  // Remove any badge from a previous click on this button so they don't stack.
+  const sib=b.nextElementSibling;if(sib&&sib.classList&&sib.classList.contains('badge-data'))sib.remove();
+  b.textContent='…';
+  try{const res=await fetch(url);let has;
+    if(kind==='availability'||kind==='psd'){const t=await res.text();
+      // text services return CSV/text; count real (non-header, non-comment) rows.
+      has=res.status===200&&t.split('\n').filter(l=>{l=l.trim();return l&&!l.startsWith('#')&&!/^network,/i.test(l);}).length>0;}
+    else{const buf=await res.arrayBuffer();has=res.status===200&&buf.byteLength>0;}
+    b.insertAdjacentHTML('afterend',`<span class="badge-data ${has?'yes':'no'}">${has?'HAS DATA':'NO DATA'}</span>`);
+  }catch{b.insertAdjacentHTML('afterend','<span class="badge-data err">FAILED</span>');}
+  b.textContent='run';delete b.dataset.busy;}
+
+async function main(){const u=new URLSearchParams(location.search).get('report')||'sample-report.json';
+  try{state.report=await (await fetch(u)).json();}catch{$('#app').innerHTML='<div class="empty">Could not load '+esc(u)+'</div>';return;}
+  if(!state.report.summary||!Array.isArray(state.report.results)){$('#app').innerHTML='<div class="empty">Not an EIDA consistency report.</div>';return;}
+  render();}
+main();
+</script>
+</body></html>
