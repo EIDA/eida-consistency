@@ -530,8 +530,8 @@ def test_psd_section_shows_scores_and_network_note():
                    psd_present=False, psd_consistent=None),         # unsupported
     ]
     body = "\n".join(build_psd_section(recs))
-    assert "PSD compliance (≥2024): 50.0%" in body
-    assert "PSD coverage (all dates): 50.0%" in body
+    assert "**PSD compliance (≥2024):** 50.0% — over 2 data-bearing window(s)." in body
+    assert "**PSD coverage (all dates):** 50.0% — over 2 data-bearing window(s)." in body
     assert "1 window(s) skipped" in body
     assert "1 unsupported" in body
 
@@ -540,6 +540,6 @@ def test_psd_section_na_and_no_note_when_clean():
     recs = [_rec_score(psd_status="Consistent", psd_present=True,
                        psd_required=False, psd_consistent=True)]   # pre-2024 hit only
     body = "\n".join(build_psd_section(recs))
-    assert "PSD compliance (≥2024): N/A" in body     # no >=2024 windows
-    assert "PSD coverage (all dates): 100.0%" in body
+    assert "**PSD compliance (≥2024):** N/A — over 0 data-bearing window(s)." in body  # no >=2024 windows
+    assert "**PSD coverage (all dates):** 100.0% — over 1 data-bearing window(s)." in body
     assert "skipped" not in body                     # note omitted when none

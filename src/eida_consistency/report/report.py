@@ -172,19 +172,20 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
     skipped = buckets.get("skipped", []) + buckets.get("unsupported", [])
 
     sc = psd_scores(records)
+    n_skipped = len(buckets.get("skipped", []))
+    n_unsupported = len(buckets.get("unsupported", []))
     _fmt = lambda v: f"{v:.1f}%" if v is not None else "N/A"
     _score_lines = [
         "",
-        f"- PSD compliance (≥2024): {_fmt(sc['psd_compliance_score'])} "
+        f"- **PSD compliance (≥2024):** {_fmt(sc['psd_compliance_score'])} "
         f"— over {sc['psd_evaluated_2024']} data-bearing window(s).",
-        f"- PSD coverage (all dates): {_fmt(sc['psd_coverage_score'])} "
+        f"- **PSD coverage (all dates):** {_fmt(sc['psd_coverage_score'])} "
         f"— over {sc['psd_evaluated']} data-bearing window(s).",
     ]
-    if buckets.get("skipped") or buckets.get("unsupported"):
+    if n_skipped or n_unsupported:
         _score_lines.append(
-            f"- Network / service note: {len(buckets.get('skipped', []))} "
-            f"window(s) skipped (transient PSD error), "
-            f"{len(buckets.get('unsupported', []))} unsupported (node has no PSD "
+            f"- **Network / service note:** {n_skipped} window(s) skipped "
+            f"(transient PSD error), {n_unsupported} unsupported (node has no PSD "
             f"service) — excluded from the PSD scores."
         )
 
