@@ -394,9 +394,9 @@ test('renderSummary shows PSD chips when records carry PSD', () => {
   assert.match(html, /pre-2024 gaps/);
 });
 
-test('renderSummary omits PSD chips for pre-PSD reports', () => {
+test('renderSummary reports no counts for pre-PSD reports', () => {
   const html = renderSummary({ node: 'X', score: 80 }, [noPsd]);
-  assert.doesNotMatch(html, /PSD/);
+  assert.doesNotMatch(html, /violations|pre-2024 gaps/);
 });
 
 test('renderResultsTable adds a PSD column with the triad when data present', () => {
@@ -405,9 +405,9 @@ test('renderResultsTable adds a PSD column with the triad when data present', ()
   assert.match(html, /▼ ▲ ▷/);
 });
 
-test('renderResultsTable has no PSD column for pre-PSD reports', () => {
+test('renderResultsTable carries no PSD verdict for pre-PSD reports', () => {
   const html = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
-  assert.doesNotMatch(html, /PSD/);
+  assert.doesNotMatch(html, /violation|pre-2024 gap|PSD consistent/);
 });
 
 test('renderDetail shows the PSD line when checked', () => {
@@ -446,12 +446,39 @@ test('matchesFilter psd=all keeps the normal onlyInconsistent behavior', () => {
   assert.equal(matchesFilter(psdOk, { onlyInconsistent: false, psd: 'all' }), true);
 });
 
-test('renderResultsTable includes the PSD legend when data present, omits it otherwise', () => {
-  const withPsd = renderResultsTable([psdViolation], { onlyInconsistent: false, direction: 'both', search: '' });
+// A report from before the PSD check must render the same UI as one with PSD:
+// same columns, same chip row, same legend box — only the values say "not
+// checked". Otherwise old and new reports look like two different tools.
+const _filter = { onlyInconsistent: false, direction: 'both', search: '' };
+const _cols = html => [...html.matchAll(/<th[^>]*>(.*?)<\/th>/g)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+
+test('renderResultsTable keeps the PSD column for reports without PSD', () => {
+  const withPsd = renderResultsTable([psdViolation], _filter);
+  const without = renderResultsTable([noPsd], _filter);
+  assert.deepEqual(_cols(without), _cols(withPsd));
+  assert.match(_cols(without).join(' '), /PSD/);
+});
+
+test('renderResultsTable marks unchecked PSD cells with ? and a title', () => {
+  const html = renderResultsTable([noPsd], _filter);
+  assert.match(html, /▼ ▲ \?/);
+  assert.match(html, /PSD not checked/);
+});
+
+test('renderResultsTable always shows the legend, noting when PSD is unchecked', () => {
+  const withPsd = renderResultsTable([psdViolation], _filter);
   assert.match(withPsd, /psd-legend/);
-  assert.match(withPsd, /PSD triangle/);
-  const without = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
-  assert.doesNotMatch(without, /psd-legend/);
+  assert.match(withPsd, /filled = has data/);
+  const without = renderResultsTable([noPsd], _filter);
+  assert.match(without, /psd-legend/);
+  assert.match(without, /not checked/i);
+});
+
+test('renderSummary keeps the PSD chip row for reports without PSD', () => {
+  const html = renderSummary({ node: 'HL', score: 70 }, [noPsd]);
+  assert.match(html, /chips psd/);
+  assert.match(html, /not checked/i);
+  assert.doesNotMatch(html, /violations/);   // no counts to report
 });
 
 test('psdLegend explains the glyphs', () => {

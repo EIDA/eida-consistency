@@ -8,8 +8,9 @@ An interactive HTML view of the JSON reports produced by `eida-consistency`
 | `viewer.html` | **Landing page** — lists the reports found in the default reports directory, and takes a report by drag-drop, file picker, or pasted URL |
 | `viewer.html?report=…` | **Report view** — score gauge, PSD summary, sortable and filterable table of findings, per-record timeline, and buttons that replay each finding's exact availability/dataselect request |
 
-A report without PSD data renders the same view minus every PSD element: no PSD
-column, no legend, no PSD chips, and the PSD filter hides itself.
+Reports produced before the PSD check render the same UI as current ones — same
+columns, chip row and legend. The PSD chip reads *not checked*, every PSD cell
+shows `▼ ▲ ?`, and the PSD filter is disabled rather than hidden.
 
 ## No framework, no build step
 

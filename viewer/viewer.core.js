@@ -334,10 +334,14 @@ export function renderSummary(s, results) {
   </header>`;
 }
 
-// PSD chip row for the summary header; empty when the run didn't check PSD.
+// PSD chip row for the summary header. Reports predating the PSD check keep the
+// row — saying so explicitly — so that they render the same UI as newer ones.
 function psdChips(results) {
   const c = psdCounts(results);
-  if (!c.checked) return '';
+  if (!c.checked) {
+    return `<div class="chips psd" title="This report was produced before the PSD check existed">
+    <span class="chip lbl">PSD</span><span class="chip mut">not checked</span></div>`;
+  }
   const extra = (c.unsupported || c.skipped)
     ? `<span class="chip mut">${esc(c.unsupported + c.skipped)} PSD n/a</span>` : '';
   return `<div class="chips psd" title="Availability/Dataselect/PSD triangle — PSD required only for data on/after 2024-01-01">
@@ -358,11 +362,9 @@ const COLUMNS = [
 export function renderResultsTable(results, filter, sort) {
   const key = sort && sort.key, dir = sort && sort.dir;
   const hasPsd = (results || []).some(psdChecked);
-  // Insert the PSD column after "Disagreement" only when the report has PSD data,
-  // so pre-PSD reports render exactly as before.
-  const cols = hasPsd
-    ? [...COLUMNS.slice(0, 3), { label: '▼▲▶ PSD', sort: null }, ...COLUMNS.slice(3)]
-    : COLUMNS;
+  // The PSD column is always present, so a pre-PSD report renders the same UI as
+  // a current one; its cells read "▼ ▲ ?" instead of carrying a verdict.
+  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶ PSD', sort: null }, ...COLUMNS.slice(3)];
   const head = cols.map(c => {
     if (!c.sort) return `<th>${c.label}</th>`;
     const active = c.sort === key;
@@ -378,22 +380,26 @@ export function renderResultsTable(results, filter, sort) {
     const { count } = gapStats(r);
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     const v = recordVerdict(r);
-    let psdCell = '';
-    if (hasPsd) {
-      const pv = psdVerdict(r);
-      psdCell = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pv ? pv.text : 'PSD not checked')}">${esc(psdTriad(r))}</span></td>`;
-    }
+    const pv = psdVerdict(r);
+    const psdCell = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pv ? pv.text : 'PSD not checked in this report')}">${esc(psdTriad(r))}</span></td>`;
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
       <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCell}
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
-  return `${hasPsd ? psdLegend() : ''}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  return `${psdLegend(hasPsd)}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // Legend for the PSD triangle column: what each triangle means and how colour
-// encodes the verdict.
-export function psdLegend() {
+// encodes the verdict. Reports without PSD get the same box, saying why the
+// column is empty rather than explaining glyphs that never appear.
+export function psdLegend(hasPsd = true) {
+  if (!hasPsd) {
+    return `<div class="psd-legend"><strong>PSD triangle</strong> — `
+      + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD. `
+      + `PSD was <b>not checked</b> in this report, so every row shows `
+      + `<span class="psd mut">▼ ▲ ?</span> — re-run the check to include it.</div>`;
+  }
   return `<div class="psd-legend"><strong>PSD triangle</strong> — `
     + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD · `
     + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing). `
