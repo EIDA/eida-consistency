@@ -44,11 +44,11 @@ export function recordDirections(record) {
 }
 
 export function matchesFilter(record, filter) {
-  // An explicit PSD filter takes over from "only inconsistent" (a PSD violation
-  // can be availability/dataselect-consistent), so picking a PSD category shows
-  // all rows in it regardless of the A–D verdict.
+  // The PSD selector narrows the rows already on screen rather than overriding
+  // "only inconsistent", so the checkbox always means the same thing. PSD
+  // findings on availability/dataselect-consistent rows appear once it is off.
   const psdSel = filter.psd && filter.psd !== 'all' ? filter.psd : null;
-  if (!psdSel && filter.onlyInconsistent && record.consistent !== false) return false;
+  if (filter.onlyInconsistent && record.consistent !== false) return false;
   if (psdSel) {
     const v = psdVerdict(record);
     const kind = v ? v.kind : null;

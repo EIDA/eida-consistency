@@ -418,11 +418,20 @@ test('renderDetail shows the PSD line when checked', () => {
 
 import { psdLegend } from './viewer.core.js';
 
-test('matchesFilter psd=violation shows >=2024 data-without-PSD even when A-D consistent', () => {
-  const f = { onlyInconsistent: true, direction: 'both', psd: 'violation', search: '' };
+test('matchesFilter psd=violation selects >=2024 data-without-PSD', () => {
+  const f = { onlyInconsistent: false, direction: 'both', psd: 'violation', search: '' };
   assert.equal(matchesFilter(psdViolation, f), true);
   assert.equal(matchesFilter(psdPregap, f), false);
   assert.equal(matchesFilter(psdOk, f), false);
+});
+
+test('matchesFilter composes the PSD filter with "only inconsistent"', () => {
+  // The PSD selector narrows what is already on screen; it never widens it. So
+  // with the box ticked an A/D-consistent record stays hidden even when it is a
+  // PSD violation, and an inconsistent one in the same category shows.
+  const f = { onlyInconsistent: true, direction: 'both', psd: 'violation', search: '' };
+  assert.equal(matchesFilter(psdViolation, f), false);          // consistent: true
+  assert.equal(matchesFilter({ ...psdViolation, consistent: false }, f), true);
 });
 
 test('matchesFilter psd=pregap / psd=consistent select their categories', () => {
