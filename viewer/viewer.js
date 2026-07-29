@@ -95,7 +95,16 @@ function showReport(report) {
   const psd = $('#psd');
   psd.disabled = !hasPsd;
   psd.title = hasPsd ? '' : 'This report was produced before the PSD check existed';
-  if (!hasPsd) { psd.value = 'all'; state.filter.psd = 'all'; }
+  if (!hasPsd) psd.value = 'all';
+  // Take the filter state from the controls rather than assuming the defaults:
+  // browsers restore form state across a reload, which would otherwise leave the
+  // toolbar showing one thing and the table filtered by another.
+  state.filter = {
+    onlyInconsistent: $('#onlyInc').checked,
+    direction: $('#dir').value,
+    psd: psd.value,
+    search: $('#search').value,
+  };
   wire();
   paint();
 }
