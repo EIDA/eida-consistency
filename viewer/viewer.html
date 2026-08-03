@@ -2,8 +2,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EIDA Consistency — report viewer</title>
 <style>
-:root{--bg:#fff;--fg:#1f2328;--mut:#656d76;--line:#d0d7de;--accent:#0969da;--card:#f6f8fa;--ok:#1a7f37;--warn:#bf8700;--bad:#cf222e}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--accent:#4493f8;--card:#161b22;--ok:#3fb950;--warn:#d29922;--bad:#f85149}}
+:root{--bg:#fff;--fg:#1f2328;--mut:#656d76;--line:#d0d7de;--accent:#0969da;--card:#f6f8fa;--ok:#1a7f37;--warn:#bf8700;--bad:#cf222e;--info:#8250df}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--accent:#4493f8;--card:#161b22;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--info:#a371f7}}
 *{box-sizing:border-box}
 body{font-family:Roboto,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg);font-size:14px}
 .wrap{max-width:1100px;margin:0 auto;padding:1.2rem}
@@ -48,11 +48,11 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .tag.avail{color:var(--warn)} .tag.data{color:var(--bad)}
 .verdict{font-weight:600;font-size:.85rem}
 .verdict.bad{color:var(--bad)} .verdict.ok{color:var(--ok)} .verdict.mut{color:var(--mut)}
-.chip.warn{color:var(--warn)} .chip.lbl{color:var(--mut);font-weight:600}
+.chip.warn{color:var(--warn)} .chip.info{color:var(--info)} .chip.lbl{color:var(--mut);font-weight:600}
 .psd{font-weight:600;letter-spacing:1px;white-space:nowrap}
-.psd.ok{color:var(--ok)} .psd.bad{color:var(--bad)} .psd.warn{color:var(--warn)} .psd.mut{color:var(--mut)}
+.psd.ok{color:var(--ok)} .psd.bad{color:var(--bad)} .psd.warn{color:var(--warn)} .psd.mut{color:var(--mut)} .psd.info{color:var(--info)}
 .psd-line{margin:.3rem 0;font-size:.9rem} .psd-tri{font-weight:700;letter-spacing:1px;margin-right:.3rem}
-.psd-line.bad{color:var(--bad)} .psd-line.ok{color:var(--ok)} .psd-line.warn{color:var(--warn)} .psd-line.mut{color:var(--mut)}
+.psd-line.bad{color:var(--bad)} .psd-line.ok{color:var(--ok)} .psd-line.warn{color:var(--warn)} .psd-line.mut{color:var(--mut)} .psd-line.info{color:var(--info)}
 .psd-legend{color:var(--mut);font-size:.8rem;line-height:1.5;margin:.6rem 0 .3rem;padding:.5rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .psd-legend b{color:var(--fg);font-weight:700}
 .psd-legend .psd{margin:0 .1rem}
@@ -110,7 +110,7 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
   <div class="toolbar" id="toolbar">
     <label><input type="checkbox" id="onlyInc" checked> only inconsistent</label>
     <select id="dir"><option value="both">all ▲▼</option><option value="dataselect">▲ Data only</option><option value="availability">▼ Avail only</option></select>
-    <select id="psd"><option value="all">PSD: all</option><option value="violation">▶ PSD violations (≥2024)</option><option value="pregap">▶ pre-2024 PSD gaps</option><option value="consistent">▶ PSD consistent</option><option value="na">PSD n/a</option></select>
+    <select id="psd"><option value="all">PSD: all</option><option value="violation">▶ PSD violations (≥2024)</option><option value="pregap">▶ pre-2024 PSD gaps</option><option value="orphan">▶ PSD without data</option><option value="consistent">▶ PSD consistent</option><option value="na">PSD n/a</option></select>
     <input id="search" placeholder="search NET.STA.CHA">
     <span class="hint">click a column header to sort</span>
   </div>

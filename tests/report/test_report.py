@@ -561,3 +561,59 @@ def test_markdown_includes_interactive_view_link(tmp_path):
     assert "Interactive view" in md
     assert "?report=" in md
     assert ".json" in md.split("Interactive view")[1].split(")")[0]
+
+
+# --- orphan PSD: PSD for a day with no data at all ---
+
+def _orphan(**kw):
+    base = dict(station="O", dataselect_success=False, psd_present=True,
+                psd_required=True, psd_status="Orphan", psd_consistent=None,
+                psd_url="http://psd", psd_day_url="http://day")
+    base.update(kw)
+    return _rec(**base)
+
+
+def test_summary_counts_orphan_psd():
+    recs = [
+        _orphan(),
+        _rec(psd_consistent=False, psd_status="Inconsistent", psd_required=True),
+        _rec(psd_consistent=True, psd_status="Consistent", psd_required=True),
+    ]
+    summary = create_report_object("NOA", 1, 600, recs)["summary"]
+    assert summary["psd_yes_data_no"] == 1
+    assert summary["data_yes_psd_no"] == 1        # the reverse case, unchanged
+
+
+def test_orphan_psd_does_not_move_the_psd_scores():
+    from eida_consistency.report.report import psd_scores
+    with_orphan = psd_scores([
+        _orphan(),
+        _rec(dataselect_success=True, psd_present=True, psd_required=True,
+             psd_status="Consistent"),
+    ])
+    without = psd_scores([
+        _rec(dataselect_success=True, psd_present=True, psd_required=True,
+             psd_status="Consistent"),
+    ])
+    assert with_orphan == without
+
+
+def test_build_psd_section_lists_orphans_separately():
+    recs = [
+        _orphan(),
+        _rec(station="V", dataselect_success=True, psd_present=False,
+             psd_required=True, psd_status="Inconsistent"),
+    ]
+    body = "\n".join(build_psd_section(recs))
+    assert "PSD without data" in body
+    assert "`HL.O..HNZ`" in body
+    # the orphan is not filed under the >=2024 violations
+    violations = body.split("### PSD without data")[0]
+    assert "`HL.O..HNZ`" not in violations
+
+
+def test_build_psd_section_orphan_section_says_none_when_clean():
+    recs = [_rec(station="C", dataselect_success=True, psd_present=True,
+                 psd_required=True, psd_status="Consistent")]
+    body = "\n".join(build_psd_section(recs))
+    assert "PSD without data" in body

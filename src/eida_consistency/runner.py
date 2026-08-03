@@ -6,11 +6,15 @@ import concurrent.futures
 import json
 import sys
 import time
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
+from .core.coverage import parse_iso
+
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
+from .services.availability import day_has_spans
 from .services.psd import psd_coverage
 from .core.checker import check_candidate
 from .core.consistency import classify_consistency, classify_psd
@@ -22,6 +26,17 @@ from .report.report import (
     save_report_markdown,
     REPORT_DIR,
 )
+
+
+def _utc_day_range(start: str, end: str) -> tuple[str, str]:
+    """The UTC day(s) a window spans: floor(start day) → ceil(end day).
+
+    A window may cross midnight, in which case both days are probed.
+    """
+    t0, t1 = parse_iso(str(start)), parse_iso(str(end))
+    lo = t0.replace(hour=0, minute=0, second=0, microsecond=0)
+    hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    return lo.strftime("%Y-%m-%dT%H:%M:%S"), hi.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def run_consistency_check(
@@ -120,7 +135,18 @@ def run_consistency_check(
                 base_url, match["network"], match["station"], match["channel"],
                 start, end, loc_final,
             )
-            psd_class = classify_psd(ds_result, psd_result, (start, end))
+            # Probe the whole UTC day only if PSD exists for a window with no
+            # data — see classify_psd(): it separates an intra-day gap from an
+            # orphan PSD.
+            def day_probe():
+                lo, hi = _utc_day_range(start, end)
+                return day_has_spans(
+                    base_url, match["network"], match["station"], match["channel"],
+                    lo, hi, loc_final or "*",
+                )
+
+            psd_class = classify_psd(ds_result, psd_result, (start, end),
+                                     day_check=day_probe)
         log = format_result(
             idx,
             url,
@@ -162,6 +188,7 @@ def run_consistency_check(
             "psd_required": (psd_class["psd_required"] if psd_class else None),
             "psd_consistent": (psd_class["consistent"] if psd_class else None),
             "psd_url": (psd_result["url"] if psd_result else None),
+            "psd_day_url": (psd_class.get("day_url") if psd_class else None),
         }
         if psd_result is not None:
             record.setdefault("coverage", {})

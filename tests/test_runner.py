@@ -141,3 +141,40 @@ def test_runner_report_json_contains_psd_fields(monkeypatch, tmp_path):
     assert "psd_status" in rec and "psd_present" in rec and "psd_required" in rec
     assert "psd" in rec["coverage"]
     assert "data_yes_psd_no" in report["summary"]
+
+def test_runner_flags_orphan_psd_when_the_whole_day_is_dataless(monkeypatch, tmp_path):
+    calls = []
+    _stub_pipeline(monkeypatch, calls)
+    # No data in the window ...
+    monkeypatch.setattr(runner_mod, "dataselect", lambda *a, **k: {
+        "success": False, "status": "NoData", "type": "None",
+        "segments": [], "url": "http://ds", "debug": ""})
+    # ... but PSD exists for the day ...
+    monkeypatch.setattr(runner_mod, "psd_coverage", lambda *a, **k: {
+        "success": True, "status": "OK", "records": [], "day_covered": True, "url": "http://psd"})
+    # ... and availability reports nothing all day.
+    probes = []
+
+    def fake_day(*a, **k):
+        probes.append((a, k))
+        return {"ok": True, "has_spans": False, "url": "http://day"}
+
+    monkeypatch.setattr(runner_mod, "day_has_spans", fake_day)
+
+    path = runner_mod.run_consistency_check(node="NOA", epochs=1, check_psd=True, report_dir=tmp_path)
+    report = json.loads(path.read_text())
+    rec = report["results"][0]
+    assert len(probes) == 1
+    assert rec["psd_status"] == "Orphan"
+    assert rec["psd_day_url"] == "http://day"
+    assert report["summary"]["psd_yes_data_no"] == 1
+
+
+def test_runner_does_not_probe_the_day_when_data_is_present(monkeypatch, tmp_path):
+    calls = []
+    _stub_pipeline(monkeypatch, calls)
+    probes = []
+    monkeypatch.setattr(runner_mod, "day_has_spans",
+                        lambda *a, **k: probes.append(1) or {"ok": True, "has_spans": True, "url": "u"})
+    runner_mod.run_consistency_check(node="NOA", epochs=1, check_psd=True, report_dir=tmp_path)
+    assert probes == []

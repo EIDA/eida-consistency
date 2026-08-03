@@ -253,6 +253,8 @@ export function psdVerdict(record) {
   const st = record.psd_status;
   if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
   if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', text: 'PSD skipped (transient)' };
+  // PSD published for a day the archive has no data for — the reverse finding.
+  if (st === 'Orphan') return { kind: 'orphan', cls: 'info', text: 'PSD without data (no data that day)' };
   if (record.psd_consistent === false)
     return record.psd_required
       ? { kind: 'violation', cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
@@ -269,9 +271,9 @@ export function psdTriad(record) {
 }
 
 // Roll up the PSD dimension across the records for the summary header.
-const _PSD_BUCKET = { violation: 'violations', pregap: 'pregaps', unsupported: 'unsupported', skipped: 'skipped', ok: 'consistent' };
+const _PSD_BUCKET = { violation: 'violations', pregap: 'pregaps', orphan: 'orphans', unsupported: 'unsupported', skipped: 'skipped', ok: 'consistent' };
 export function psdCounts(results) {
-  const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, unsupported: 0, skipped: 0 };
+  const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, orphans: 0, unsupported: 0, skipped: 0 };
   for (const r of results || []) {
     if (!psdChecked(r)) continue;
     c.checked++;
@@ -344,11 +346,14 @@ function psdChips(results) {
   }
   const extra = (c.unsupported || c.skipped)
     ? `<span class="chip mut">${esc(c.unsupported + c.skipped)} PSD n/a</span>` : '';
+  // The reverse finding is rare; show it only when it happened.
+  const orphan = c.orphans
+    ? `<span class="chip info">${esc(c.orphans)} PSD without data</span>` : '';
   return `<div class="chips psd" title="Availability/Dataselect/PSD triangle — PSD required only for data on/after 2024-01-01">
     <span class="chip lbl">PSD</span>
     <span class="chip bad">${esc(c.violations)} violations (≥2024)</span>
     <span class="chip warn">${esc(c.pregaps)} pre-2024 gaps</span>
-    <span class="chip ok">${esc(c.consistent)} consistent</span>${extra}</div>`;
+    <span class="chip ok">${esc(c.consistent)} consistent</span>${orphan}${extra}</div>`;
 }
 
 const COLUMNS = [
@@ -405,6 +410,7 @@ export function psdLegend(hasPsd = true) {
     + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing). `
     + `<span class="psd bad">▶ violation</span> data ≥ 2024 without PSD · `
     + `<span class="psd warn">▶ pre-2024 gap</span> not required · `
+    + `<span class="psd info">▽ △ ▶ PSD without data</span> no data that whole day · `
     + `<span class="psd ok">▶ consistent</span></div>`;
 }
 
@@ -438,8 +444,13 @@ export function renderDetail(record) {
     const covPsd = (record.coverage && record.coverage.psd) || [];
     const covNote = covPsd.length
       ? ` · PSD day record: ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}` : '';
+    // An orphan is only a finding because the whole day is empty — link the
+    // availability query that established it so the claim can be re-checked.
+    const dayUrl = safeUrl(record.psd_day_url);
+    const dayNote = dayUrl
+      ? `<br><a href="${esc(dayUrl)}" target="_blank" rel="noopener noreferrer">day availability query</a>` : '';
     parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> `
-      + `${esc(pv.text)} — ${esc(req)}${covNote}<br>`
+      + `${esc(pv.text)} — ${esc(req)}${covNote}${dayNote}<br>`
       + `<span class="mut">▼ Availability · ▲ Dataselect (ground truth) · ▶ PSD — filled = present, hollow = absent</span></p>`);
   }
   const cov = record.coverage;

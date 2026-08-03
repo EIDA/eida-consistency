@@ -487,3 +487,54 @@ test('psdLegend explains the glyphs', () => {
   assert.match(l, /Dataselect/);
   assert.match(l, /filled = has data/);
 });
+
+
+// ── orphan PSD (PSD published for a day with no data at all) ──────────────
+const psdOrphan = {
+  index: 13, network: 'HL', station: 'ORPH', location: '', channel: 'HHZ',
+  available: false, dataselect_success: false, consistent: true, mismatch: [],
+  psd_status: 'Orphan', psd_present: true, psd_required: true, psd_consistent: null,
+  psd_day_url: 'https://node/fdsnws/availability/1/query?day',
+  starttime: '2025-03-04T00:10:00', endtime: '2025-03-04T00:20:00',
+  coverage: { availability: [], dataselect: [] },
+};
+
+test('psdVerdict recognises an orphan PSD', () => {
+  const v = psdVerdict(psdOrphan);
+  assert.equal(v.kind, 'orphan');
+  assert.equal(v.cls, 'info');
+  assert.match(v.text, /without data/i);
+});
+
+test('psdTriad shows PSD alone for an orphan', () => {
+  assert.equal(psdTriad(psdOrphan), '▽ △ ▶');
+});
+
+test('psdCounts buckets orphans separately', () => {
+  const c = psdCounts([psdViolation, psdOrphan, psdOk]);
+  assert.equal(c.orphans, 1);
+  assert.equal(c.violations, 1);
+  assert.equal(c.consistent, 1);
+  assert.equal(c.checked, 3);
+});
+
+test('renderSummary chips the orphan count only when there is one', () => {
+  assert.match(renderSummary({ node: 'HL', score: 90 }, [psdOrphan, psdOk]), /1 PSD without data/);
+  assert.doesNotMatch(renderSummary({ node: 'HL', score: 90 }, [psdOk]), /PSD without data/);
+});
+
+test('matchesFilter psd=orphan selects orphans', () => {
+  const f = { onlyInconsistent: false, direction: 'both', psd: 'orphan', search: '' };
+  assert.equal(matchesFilter(psdOrphan, f), true);
+  assert.equal(matchesFilter(psdViolation, f), false);
+  assert.equal(matchesFilter(psdOk, f), false);
+});
+
+test('psdLegend explains the orphan glyph', () => {
+  assert.match(psdLegend(), /without data/i);
+});
+
+test('renderDetail links the day availability query for an orphan', () => {
+  const html = renderDetail(psdOrphan);
+  assert.match(html, /availability\/1\/query\?day/);
+});
