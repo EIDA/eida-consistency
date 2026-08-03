@@ -538,3 +538,34 @@ test('renderDetail links the day availability query for an orphan', () => {
   const html = renderDetail(psdOrphan);
   assert.match(html, /availability\/1\/query\?day/);
 });
+
+
+// ── PSD request button (the coverage CSV) ─────────────────────────────────
+test('summariseRequest counts PSD coverage records', () => {
+  const csv = 'Network,Station,Start time,End time,Is valid\nHL,A,2025-01-05,2025-01-06,true\n';
+  assert.match(summariseRequest('psd', 200, csv, 0), /1 PSD record/);
+  assert.match(summariseRequest('psd', 204, '', 0), /no data/i);
+});
+
+test('runRequest reads PSD responses as text, not bytes', async () => {
+  const csv = 'Network,Station,Start time,End time,Is valid\nHL,A,2025-01-05,2025-01-06,true\n';
+  const r = await runRequest('psd', 'http://x', async () => ({
+    status: 200, text: async () => csv,
+    arrayBuffer: async () => { throw new Error('should not be called for psd'); },
+  }));
+  assert.equal(r.ok, true);
+  assert.equal(r.hasData, true);
+  assert.match(r.summary, /1 PSD record/);
+});
+
+test('renderDetail offers a Run psd button when the report has a PSD url', () => {
+  const withPsd = { ...psdViolation, url: 'https://h/availability/1/query?net=IV',
+    psd_url: 'https://h/eidaws/psd/1/coverage?net=IV' };
+  const html = renderDetail(withPsd);
+  assert.match(html, /data-kind="psd"/);
+  assert.match(html, /eidaws\/psd\/1\/coverage/);
+});
+
+test('renderDetail omits the PSD button for reports without a PSD url', () => {
+  assert.doesNotMatch(renderDetail({ ...rec }), /data-kind="psd"/);
+});

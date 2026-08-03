@@ -177,10 +177,19 @@ export function timelineGapsSVG(windowStart, windowEnd, mismatch) {
   </svg>`;
 }
 
+// PSD coverage answers as CSV with a header row; count the data rows.
+const _psdRows = text => Math.max(0, (text || '').trim().split('\n')
+  .filter(l => l && !l.startsWith('#')).length - 1);
+
 export function summariseRequest(kind, status, bodyText, byteLength) {
   if (kind === 'availability') {
     const n = (bodyText || '').split('\n').filter(l => l && !l.startsWith('#')).length;
     return `HTTP ${status} — ${n} span${n === 1 ? '' : 's'}`;
+  }
+  if (kind === 'psd') {
+    if (status === 204 || !(bodyText || '').trim()) return `HTTP ${status} — no data`;
+    const n = _psdRows(bodyText);
+    return `HTTP ${status} — ${n} PSD record${n === 1 ? '' : 's'}`;
   }
   if (status === 204) return `HTTP 204 — no data`;
   return `HTTP ${status} — ${byteLength} bytes`;
@@ -193,6 +202,10 @@ export async function runRequest(kind, url, fetchImpl) {
       const text = await res.text();
       const n = (text || '').split('\n').filter(l => l && !l.startsWith('#')).length;
       return { ok: true, status: res.status, hasData: res.status === 200 && n > 0, summary: summariseRequest(kind, res.status, text, 0) };
+    }
+    if (kind === 'psd') {
+      const text = await res.text();
+      return { ok: true, status: res.status, hasData: res.status === 200 && _psdRows(text) > 0, summary: summariseRequest(kind, res.status, text, 0) };
     }
     const buf = await res.arrayBuffer();
     return { ok: true, status: res.status, hasData: res.status === 200 && buf.byteLength > 0, summary: summariseRequest(kind, res.status, '', buf.byteLength) };
@@ -463,7 +476,8 @@ export function renderDetail(record) {
     const svg = timelineGapsSVG(record.starttime, record.endtime, record.mismatch || []);
     if (svg) parts.push(`${svg}<div class="legend"><span class="lg gap">█</span> mismatch (gap) within the requested window — older report without full coverage data</div>`);
   }
-  const full = [['availability', record.url], ['dataselect', buildDataselectUrl(record)]]
+  const full = [['availability', record.url], ['dataselect', buildDataselectUrl(record)],
+                ['psd', record.psd_url]]
     .filter(([, u]) => u).map(([k, u]) => reqLinks(k, u)).join(' ');
   if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
   const gaps = record.mismatch || [];
