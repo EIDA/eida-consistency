@@ -51,7 +51,10 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .chip.warn{color:var(--warn)} .chip.info{color:var(--info)} .chip.lbl{color:var(--mut);font-weight:600}
 .psd{font-weight:600;letter-spacing:1px;white-space:nowrap}
 .psd.ok{color:var(--ok)} .psd.bad{color:var(--bad)} .psd.warn{color:var(--warn)} .psd.mut{color:var(--mut)} .psd.info{color:var(--info)}
-.psd-line{margin:.3rem 0;font-size:.9rem} .psd-tri{font-weight:700;letter-spacing:1px;margin-right:.3rem}
+.psd-line{margin:.3rem 0 .1rem;font-size:.9rem} .psd-tri{font-weight:700;letter-spacing:1px;margin-right:.3rem}
+.psd-meta{margin:0 0 .6rem;font-size:.82rem;color:var(--mut)}
+.psd-meta a{color:var(--accent);text-decoration:none} .psd-meta a:hover{text-decoration:underline}
+.mut{color:var(--mut)}
 .psd-line.bad{color:var(--bad)} .psd-line.ok{color:var(--ok)} .psd-line.warn{color:var(--warn)} .psd-line.mut{color:var(--mut)} .psd-line.info{color:var(--info)}
 .psd-legend{color:var(--mut);font-size:.8rem;line-height:1.5;margin:.6rem 0 .3rem;padding:.5rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .psd-legend b{color:var(--fg);font-weight:700}
@@ -71,12 +74,13 @@ table.results tbody tr.sel{background:var(--card);box-shadow:inset 3px 0 0 var(-
 .tl-gap-solid{fill:var(--bad);opacity:.85}
 .tl-axis{stroke:var(--line)}
 .tl-lab,.tl-lane{fill:var(--mut);font-size:11px;font-family:Roboto,system-ui,sans-serif}
-.tl{font-family:"Roboto Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.15;letter-spacing:1px;margin:.1rem 0;white-space:pre;overflow-x:auto;color:var(--mut)}
+.tl{font-family:"Roboto Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.15;letter-spacing:0;margin:.1rem 0;white-space:pre;overflow-x:auto;color:var(--mut)}
 .legend{color:var(--mut);font-size:.78rem;margin:.1rem 0 .7rem}
 .legend .lg{font-family:"Roboto Mono",monospace}
 .legend .lg.av{color:var(--ok)} .legend .lg.ds{color:var(--accent)} .legend .lg.gap{color:var(--bad)}
 .req{margin:.3rem 0}
-.req.full{font-weight:600}
+.req.full{font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+.reqitem{display:inline-flex;align-items:center;gap:.25rem;font-weight:400}
 .req button{cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:.15rem .5rem;margin-right:.2rem}
 .req button.copy{font-size:.75rem;color:var(--mut)}
 .req a{color:var(--accent);margin-right:.4rem;text-decoration:none}

@@ -569,3 +569,45 @@ test('renderDetail offers a Run psd button when the report has a PSD url', () =>
 test('renderDetail omits the PSD button for reports without a PSD url', () => {
   assert.doesNotMatch(renderDetail({ ...rec }), /data-kind="psd"/);
 });
+
+
+// ── detail panel polish ───────────────────────────────────────────────────
+test('renderDetail drops the requirement clause for verdicts it cannot apply to', () => {
+  // "not required (pre-2024)" is meaningless for an orphan: nothing is missing.
+  const html = renderDetail({ ...psdOrphan, psd_url: 'https://h/eidaws/psd/1/coverage' });
+  assert.doesNotMatch(html, /required|2024-01-01/);
+  assert.match(html, /without data/i);
+});
+
+test('renderDetail keeps the requirement clause where it decides the verdict', () => {
+  assert.match(renderDetail(psdViolation), /required \(data on\/after 2024-01-01\)/);
+  assert.match(renderDetail(psdPregap), /not required \(pre-2024\)/);
+});
+
+test('renderDetail labels the day query as an action', () => {
+  const html = renderDetail(psdOrphan);
+  assert.match(html, /check the day's availability/);
+});
+
+test('renderDetail leaves the glyph key to the table legend', () => {
+  // The legend box above the table already explains the triangles; repeating it
+  // in every detail panel is noise.
+  assert.doesNotMatch(renderDetail(psdViolation), /filled = present, hollow = absent/);
+});
+
+test('renderDetail skips the ASCII timeline when neither service has data', () => {
+  const empty = { ...psdOrphan, coverage: { availability: [], dataselect: [] } };
+  const html = renderDetail(empty);
+  assert.doesNotMatch(html, /<pre class="tl">/);
+  assert.match(html, /Neither service returned data/);
+});
+
+test('renderDetail still draws the ASCII timeline when there is coverage', () => {
+  assert.match(renderDetail(rec), /<pre class="tl">/);
+});
+
+test('renderDetail formats gap timestamps like the rest of the panel', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /2014-02-15 05:18:25 → 2014-02-15 05:19:01/);
+  assert.doesNotMatch(html, /05:18:25\+00:00/);
+});

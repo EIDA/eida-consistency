@@ -445,7 +445,8 @@ function reqLinks(kind, url) {
   const safe = safeUrl(url);
   const open = safe ? ` <a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">open</a>` : '';
   const copy = ` <button class="copy" data-copy="${esc(url)}">copy</button>`;
-  return `<button data-kind="${kind}" data-url="${esc(url)}">Run ${kind}</button>${open}${copy}`;
+  // Keep the button, its links and its result badge together when the row wraps.
+  return `<span class="reqitem"><button data-kind="${kind}" data-url="${esc(url)}">Run ${kind}</button>${open}${copy}</span>`;
 }
 
 export function renderDetail(record) {
@@ -453,25 +454,33 @@ export function renderDetail(record) {
   const parts = [`<p class="explain ${ex.cls}">${esc(ex.text)}</p>`];
   if (psdChecked(record)) {
     const pv = psdVerdict(record);
-    const req = record.psd_required ? 'required (data on/after 2024-01-01)' : 'not required (pre-2024)';
+    // The 2024 obligation only decides the verdict when PSD is missing; on an
+    // orphan (or an unsupported/skipped check) it is noise.
+    const meta = [];
+    if (pv.kind === 'violation' || pv.kind === 'pregap') {
+      meta.push(record.psd_required ? 'required (data on/after 2024-01-01)' : 'not required (pre-2024)');
+    }
     const covPsd = (record.coverage && record.coverage.psd) || [];
-    const covNote = covPsd.length
-      ? ` · PSD day record: ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}` : '';
+    if (covPsd.length) meta.push(`day record ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}`);
     // An orphan is only a finding because the whole day is empty — link the
     // availability query that established it so the claim can be re-checked.
     const dayUrl = safeUrl(record.psd_day_url);
-    const dayNote = dayUrl
-      ? `<br><a href="${esc(dayUrl)}" target="_blank" rel="noopener noreferrer">day availability query</a>` : '';
-    parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> `
-      + `${esc(pv.text)} — ${esc(req)}${covNote}${dayNote}<br>`
-      + `<span class="mut">▼ Availability · ▲ Dataselect (ground truth) · ▶ PSD — filled = present, hollow = absent</span></p>`);
+    if (dayUrl) meta.push(`<a href="${esc(dayUrl)}" target="_blank" rel="noopener noreferrer">check the day's availability</a>`);
+    parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> ${esc(pv.text)}</p>`
+      + (meta.length ? `<p class="psd-meta">${meta.join(' · ')}</p>` : ''));
   }
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
+    const segs = (cov.availability || []).length + (cov.dataselect || []).length;
     const svg = timelineSVG(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    const tl = timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    parts.push(`${svg}<pre class="tl">${esc(tl)}</pre>
-      <div class="legend"><span class="lg av">█</span> availability has data &nbsp; <span class="lg ds">█</span> dataselect has data &nbsp; <span class="lg gap">█</span> mismatch &nbsp;·&nbsp; ASCII: ▲ data-only ▼ avail-only █ both · none | boundary</div>`);
+    // With nothing on either lane the ASCII strip is a row of dots — say what
+    // happened instead of drawing an empty picture twice.
+    const tl = segs
+      ? `<pre class="tl">${esc(timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []))}</pre>` : '';
+    const legend = segs
+      ? `<span class="lg av">█</span> availability has data &nbsp; <span class="lg ds">█</span> dataselect has data &nbsp; <span class="lg gap">█</span> mismatch &nbsp;·&nbsp; ASCII: ▲ data-only ▼ avail-only █ both · none | boundary`
+      : `Neither service returned data in this window.`;
+    parts.push(`${svg}${tl}<div class="legend">${legend}</div>`);
   } else {
     const svg = timelineGapsSVG(record.starttime, record.endtime, record.mismatch || []);
     if (svg) parts.push(`${svg}<div class="legend"><span class="lg gap">█</span> mismatch (gap) within the requested window — older report without full coverage data</div>`);
@@ -486,7 +495,7 @@ export function renderDetail(record) {
       const q = gapQueries(record, m);
       const dur = fmtDuration((_parseUTC(m.end) - _parseUTC(m.start)) / 1000);
       const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k => reqLinks(k, q[k])).join(' ');
-      return `<div class="gap"><div class="ghead">${esc(m.start)} → ${esc(m.end)} <span class="gdur">${esc(dur)}</span> ${esc(DIR_LABEL[m.who] || '')}</div><div class="req">${btns}</div></div>`;
+      return `<div class="gap"><div class="ghead">${esc(_fmtTime(m.start))} → ${esc(_fmtTime(m.end))} <span class="gdur">${esc(dur)}</span> ${esc(DIR_LABEL[m.who] || '')}</div><div class="req">${btns}</div></div>`;
     }).join('');
     parts.push(`<div class="gaps"><h2>${esc(gaps.length)} gap${gaps.length === 1 ? '' : 's'}</h2>${items}</div>`);
   }
