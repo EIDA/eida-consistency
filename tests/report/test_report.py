@@ -38,7 +38,6 @@ def test_create_report_object_basic():
     ]
     rep = report.create_report_object(
         "NODE",
-        123,
         5,
         600,
         records,
@@ -63,29 +62,40 @@ def test_create_report_object_basic():
 def test_create_report_object_includes_tool_version():
     import eida_consistency
 
-    rep = report.create_report_object("NODE", 1, 1, 600, [])
+    rep = report.create_report_object("NODE", 1, 600, [])
     assert rep["summary"]["version"] == eida_consistency.__version__
     assert isinstance(rep["summary"]["version"], str)
     assert rep["summary"]["version"]
 
 
 def test_create_report_object_empty_records():
-    rep = report.create_report_object("NODE", 1, 1, 600, [])
+    rep = report.create_report_object("NODE", 1, 600, [])
     assert rep["summary"]["score"] == 0.0
     assert rep["summary"]["total_checked"] == 0
     assert rep["summary"]["total_skipped"] == 0
 
 
 def test_make_unique_filename_format():
-    fname = report._make_unique_filename("NODE", 42, "json")
-    assert fname.startswith("node_")
-    assert "_42.json" in fname
+    ts = "2026-04-27T09:58:47.529160+00:00"
+    fname = report._make_unique_filename("NODE", ts, "json")
+    assert fname == "node_20260427_095847_529160.json"
+    # 4-part underscore shape preserved, last field numeric (microseconds)
     assert len(fname.split("_")) == 4
+    assert fname.split("_")[-1].removesuffix(".json").isdigit()
+
+
+def test_report_has_no_seed_and_filenames_pair(tmp_path):
+    rep = report.create_report_object("NODE", 1, 600, [make_record()])
+    assert "seed" not in rep["summary"]
+    json_path = report.save_report_json(rep, report_dir=tmp_path)
+    md_path = report.save_report_markdown(rep, report_dir=tmp_path)
+    # json/md of one run share a stem (both derived from summary.timestamp)
+    assert json_path.stem == md_path.stem
 
 
 def test_save_report_json_and_content(tmp_path):
     recs = [make_record()]
-    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    rep = report.create_report_object("NODE", 1, 600, recs)
     path = report.save_report_json(rep, report_dir=tmp_path)
     assert path.exists()
     data = json.loads(path.read_text())
@@ -98,7 +108,7 @@ def test_save_report_markdown_with_skipped(tmp_path):
         make_record(False, ds_type="B"),
         make_record(None, ds_success=False, ds_type="Error", status="ConnectionError", scoreable=False, reason="TransientDataselectFailure"),
     ]
-    rep = report.create_report_object("NODE", 2, 3, 600, recs)
+    rep = report.create_report_object("NODE", 3, 600, recs)
     path = report.save_report_markdown(rep, report_dir=tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "# EIDA Consistency Report" in text
@@ -162,7 +172,7 @@ def test_table_channel_links_to_detail_anchor():
 
 
 def test_detail_has_anchor_for_record(tmp_path):
-    rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec(index=7)])
+    rep = report.create_report_object("NODE", 1, 600, [_inconsistent_rec(index=7)])
     text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
     assert '<a id="rec-7">' in text
 
@@ -184,7 +194,7 @@ def test_detail_gaps_include_gap_scoped_queries():
 
 
 def test_detail_shows_requests_and_status_for_inconsistency(tmp_path):
-    rep = report.create_report_object("NODE", 1, 1, 600, [_inconsistent_rec(index=5)])
+    rep = report.create_report_object("NODE", 1, 600, [_inconsistent_rec(index=5)])
     text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
     assert "availability/1/query?network=FR&station=MLS" in text
     assert "dataselect/1/query?network=FR&station=MLS" in text
@@ -256,7 +266,7 @@ def test_markdown_detail_includes_timeline_and_gaps(tmp_path):
         "availability": [["2014-02-15T05:17:09.6", "2014-02-15T05:19:01.6"]],
         "dataselect": [["2014-02-15T05:17:09.6", "2014-02-15T05:18:25.0"]],
     }
-    rep = report.create_report_object("NODE", 1, 1, 600, [rec])
+    rep = report.create_report_object("NODE", 1, 600, [rec])
     text = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
     assert "█" in text          # only the ASCII timeline draws coverage blocks
     assert "·" in text          # empty lead-in in the timeline
@@ -299,7 +309,7 @@ def test_render_timeline_dataselect_only_uses_up_triangle():
 
 def test_delete_old_reports(tmp_path):
     recs = [make_record()]
-    rep = report.create_report_object("NODE", 1, 1, 600, recs)
+    rep = report.create_report_object("NODE", 1, 600, recs)
     for _ in range(3):
         report.save_report_json(rep, report_dir=tmp_path)
         report.save_report_markdown(rep, report_dir=tmp_path)
@@ -316,3 +326,238 @@ def test_delete_old_reports(tmp_path):
 def test_delete_old_reports_nonexistent_dir(tmp_path):
     non_existing = tmp_path / "not_here"
     report.delete_old_reports(non_existing, keep=1)
+
+
+from eida_consistency.report.report import triad
+
+
+def test_triad_all_present_filled():
+    assert triad(True, True, True) == "▼ ▲ ▶"
+
+
+def test_triad_all_absent_hollow():
+    assert triad(False, False, False) == "▽ △ ▷"
+
+
+def test_triad_data_but_no_psd():
+    assert triad(False, True, False) == "▽ ▲ ▷"
+
+
+def test_triad_psd_none_shows_question():
+    assert triad(True, True, None) == "▼ ▲ ?"
+
+
+from eida_consistency.report.report import render_timeline
+
+WS, WE = "2024-06-02T12:00:00", "2024-06-02T12:10:00"
+
+
+def test_render_timeline_single_line_unchanged_without_psd():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)])
+    assert "\n" not in out  # still one line
+    assert set(out) <= set("█▲▼·|")
+
+
+def test_render_timeline_three_lanes_when_psd_present():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)], psd_present=True)
+    lines = out.splitlines()
+    assert len(lines) == 3
+    assert lines[0].startswith("▼ Avail")
+    assert lines[1].startswith("▲ Data")
+    assert lines[2].startswith("▶ PSD")
+    assert "█" in lines[2] and "░" not in lines[2]  # PSD lane uniform present
+
+
+def test_render_timeline_psd_lane_uniform_absent():
+    out = render_timeline(WS, WE, [(WS, WE)], [(WS, WE)], psd_present=False)
+    psd_line = out.splitlines()[2]
+    assert "░" in psd_line and "█" not in psd_line
+
+
+from eida_consistency.report.report import create_report_object
+
+
+def _rec(**kw):
+    base = dict(index=1, network="HL", station="A", channel="HNZ", location="",
+                available=True, dataselect_success=True, dataselect_type="SingleTrace",
+                consistent=True, scoreable=True, starttime="2024-06-02T12:00:00",
+                endtime="2024-06-02T12:10:00")
+    base.update(kw)
+    return base
+
+
+def test_summary_counts_data_but_no_psd():
+    recs = [
+        _rec(psd_consistent=False, psd_status="Inconsistent", psd_required=True),
+        _rec(psd_consistent=True, psd_status="Consistent", psd_required=True),
+        _rec(psd_consistent=None, psd_status="Unsupported", psd_required=True),
+        _rec(psd_consistent=None, psd_status="Skipped", psd_required=False),
+    ]
+    summary = create_report_object("NOA", 1, 600, recs)["summary"]
+    assert summary["data_yes_psd_no"] == 1
+    assert summary["psd_unsupported"] == 1
+    assert summary["psd_skipped"] == 1
+    assert summary["psd_required_count"] == 3
+    # existing A–D score untouched (all A–D consistent)
+    assert summary["score"] == 100.0
+
+
+from eida_consistency.report.report import build_psd_section
+
+
+def test_build_psd_section_empty_when_psd_not_checked():
+    # records without a psd_status mean PSD was disabled -> no section at all
+    assert build_psd_section([_rec()]) == []
+
+
+def test_build_psd_section_separates_violations_from_pregaps():
+    recs = [
+        _rec(station="V", dataselect_success=True, psd_present=False,
+             psd_required=True, psd_status="Inconsistent"),    # violation (>=2024)
+        _rec(station="G", dataselect_success=True, psd_present=False,
+             psd_required=False, psd_status="Inconsistent"),   # pre-2024 gap
+        _rec(station="C", dataselect_success=True, psd_present=True,
+             psd_required=True, psd_status="Consistent"),      # consistent
+    ]
+    body = "\n".join(build_psd_section(recs))
+    # explanatory prose is present
+    assert "## PSD Consistency" in body
+    assert "ground truth" in body
+    assert "2024-01-01" in body
+    # summary counts
+    assert "1 consistent" in body
+    assert "1 violation(s)" in body
+    assert "1 pre-2024 gap(s)" in body
+    # the violation is under the Violations heading, the gap under the gaps heading
+    v_head = body.index("### PSD Violations")
+    g_head = body.index("### PSD gaps before 2024")
+    assert v_head < body.index("HL.V..HNZ") < g_head        # violation in violations section
+    assert body.index("HL.G..HNZ") > g_head                 # gap in gaps section
+
+
+def test_build_psd_section_no_violations_shows_all_clear():
+    recs = [_rec(station="C", dataselect_success=True, psd_present=True,
+                 psd_required=True, psd_status="Consistent")]
+    body = "\n".join(build_psd_section(recs))
+    assert "None — every window" in body   # no violations
+    assert "✅" in body
+
+
+from eida_consistency.report.report import psd_scores
+
+
+def _pr(**kw):
+    """A minimal record for PSD scoring."""
+    base = dict(dataselect_success=True, psd_status="Consistent",
+                psd_present=True, psd_required=True)
+    base.update(kw)
+    return base
+
+
+def test_psd_scores_population_excludes_nodata_skipped_unsupported():
+    recs = [
+        _pr(psd_status="Consistent", psd_present=True, psd_required=True),          # hit >=2024
+        _pr(psd_status="Inconsistent", psd_present=False, psd_required=True),       # miss >=2024
+        _pr(psd_status="Consistent", psd_present=True, psd_required=False),         # hit pre-2024
+        _pr(psd_status="Inconsistent", psd_present=False, psd_required=False),      # miss pre-2024
+        _pr(dataselect_success=False, psd_status="Consistent", psd_present=False),  # no data -> excluded
+        _pr(psd_status="Skipped", psd_present=False),                               # skipped -> excluded
+        _pr(psd_status="Unsupported", psd_present=False),                           # unsupported -> excluded
+    ]
+    s = psd_scores(recs)
+    assert s["psd_evaluated"] == 4          # 4 data-bearing definitive windows
+    assert s["psd_present"] == 2            # 2 hits
+    assert s["psd_evaluated_2024"] == 2     # 2 required windows
+    assert s["psd_present_2024"] == 1       # 1 hit among them
+    assert s["psd_coverage_score"] == 50.0
+    assert s["psd_compliance_score"] == 50.0
+
+
+def test_psd_scores_na_when_no_required_windows():
+    recs = [_pr(psd_required=False, psd_present=True),
+            _pr(psd_required=False, psd_present=False)]
+    s = psd_scores(recs)
+    assert s["psd_compliance_score"] is None      # no >=2024 windows -> N/A
+    assert s["psd_coverage_score"] == 50.0
+
+
+def test_psd_scores_na_when_nothing_scoreable():
+    recs = [_pr(dataselect_success=False, psd_status="Consistent"),
+            _pr(psd_status="Unsupported")]
+    s = psd_scores(recs)
+    assert s["psd_evaluated"] == 0
+    assert s["psd_coverage_score"] is None
+    assert s["psd_compliance_score"] is None
+
+
+def test_psd_scores_rounds_to_two_dp():
+    recs = [_pr(psd_present=True), _pr(psd_present=False), _pr(psd_present=False)]  # 1/3 >=2024
+    s = psd_scores(recs)
+    assert s["psd_compliance_score"] == 33.33
+
+
+from eida_consistency.report.report import create_report_object
+
+
+def _rec_score(**kw):
+    base = dict(index=1, network="HL", station="A", channel="HNZ", location="",
+                available=True, dataselect_success=True, dataselect_type="SingleTrace",
+                consistent=True, scoreable=True, starttime="2024-06-02T12:00:00",
+                endtime="2024-06-02T12:10:00")
+    base.update(kw)
+    return base
+
+
+def test_summary_carries_psd_scores_without_touching_ad_score():
+    recs = [
+        _rec_score(psd_status="Inconsistent", psd_present=False, psd_required=True,
+                   psd_consistent=False),                                    # >=2024 miss
+        _rec_score(psd_status="Consistent", psd_present=True, psd_required=True,
+                   psd_consistent=True),                                     # >=2024 hit
+    ]
+    summary = create_report_object("NOA", 1, 600, recs)["summary"]
+    assert summary["psd_evaluated"] == 2
+    assert summary["psd_present"] == 1
+    assert summary["psd_evaluated_2024"] == 2
+    assert summary["psd_compliance_score"] == 50.0
+    assert summary["psd_coverage_score"] == 50.0
+    # A/D score is unaffected by PSD misses (both records are A/D consistent)
+    assert summary["score"] == 100.0
+
+
+from eida_consistency.report.report import build_psd_section
+
+
+def test_psd_section_shows_scores_and_network_note():
+    recs = [
+        _rec_score(station="V", psd_status="Inconsistent", psd_present=False,
+                   psd_required=True, psd_consistent=False),        # >=2024 miss
+        _rec_score(station="C", psd_status="Consistent", psd_present=True,
+                   psd_required=True, psd_consistent=True),         # >=2024 hit
+        _rec_score(station="S", dataselect_success=True, psd_status="Skipped",
+                   psd_present=False, psd_consistent=None),         # skipped
+        _rec_score(station="U", dataselect_success=True, psd_status="Unsupported",
+                   psd_present=False, psd_consistent=None),         # unsupported
+    ]
+    body = "\n".join(build_psd_section(recs))
+    assert "**PSD compliance (≥2024):** 50.0% — over 2 data-bearing window(s)." in body
+    assert "**PSD coverage (all dates):** 50.0% — over 2 data-bearing window(s)." in body
+    assert "1 window(s) skipped" in body
+    assert "1 unsupported" in body
+
+
+def test_psd_section_na_and_no_note_when_clean():
+    recs = [_rec_score(psd_status="Consistent", psd_present=True,
+                       psd_required=False, psd_consistent=True)]   # pre-2024 hit only
+    body = "\n".join(build_psd_section(recs))
+    assert "**PSD compliance (≥2024):** N/A — over 0 data-bearing window(s)." in body  # no >=2024 windows
+    assert "**PSD coverage (all dates):** 100.0% — over 1 data-bearing window(s)." in body
+    assert "skipped" not in body                     # note omitted when none
+
+
+def test_markdown_includes_interactive_view_link(tmp_path):
+    rep = report.create_report_object("NODE", 1, 600, [_inconsistent_rec()])
+    md = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
+    assert "Interactive view" in md
+    assert "?report=" in md
+    assert ".json" in md.split("Interactive view")[1].split(")")[0]

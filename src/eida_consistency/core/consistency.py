@@ -7,6 +7,7 @@ from typing import Any, Dict
 from eida_consistency.core.coverage import (
     parse_iso, tolerance_seconds, clip_intervals, mismatch_intervals_directional,
 )
+from eida_consistency.utils.constants import PSD_REQUIRED_SINCE
 
 
 def is_transient_dataselect_failure(success: bool, status: str | None) -> bool:
@@ -91,3 +92,30 @@ def classify_consistency(spans, ds_result: Dict[str, Any], window) -> Dict[str, 
             "dataselect": [[s.isoformat(), e.isoformat()] for s, e in d],
         },
     }
+
+
+def classify_psd(ds_result: Dict[str, Any], psd_result: Dict[str, Any], window) -> Dict[str, Any]:
+    """Compare dataselect (ground truth) vs PSD day-coverage for `window`."""
+    w1 = parse_iso(window[1])
+    required = bool(w1 and w1 >= parse_iso(PSD_REQUIRED_SINCE))
+
+    base = {"applicable": True, "psd_required": required,
+            "d_present": bool(ds_result.get("segments")),
+            "p_present": bool(psd_result.get("day_covered"))}
+
+    if psd_result.get("status") == "Unsupported":
+        return {**base, "status": "Unsupported", "scoreable": False, "consistent": None}
+
+    psd_transient = is_transient_dataselect_failure(
+        psd_result.get("success", False), psd_result.get("status"))
+    ds_transient = is_transient_dataselect_failure(
+        ds_result.get("success", False), ds_result.get("status"))
+    if psd_transient or ds_transient:
+        return {**base, "status": "Skipped", "scoreable": False, "consistent": None}
+
+    if not psd_result.get("success"):
+        return {**base, "status": "Skipped", "scoreable": False, "consistent": None}
+
+    consistent = not (base["d_present"] and not base["p_present"])
+    return {**base, "scoreable": True, "consistent": consistent,
+            "status": "Consistent" if consistent else "Inconsistent"}

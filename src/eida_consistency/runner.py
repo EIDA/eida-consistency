@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import concurrent.futures
 import json
 import sys
@@ -12,8 +11,9 @@ from typing import Optional
 
 from .services.station import fetch_candidates
 from .services.dataselect import dataselect
+from .services.psd import psd_coverage
 from .core.checker import check_candidate
-from .core.consistency import classify_consistency
+from .core.consistency import classify_consistency, classify_psd
 from .utils.nodes import load_node_url
 from .core.formatter import format_result
 from .report.report import (
@@ -29,12 +29,12 @@ def run_consistency_check(
     epochs: int | str | None = 10,
     percentage: float | None = None,
     duration: int = 600,
-    seed: int | None = None,
     delete_old: bool = False,
     max_workers: int = 10,
     print_stdout: bool = False,
     report_dir: Path = REPORT_DIR,
     station_multiplier: int = 3,
+    check_psd: bool = True,
 ) -> Optional[Path]:
     """
     Run the availability + dataselect consistency check and write reports.
@@ -68,19 +68,11 @@ def run_consistency_check(
     elif percentage is not None:
         epochs = None
 
-    # OPEN ISSUE (seed removal): a seed only reproduces a run while the node's
-    # live station inventory is unchanged; weeks later the same seed selects
-    # different channels, so it cannot reproduce a specific finding. To
-    # re-verify a finding, replay its exact window (see explorer._check_window).
-    # Removal is pending confirmation that the Oculus/dmtri pipeline does not
-    # depend on the seed in the report filename / summary. See report.py.
-    if seed is None:
-        seed = random.randint(0, 999_999)
-        logging.info(f" Using generated seed: {seed}")
-    else:
-        logging.info(f" Using provided seed: {seed}")
-
-    random.seed(seed)
+    # The seed mechanism was removed: a seed cannot reproduce a run because the
+    # node's live inventory changes over time, so the same seed selects
+    # different channels later. To re-verify a specific finding, replay its
+    # exact window with 'explore'/'check' (deterministic; see
+    # explorer._check_window). Sampling is therefore unseeded.
     base_url = load_node_url(node)
 
     if percentage is not None:
@@ -121,6 +113,14 @@ def run_consistency_check(
             start, end, loc_final
         )
         classification = classify_consistency(spans, ds_result, (start, end))
+        psd_result = None
+        psd_class = None
+        if check_psd:
+            psd_result = psd_coverage(
+                base_url, match["network"], match["station"], match["channel"],
+                start, end, loc_final,
+            )
+            psd_class = classify_psd(ds_result, psd_result, (start, end))
         log = format_result(
             idx,
             url,
@@ -156,7 +156,18 @@ def run_consistency_check(
                 "end": matched_span.get("end") if matched_span else None,
                 "location": matched_span.get("location") if matched_span else None,
             },
+            "psd_success": (psd_result["success"] if psd_result else None),
+            "psd_status": (psd_class["status"] if psd_class else None),
+            "psd_present": (psd_class["p_present"] if psd_class else None),
+            "psd_required": (psd_class["psd_required"] if psd_class else None),
+            "psd_consistent": (psd_class["consistent"] if psd_class else None),
+            "psd_url": (psd_result["url"] if psd_result else None),
         }
+        if psd_result is not None:
+            record.setdefault("coverage", {})
+            record["coverage"]["psd"] = [
+                [s, e] for (s, e, _sr, valid) in psd_result["records"] if valid
+            ]
         return log, record
 
     args_list = []
@@ -199,7 +210,6 @@ def run_consistency_check(
     # --- Save reports into chosen report_dir ---
     report = create_report_object(
         node=node,
-        seed=seed,
         epochs=epochs,
         duration=duration,
         records=all_records,

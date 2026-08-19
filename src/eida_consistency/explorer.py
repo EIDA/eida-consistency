@@ -1,6 +1,5 @@
 """Explore inconsistency boundaries around reported results."""
 
-import json
 import logging
 import random
 import sys
@@ -8,10 +7,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
-import requests
-
 from eida_consistency.services.availability import get_availability_spans
 from eida_consistency.services.dataselect import dataselect
+from eida_consistency.services.psd import psd_coverage
 from eida_consistency.core.consistency import classify_consistency
 from eida_consistency.utils.nodes import load_node_url
 
@@ -95,9 +93,13 @@ def _check_window(
             f"network={net}&station={sta}&location={loc}&channel={cha}"
             f"&starttime={_iso(t0)}&endtime={_iso(t1)}&nodata=204"
         )
+        # PSD (day-granularity); informational alongside the A-D boundary walk.
+        psd_res = psd_coverage(base_url, net, sta, cha, _iso(t0), _iso(t1), loc)
+        psd_present = bool(psd_res.get("day_covered"))
+        logging.info(f"  PSD URL:          {psd_res.get('url')}")
         logging.info(
             f"  Result -> availability window_covered={window_covered}, "
-            f"dataselect success={ds['success']}, "
+            f"dataselect success={ds['success']}, PSD present={psd_present}, "
             f"consistent={consistent}"
         )
     else:
@@ -170,21 +172,13 @@ def explore_boundaries(
     rows are reported with null window so a consumer can see they were evaluated
     but need no action. The ``--json`` CLI flag dumps this dict to stdout.
     """
-    report_path = str(report_path)
-    if report_path.startswith("http://") or report_path.startswith("https://"):
-        from eida_consistency.utils.constants import USER_AGENT
-        logging.info(f"Fetching report from URL: {report_path}")
-        response = requests.get(report_path, headers={"User-Agent": USER_AGENT}, timeout=30)
-        response.raise_for_status()
-        report = response.json()
-    else:
-        report = json.loads(Path(report_path).read_text())
-    results = report["results"]
+    # Shared report loader / target selector (function-local import avoids a
+    # circular import: reverify imports the window-check primitives from here).
+    from eida_consistency.reverify import load_report, select_targets
 
-    if indices:
-        targets = [r for r in results if r["index"] in indices]
-    else:
-        targets = [r for r in results if r.get("consistent") is False]
+    report_path = str(report_path)
+    report = load_report(report_path)
+    targets = select_targets(report, indices)
 
     if not targets:
         logging.info("No targets to explore (all consistent or no matching index).")

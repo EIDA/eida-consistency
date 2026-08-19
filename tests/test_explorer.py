@@ -38,12 +38,18 @@ def test_slice_consistent_available_and_dataselect(monkeypatch, caplog):
                         lambda *a, **kw: {"success": True,
                                           "segments": [("2023-01-01T00:00:00",
                                                         "2023-01-01T02:00:00", 100.0)]})
+    monkeypatch.setattr(explorer, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "OK",
+                                          "day_covered": True, "records": [],
+                                          "url": "http://fake/eidaws/psd/1/coverage?net=XX"})
 
     caplog.set_level(logging.INFO)
     ok = explorer._slice_consistent("http://fake/", "XX", "STA", "BHZ", "00", t0, t1, verbose=True)
     assert ok is True
     assert "Availability URL" in caplog.text
     assert "Dataselect URL" in caplog.text
+    assert "PSD URL" in caplog.text                 # PSD surfaced in explore
+    assert "PSD present=True" in caplog.text
 
 def test_slice_consistent_not_covered(monkeypatch):
     t0 = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc)
@@ -165,6 +171,11 @@ def test_explore_boundaries_with_targets(monkeypatch, tmp_path, caplog):
     monkeypatch.setattr(explorer, "get_availability_spans", lambda *a, **kw: [{"start": "2020-01-01T00:00:00", "end": "2025-01-01T00:00:00"}])
     # dataselect always fails
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
+    # PSD queried only in verbose mode; stub it so no real network call is made
+    monkeypatch.setattr(explorer, "psd_coverage",
+                        lambda *a, **kw: {"success": True, "status": "NoData",
+                                          "day_covered": False, "records": [],
+                                          "url": "http://fake/eidaws/psd/1/coverage"})
     # base url loader
     monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
 
@@ -207,7 +218,7 @@ def test_explore_boundaries_url_fetches_json(caplog):
     mock_response.json.return_value = _report_payload(consistent=True)
     mock_response.raise_for_status.return_value = None
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response) as mock_get:
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response) as mock_get:
         caplog.set_level(logging.INFO)
         explorer.explore_boundaries("https://example.com/report.json")
 
@@ -225,7 +236,7 @@ def test_explore_boundaries_url_http_error():
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = req.HTTPError("404 Not Found")
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response):
         with pytest.raises(req.HTTPError):
             explorer.explore_boundaries("https://example.com/missing.json")
 
@@ -240,7 +251,7 @@ def test_explore_boundaries_url_inconsistent(monkeypatch, caplog):
     monkeypatch.setattr(explorer, "dataselect", lambda *a, **kw: {"success": False})
     monkeypatch.setattr(explorer, "load_node_url", lambda node: "http://fake/")
 
-    with patch("eida_consistency.explorer.requests.get", return_value=mock_response):
+    with patch("eida_consistency.reverify.requests.get", return_value=mock_response):
         caplog.set_level(logging.INFO)
         explorer.explore_boundaries("https://example.com/report.json", max_days=1)
 

@@ -1,0 +1,489 @@
+{
+  "summary": {
+    "version": "0.6.0",
+    "node": "DEMO (NOA · INGV · ETH)",
+    "epochs_requested": 15,
+    "candidates_requested": 15,
+    "candidates_tested": null,
+    "station_queries": null,
+    "duration": 600,
+    "test_duration_sec": 7,
+    "total_checked": 9,
+    "total_evaluated": 9,
+    "total_skipped": 0,
+    "total_consistent": 6,
+    "total_inconsistent": 3,
+    "total_transient": 0,
+    "score": 66.67,
+    "availability_yes_dataselect_no": 0,
+    "availability_no_dataselect_yes": 3,
+    "data_yes_psd_no": 5,
+    "psd_unsupported": 0,
+    "psd_skipped": 0,
+    "psd_required_count": 3,
+    "timestamp": "2026-07-20T21:28:12.161611+00:00",
+    "candidates_generated": 15,
+    "candidates_pool": null,
+    "queries_performed": 17,
+    "psd_evaluated": 8,
+    "psd_present": 3,
+    "psd_evaluated_2024": 3,
+    "psd_present_2024": 1,
+    "psd_coverage_score": 37.5,
+    "psd_compliance_score": 33.33
+  },
+  "results": [
+    {
+      "index": 1,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=CH&station=SVEJ&location=*&channel=HGE&start=2022-12-23T18:49:34&end=2022-12-23T18:59:34&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "CH",
+      "station": "SVEJ",
+      "channel": "HGE",
+      "location": "",
+      "available": true,
+      "availability_status": 200,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SVEJ&location=&channel=HGE&starttime=2022-12-23T18:49:34&endtime=2022-12-23T18:59:34&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [
+          [
+            "2022-12-23T18:49:34+00:00",
+            "2022-12-23T18:59:34+00:00"
+          ]
+        ],
+        "dataselect": [
+          [
+            "2022-12-23T18:49:34+00:00",
+            "2022-12-23T18:59:34+00:00"
+          ]
+        ],
+        "psd": [
+          [
+            "2022-12-23T00:00:00.000000Z",
+            "2022-12-24T00:30:10.000000Z"
+          ]
+        ]
+      },
+      "starttime": "2022-12-23T18:49:34",
+      "endtime": "2022-12-23T18:59:34",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nCH.SVEJ..HGE | 2022-12-23T18:49:34.000000Z - 2022-12-23T18:59:34.000000Z | 250.0 Hz, 150001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=CH&station=SVEJ&location=&channel=HGE&starttime=2022-12-23T18:49:34&endtime=2022-12-23T18:59:34&nodata=204",
+      "matched_span": {
+        "start": "2022-12-23T18:49:34.000000Z",
+        "end": "2022-12-23T18:59:34.000000Z",
+        "location": ""
+      },
+      "psd_success": true,
+      "psd_status": "Consistent",
+      "psd_present": true,
+      "psd_required": false,
+      "psd_consistent": true,
+      "psd_url": "https://eida.ethz.ch/eidaws/psd/1/coverage?net=CH&sta=SVEJ&loc=--&cha=HGE&start=2022-12-22T18%3A49%3A34&end=2022-12-24T18%3A59%3A34"
+    },
+    {
+      "index": 2,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=IX&station=STN3&location=02&channel=EHE&start=2025-11-30T11:41:47&end=2025-11-30T11:51:47&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "IX",
+      "station": "STN3",
+      "channel": "EHE",
+      "location": "02",
+      "available": true,
+      "availability_status": 200,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://webservices.ingv.it/fdsnws/dataselect/1/query?network=IX&station=STN3&location=02&channel=EHE&starttime=2025-11-30T11:41:47&endtime=2025-11-30T11:51:47&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [
+          [
+            "2025-11-30T11:41:47+00:00",
+            "2025-11-30T11:51:47+00:00"
+          ]
+        ],
+        "dataselect": [
+          [
+            "2025-11-30T11:41:47+00:00",
+            "2025-11-30T11:51:46.999999+00:00"
+          ]
+        ],
+        "psd": []
+      },
+      "starttime": "2025-11-30T11:41:47",
+      "endtime": "2025-11-30T11:51:47",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nIX.STN3.02.EHE | 2025-11-30T11:41:46.999999Z - 2025-11-30T11:51:46.999999Z | 125.0 Hz, 75001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=IX&station=STN3&location=02&channel=EHE&starttime=2025-11-30T11:41:47&endtime=2025-11-30T11:51:47&nodata=204",
+      "matched_span": {
+        "start": "2025-11-30T11:41:47.000000Z",
+        "end": "2025-11-30T11:51:47.000000Z",
+        "location": "02"
+      },
+      "psd_success": true,
+      "psd_status": "Inconsistent",
+      "psd_present": false,
+      "psd_required": true,
+      "psd_consistent": false,
+      "psd_url": "https://webservices.ingv.it/eidaws/psd/1/coverage?net=IX&sta=STN3&loc=02&cha=EHE&start=2025-11-29T11%3A41%3A47&end=2025-12-01T11%3A51%3A47"
+    },
+    {
+      "index": 3,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=XT&station=AAE34&location=00&channel=LHE&start=2014-12-24T07:51:28&end=2014-12-24T08:01:28&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "XT",
+      "station": "AAE34",
+      "channel": "LHE",
+      "location": "00",
+      "available": true,
+      "availability_status": 200,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.ethz.ch/fdsnws/dataselect/1/query?network=XT&station=AAE34&location=00&channel=LHE&starttime=2014-12-24T07:51:28&endtime=2014-12-24T08:01:28&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [
+          [
+            "2014-12-24T07:51:28+00:00",
+            "2014-12-24T08:01:28+00:00"
+          ]
+        ],
+        "dataselect": [
+          [
+            "2014-12-24T07:51:28+00:00",
+            "2014-12-24T08:01:27.615000+00:00"
+          ]
+        ],
+        "psd": []
+      },
+      "starttime": "2014-12-24T07:51:28",
+      "endtime": "2014-12-24T08:01:28",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nXT.AAE34.00.LHE | 2014-12-24T07:51:27.615000Z - 2014-12-24T08:01:27.615000Z | 1.0 Hz, 601 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=XT&station=AAE34&location=00&channel=LHE&starttime=2014-12-24T07:51:28&endtime=2014-12-24T08:01:28&nodata=204",
+      "matched_span": {
+        "start": "2014-12-24T07:51:28.000000Z",
+        "end": "2014-12-24T08:01:28.000000Z",
+        "location": "00"
+      },
+      "psd_success": true,
+      "psd_status": "Inconsistent",
+      "psd_present": false,
+      "psd_required": false,
+      "psd_consistent": false,
+      "psd_url": "https://eida.ethz.ch/eidaws/psd/1/coverage?net=XT&sta=AAE34&loc=00&cha=LHE&start=2014-12-23T07%3A51%3A28&end=2014-12-25T08%3A01%3A28"
+    },
+    {
+      "index": 4,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=HL&station=PTL&location=*&channel=HHN&start=2016-01-04T19:40:00&end=2016-01-04T19:50:00&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "HL",
+      "station": "PTL",
+      "channel": "HHN",
+      "location": "",
+      "available": false,
+      "availability_status": 204,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=PTL&location=&channel=HHN&starttime=2016-01-04T19:40:00&endtime=2016-01-04T19:50:00&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "scoreable": true,
+      "consistency_status": "Inconsistent",
+      "consistency_reason": null,
+      "mismatch": [
+        {
+          "start": "2016-01-04T19:40:00+00:00",
+          "end": "2016-01-04T19:50:00+00:00",
+          "who": "dataselect"
+        }
+      ],
+      "coverage": {
+        "availability": [],
+        "dataselect": [
+          [
+            "2016-01-04T19:40:00+00:00",
+            "2016-01-04T19:50:00+00:00"
+          ]
+        ],
+        "psd": [
+          [
+            "2016-01-04T05:31:56.000000Z",
+            "2016-01-04T06:41:54.990000Z"
+          ],
+          [
+            "2016-01-04T19:51:35.000000Z",
+            "2016-01-04T20:59:03.990000Z"
+          ],
+          [
+            "2016-01-04T22:50:15.000000Z",
+            "2016-01-04T23:57:43.990000Z"
+          ],
+          [
+            "2016-01-05T01:52:24.000000Z",
+            "2016-01-05T03:31:22.990000Z"
+          ]
+        ]
+      },
+      "starttime": "2016-01-04T19:40:00",
+      "endtime": "2016-01-04T19:50:00",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nHL.PTL..HHN | 2016-01-04T19:40:00.000000Z - 2016-01-04T19:50:00.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=HL&station=PTL&location=&channel=HHN&starttime=2016-01-04T19:40:00&endtime=2016-01-04T19:50:00&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      },
+      "psd_success": true,
+      "psd_status": "Consistent",
+      "psd_present": true,
+      "psd_required": false,
+      "psd_consistent": true,
+      "psd_url": "https://eida.gein.noa.gr/eidaws/psd/1/coverage?net=HL&sta=PTL&loc=--&cha=HHN&start=2016-01-03T19%3A40%3A00&end=2016-01-05T19%3A50%3A00"
+    },
+    {
+      "index": 5,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=XJ&station=MUS08&location=*&channel=HH1&start=2024-02-24T04:28:23&end=2024-02-24T04:38:23&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "XJ",
+      "station": "MUS08",
+      "channel": "HH1",
+      "location": "",
+      "available": false,
+      "availability_status": 204,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.ethz.ch/fdsnws/dataselect/1/query?network=XJ&station=MUS08&location=&channel=HH1&starttime=2024-02-24T04:28:23&endtime=2024-02-24T04:38:23&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "scoreable": true,
+      "consistency_status": "Inconsistent",
+      "consistency_reason": null,
+      "mismatch": [
+        {
+          "start": "2024-02-24T04:28:23.001800+00:00",
+          "end": "2024-02-24T04:38:23+00:00",
+          "who": "dataselect"
+        }
+      ],
+      "coverage": {
+        "availability": [],
+        "dataselect": [
+          [
+            "2024-02-24T04:28:23.001800+00:00",
+            "2024-02-24T04:38:23+00:00"
+          ]
+        ],
+        "psd": []
+      },
+      "starttime": "2024-02-24T04:28:23",
+      "endtime": "2024-02-24T04:38:23",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\nXJ.MUS08..HH1 | 2024-02-24T04:28:23.001800Z - 2024-02-24T04:38:23.001800Z | 250.0 Hz, 150001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=XJ&station=MUS08&location=&channel=HH1&starttime=2024-02-24T04:28:23&endtime=2024-02-24T04:38:23&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      },
+      "psd_success": true,
+      "psd_status": "Inconsistent",
+      "psd_present": false,
+      "psd_required": true,
+      "psd_consistent": false,
+      "psd_url": "https://eida.ethz.ch/eidaws/psd/1/coverage?net=XJ&sta=MUS08&loc=--&cha=HH1&start=2024-02-23T04%3A28%3A23&end=2024-02-25T04%3A38%3A23"
+    },
+    {
+      "index": 6,
+      "url": "https://eida.gein.noa.gr/fdsnws/availability/1/query?network=5S&station=RDE68&location=00&channel=ENE&start=2021-04-16T14:07:33&end=2021-04-16T14:17:33&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "5S",
+      "station": "RDE68",
+      "channel": "ENE",
+      "location": "00",
+      "available": false,
+      "availability_status": 204,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=5S&station=RDE68&location=00&channel=ENE&starttime=2021-04-16T14:07:33&endtime=2021-04-16T14:17:33&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": false,
+      "scoreable": true,
+      "consistency_status": "Inconsistent",
+      "consistency_reason": null,
+      "mismatch": [
+        {
+          "start": "2021-04-16T14:07:33.003000+00:00",
+          "end": "2021-04-16T14:17:33+00:00",
+          "who": "dataselect"
+        }
+      ],
+      "coverage": {
+        "availability": [],
+        "dataselect": [
+          [
+            "2021-04-16T14:07:33.003000+00:00",
+            "2021-04-16T14:17:33+00:00"
+          ]
+        ],
+        "psd": []
+      },
+      "starttime": "2021-04-16T14:07:33",
+      "endtime": "2021-04-16T14:17:33",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\n5S.RDE68.00.ENE | 2021-04-16T14:07:33.003000Z - 2021-04-16T14:17:33.003000Z | 100.0 Hz, 60001 samples\nhttps://eida.gein.noa.gr/fdsnws/dataselect/1/query?network=5S&station=RDE68&location=00&channel=ENE&starttime=2021-04-16T14:07:33&endtime=2021-04-16T14:17:33&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      },
+      "psd_success": true,
+      "psd_status": "Inconsistent",
+      "psd_present": false,
+      "psd_required": false,
+      "psd_consistent": false,
+      "psd_url": "https://eida.gein.noa.gr/eidaws/psd/1/coverage?net=5S&sta=RDE68&loc=00&cha=ENE&start=2021-04-15T14%3A07%3A33&end=2021-04-17T14%3A17%3A33"
+    },
+    {
+      "index": 7,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=ZQ&station=IST43&location=*&channel=HSF&start=2023-10-14T19:23:38&end=2023-10-14T19:33:38&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "ZQ",
+      "station": "IST43",
+      "channel": "HSF",
+      "location": "",
+      "available": false,
+      "availability_status": 204,
+      "dataselect_success": false,
+      "dataselect_status": "NoData",
+      "dataselect_url": "https://eida.ethz.ch/fdsnws/dataselect/1/query?network=ZQ&station=IST43&location=&channel=HSF&starttime=2023-10-14T19:23:38&endtime=2023-10-14T19:33:38&nodata=204",
+      "dataselect_type": "NoTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [],
+        "dataselect": [],
+        "psd": []
+      },
+      "starttime": "2023-10-14T19:23:38",
+      "endtime": "2023-10-14T19:33:38",
+      "debug": "❌ No waveform bytes (HTTP 204).\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=ZQ&station=IST43&location=&channel=HSF&starttime=2023-10-14T19:23:38&endtime=2023-10-14T19:33:38&nodata=204",
+      "matched_span": {
+        "start": null,
+        "end": null,
+        "location": null
+      },
+      "psd_success": true,
+      "psd_status": "Consistent",
+      "psd_present": false,
+      "psd_required": false,
+      "psd_consistent": true,
+      "psd_url": "https://eida.ethz.ch/eidaws/psd/1/coverage?net=ZQ&sta=IST43&loc=--&cha=HSF&start=2023-10-13T19%3A23%3A38&end=2023-10-15T19%3A33%3A38"
+    },
+    {
+      "index": 8,
+      "url": "https://webservices.ingv.it/fdsnws/availability/1/query?network=4P&station=IT24A&location=*&channel=HHE&start=2026-01-01T07:44:14&end=2026-01-01T07:54:14&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "4P",
+      "station": "IT24A",
+      "channel": "HHE",
+      "location": "",
+      "available": true,
+      "availability_status": 200,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://webservices.ingv.it/fdsnws/dataselect/1/query?network=4P&station=IT24A&location=&channel=HHE&starttime=2026-01-01T07:44:14&endtime=2026-01-01T07:54:14&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [
+          [
+            "2026-01-01T07:44:14+00:00",
+            "2026-01-01T07:54:14+00:00"
+          ]
+        ],
+        "dataselect": [
+          [
+            "2026-01-01T07:44:14+00:00",
+            "2026-01-01T07:54:14+00:00"
+          ]
+        ],
+        "psd": [
+          [
+            "2026-01-01T00:00:05.740000Z",
+            "2026-01-02T00:00:02.700000Z"
+          ]
+        ]
+      },
+      "starttime": "2026-01-01T07:44:14",
+      "endtime": "2026-01-01T07:54:14",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\n4P.IT24A..HHE | 2026-01-01T07:44:14.000000Z - 2026-01-01T07:54:14.000000Z | 100.0 Hz, 60001 samples\nhttps://webservices.ingv.it/fdsnws/dataselect/1/query?network=4P&station=IT24A&location=&channel=HHE&starttime=2026-01-01T07:44:14&endtime=2026-01-01T07:54:14&nodata=204",
+      "matched_span": {
+        "start": "2026-01-01T07:44:14.000000Z",
+        "end": "2026-01-01T07:54:14.000000Z",
+        "location": ""
+      },
+      "psd_success": true,
+      "psd_status": "Consistent",
+      "psd_present": true,
+      "psd_required": true,
+      "psd_consistent": true,
+      "psd_url": "https://webservices.ingv.it/eidaws/psd/1/coverage?net=4P&sta=IT24A&loc=--&cha=HHE&start=2025-12-31T07%3A44%3A14&end=2026-01-02T07%3A54%3A14"
+    },
+    {
+      "index": 9,
+      "url": "https://eida.ethz.ch/fdsnws/availability/1/query?network=9S&station=ILL13&location=*&channel=EHE&start=2020-05-29T16:21:31&end=2020-05-29T16:31:31&format=text&merge=quality,overlap&includerestricted=FALSE",
+      "network": "9S",
+      "station": "ILL13",
+      "channel": "EHE",
+      "location": "",
+      "available": true,
+      "availability_status": 200,
+      "dataselect_success": true,
+      "dataselect_status": "OK",
+      "dataselect_url": "https://eida.ethz.ch/fdsnws/dataselect/1/query?network=9S&station=ILL13&location=&channel=EHE&starttime=2020-05-29T16:21:31&endtime=2020-05-29T16:31:31&nodata=204",
+      "dataselect_type": "SingleTrace",
+      "consistent": true,
+      "scoreable": true,
+      "consistency_status": "Consistent",
+      "consistency_reason": null,
+      "mismatch": [],
+      "coverage": {
+        "availability": [
+          [
+            "2020-05-29T16:21:31+00:00",
+            "2020-05-29T16:31:31+00:00"
+          ]
+        ],
+        "dataselect": [
+          [
+            "2020-05-29T16:21:31+00:00",
+            "2020-05-29T16:31:31+00:00"
+          ]
+        ],
+        "psd": []
+      },
+      "starttime": "2020-05-29T16:21:31",
+      "endtime": "2020-05-29T16:31:31",
+      "debug": "✅ Retrieved 1 trace(s) via ObsPy client.\n9S.ILL13..EHE | 2020-05-29T16:21:31.000000Z - 2020-05-29T16:31:31.000000Z | 100.0 Hz, 60001 samples\nhttps://eida.ethz.ch/fdsnws/dataselect/1/query?network=9S&station=ILL13&location=&channel=EHE&starttime=2020-05-29T16:21:31&endtime=2020-05-29T16:31:31&nodata=204",
+      "matched_span": {
+        "start": "2020-05-29T16:21:31.000000Z",
+        "end": "2020-05-29T16:31:31.000000Z",
+        "location": ""
+      },
+      "psd_success": true,
+      "psd_status": "Inconsistent",
+      "psd_present": false,
+      "psd_required": false,
+      "psd_consistent": false,
+      "psd_url": "https://eida.ethz.ch/eidaws/psd/1/coverage?net=9S&sta=ILL13&loc=--&cha=EHE&start=2020-05-28T16%3A21%3A31&end=2020-05-30T16%3A31%3A31"
+    }
+  ]
+}

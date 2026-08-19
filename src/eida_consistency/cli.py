@@ -77,7 +77,10 @@ def cli(ctx, log_level, report_dir):
 @click.option("--node", help="EIDA node code (e.g., RESIF, NOA)")
 @click.option("--epochs", type=str, default="10", show_default=True, help="Number of epochs or percentage (e.g. '10', '0.05', '5%')")
 @click.option("--duration", type=int, default=600, show_default=True, help="Duration (s), must be >= 600")
-@click.option("--seed", type=int, help="Random seed")
+@click.option(
+    "--psd/--no-psd", "check_psd", default=True, show_default=True,
+    help="Also check PSD (eidaws/psd) coverage vs dataselect.",
+)
 @click.option(
     "--delete-old",
     is_flag=True,
@@ -102,7 +105,7 @@ def cli(ctx, log_level, report_dir):
     help="Directory to store reports (overrides the global --report-dir).",
 )
 @click.pass_context
-def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upload, report_dir_opt):
+def consistency(ctx, node, epochs, duration, check_psd, delete_old, print_stdout, upload, report_dir_opt):
     """Run availability + dataselect consistency check, or housekeeping with --delete-old."""
     report_dir: Path = report_dir_opt or ctx.obj["report_dir"]
 
@@ -122,7 +125,7 @@ def consistency(ctx, node, epochs, duration, seed, delete_old, print_stdout, upl
             node=node,
             epochs=epochs,
             duration=duration,
-            seed=seed,
+            check_psd=check_psd,
             print_stdout=print_stdout,
             report_dir=report_dir,
         )
@@ -187,16 +190,46 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     # "is the whole window covered by one span?" boolean — that read as "NO" even
     # when availability returned data, contradicting the timeline below.
     avail_has_data = bool(av_res.get("spans"))
+
+    # 3. Check PSD (Availability / Dataselect / PSD triangle; dataselect = truth)
+    from eida_consistency.services.psd import psd_coverage
+    from eida_consistency.core.consistency import classify_psd
+    from eida_consistency.report.report import triad
+
+    logging.info(f"Checking PSD for {net}.{sta}.{loc}.{cha}...")
+    psd_res = psd_coverage(base_url, net, sta, cha, start, end, loc)
+    psd_cls = classify_psd(ds_res, psd_res, (start, end))
+    psd_present = psd_cls["p_present"]
+
     logging.info(f"\nResults for {net}.{sta}.{loc}.{cha} ({start} -> {end}):")
     logging.info(f"  Availability: {'data present' if avail_has_data else 'no data'} (HTTP {av_res['status']})")
     logging.info(f"  Dataselect:   {'data present' if ds_success else 'no data'} (status {ds_res['status']})")
+    logging.info(f"  PSD:          {'data present' if psd_present else 'no data'} (status {psd_res['status']})")
 
     if classification["consistent"] is True:
-        logging.info("  Summary: CONSISTENT")
+        logging.info("  Summary (Avail vs Data): CONSISTENT")
     elif classification["consistent"] is False:
-        logging.info("  Summary: INCONSISTENT")
+        logging.info("  Summary (Avail vs Data): INCONSISTENT")
     else:
-        logging.info(f"  Summary: SKIPPED ({classification['reason']})")
+        logging.info(f"  Summary (Avail vs Data): SKIPPED ({classification['reason']})")
+
+    # PSD verdict (Dataselect vs PSD), gated by the 2024-01-01 obligation.
+    if psd_res["status"] == "Unsupported":
+        logging.info("  Summary (Data vs PSD):   UNSUPPORTED (node has no PSD coverage service)")
+    elif psd_cls["status"] == "Skipped":
+        logging.info("  Summary (Data vs PSD):   SKIPPED (transient PSD failure)")
+    elif psd_cls["consistent"] is False:
+        if psd_cls["psd_required"]:
+            logging.info("  Summary (Data vs PSD):   VIOLATION (data on/after 2024-01-01 but no PSD)")
+        else:
+            logging.info("  Summary (Data vs PSD):   pre-2024 gap (data but no PSD; PSD not required, informational)")
+    else:
+        logging.info("  Summary (Data vs PSD):   CONSISTENT")
+
+    logging.info(
+        f"  Triangle:     {triad(avail_has_data, ds_success, psd_present)}  "
+        f"(▼ Avail  ▲ Data  ▶ PSD; filled=present, hollow=absent)"
+    )
 
     from eida_consistency.report.report import render_timeline, render_gap_table
 
@@ -256,12 +289,62 @@ def explore(ctx, report, index, days, verbose, as_json, report_dir_opt):
         except ValueError:
             raise click.UsageError(f"No report files found in {report_dir}")
 
+    if days == 0:
+        logging.info(
+            "Note: --days 0 only re-verifies each finding's window without "
+            "exploring boundaries. For a plain re-check, use 'rerun' instead."
+        )
+
     indices = list(index) if index else None
     result = explore_boundaries(report, indices, max_days=days, verbose=verbose)
     if as_json:
         # stdout only -- logging/progress already went to stderr -- so a caller
         # (e.g. `dmtri fix`) can parse stdout as JSON directly.
         click.echo(json.dumps(result, indent=2, default=str))
+
+
+# ----------------------------------------------------------------------
+# rerun command
+# ----------------------------------------------------------------------
+@cli.command()
+@click.argument("report", required=False, type=str)
+@click.option(
+    "--index", "-i",
+    multiple=True, type=int,
+    help="Indices of results to re-run (overrides scope).",
+)
+@click.option(
+    "--all", "all_rows", is_flag=True,
+    help="Re-verify every row, not just the inconsistent ones.",
+)
+@click.option("--verbose", is_flag=True, help="Print query URLs while re-running.")
+@click.option(
+    "--json", "as_json", is_flag=True,
+    help="Emit verdicts as JSON to stdout (logs/progress stay on stderr).",
+)
+@click.pass_context
+def rerun(ctx, report, index, all_rows, verbose, as_json):
+    """Re-verify a report's inconsistencies (no boundary walk, no dmtri)."""
+    from eida_consistency.rerun import rerun_report, render_summary
+
+    report_dir: Path = ctx.obj["report_dir"]
+    if not report:
+        try:
+            report = max(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
+            logging.info(f"Using latest report: {report}")
+        except ValueError:
+            raise click.UsageError(f"No report files found in {report_dir}")
+
+    indices = list(index) if index else None
+    result = rerun_report(report, indices, all_rows=all_rows, verbose=verbose)
+
+    if as_json:
+        click.echo(json.dumps(result, indent=2, default=str))
+        return
+
+    # Per-row verdicts already streamed from rerun_report as each finding was
+    # re-checked; just close with the tally (no duplicate table).
+    logging.info(f"Summary: {render_summary(result)}")
 
 
 # ----------------------------------------------------------------------

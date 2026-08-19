@@ -57,3 +57,13 @@ def compare_reports(report1: str | Path, report2: str | Path, report_dir: Path |
     logging.info(f"  Consistent: {a_sum['total_consistent']} vs {b_sum['total_consistent']}")
     logging.info(f"  Inconsistent: {a_sum['total_inconsistent']} vs {b_sum['total_inconsistent']}")
     logging.info(f"  Score: {a_sum['score']}% vs {b_sum['score']}%")
+
+    # PSD triangle counters (absent in reports produced before PSD support).
+    if "data_yes_psd_no" in a_sum or "data_yes_psd_no" in b_sum:
+        logging.info(
+            f"  PSD data-but-no-PSD: {a_sum.get('data_yes_psd_no')} vs {b_sum.get('data_yes_psd_no')}"
+        )
+        logging.info(
+            f"  PSD required windows (>=2024): "
+            f"{a_sum.get('psd_required_count')} vs {b_sum.get('psd_required_count')}"
+        )

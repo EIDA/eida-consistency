@@ -59,7 +59,7 @@ Options:
 - `--node`: Node code (e.g. `RESIF`, `NOA`, `ETH`)
 - `--epochs`: Number of random test epochs (default: 10) OR percentage (e.g., `"5%"`, `0.05`)
 - `--duration`: Epoch length in seconds (≥600)
-- `--seed`: Random seed for sampling. Does **not** reproduce an older run — to re-verify a finding see [Re-run & Re-verify](#-re-run--re-verify)
+- `--psd` / `--no-psd`: Also check PSD (`eidaws/psd`) coverage vs dataselect (default: on)
 - `--delete-old`: Keep only the most recent report
 - `--stdout`: Print JSON report to stdout
 - `--report-dir`: Save reports to a custom folder (default: `reports/`); works before or after the subcommand
@@ -106,8 +106,8 @@ uvx eida-consistency list-nodes
 
 Reports are stored in `./reports/` by default, or in a custom folder using `--report-dir`.
 
-- JSON reports: `reports/<node>_<YYYYMMDD_HHMMSS>_<seed>.json`
-- Markdown reports: `reports/<node>_<YYYYMMDD_HHMMSS>_<seed>.md`
+- JSON reports: `reports/<node>_<YYYYMMDD>_<HHMMSS>_<microseconds>.json`
+- Markdown reports: `reports/<node>_<YYYYMMDD>_<HHMMSS>_<microseconds>.md`
 - Global summary: [`summary.md`](https://github.com/EIDA/eida-consistency/blob/main/reports/summary.md)
 
 ---
@@ -209,11 +209,12 @@ There are three distinct ways to "run it again", depending on what you want:
 # 1. Run a check (reports land in reports/test_noa/)
 uvx eida-consistency consistency --node NOA --epochs 20 --report-dir reports/test_noa
 
-# 2. Re-check the inconsistencies it found
+# 2. Re-check the inconsistencies it found (day-by-day boundaries)
 uvx eida-consistency explore --report-dir reports/test_noa
 
-# 3. Fix them at node level, then re-verify by replaying the same report
-uvx eida-consistency explore reports/test_noa/<report>.json
+# 3. Fix them at node level, then re-verify by replaying the exact windows
+#    (verdict per row: PERSISTS / RESOLVED / SKIPPED; add --all for CONSISTENT/REGRESSED)
+uvx eida-consistency rerun reports/test_noa/<report>.json
 
 # 4. Compare before/after
 uvx eida-consistency compare reports/test_noa/old.json reports/test_noa/new.json
