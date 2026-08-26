@@ -15,8 +15,6 @@ from eida_consistency.core.coverage import parse_iso
 
 REPORT_DIR = Path("reports")
 
-VIEWER_BASE = "../../viewer.html"  # relative to a rendered report page; override for Oculus
-
 # Which service holds the data inside a mismatch gap -> display glyph + label.
 _DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲", "psd": "▶"}
 _DIRECTION_LABEL = {
@@ -535,13 +533,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     inconsistent_recs = [r for r in results if r.get("consistent") is False]
     skipped_recs = [r for r in results if not r.get("scoreable", True)]
 
-    json_name = filename.rsplit(".", 1)[0] + ".json"
-    md_lines = [
-        f"# EIDA Consistency Report: `{summary['node']}`",
-        "",
-        f"🔍 [Interactive view]({VIEWER_BASE}?report={json_name})",
-        "",
-    ]
+    md_lines = [f"# EIDA Consistency Report: `{summary['node']}`", ""]
 
     if inconsistent_recs:
         md_lines.extend(["## Detected Inconsistencies", ""])

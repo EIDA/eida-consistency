@@ -555,12 +555,13 @@ def test_psd_section_na_and_no_note_when_clean():
     assert "skipped" not in body                     # note omitted when none
 
 
-def test_markdown_includes_interactive_view_link(tmp_path):
+def test_markdown_starts_with_the_report_heading(tmp_path):
+    # No viewer link is written. A guessed relative path used to be emitted
+    # unconditionally, which was a 404 on any site that did not happen to match.
     rep = report.create_report_object("NODE", 1, 600, [_inconsistent_rec()])
     md = report.save_report_markdown(rep, report_dir=tmp_path).read_text(encoding="utf-8")
-    assert "Interactive view" in md
-    assert "?report=" in md
-    assert ".json" in md.split("Interactive view")[1].split(")")[0]
+    assert md.startswith("# EIDA Consistency Report:")
+    assert "Interactive view" not in md
 
 
 # --- orphan PSD: PSD for a day with no data at all ---
