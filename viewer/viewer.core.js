@@ -49,14 +49,7 @@ export function matchesFilter(record, filter) {
   // findings on availability/dataselect-consistent rows appear once it is off.
   const psdSel = filter.psd && filter.psd !== 'all' ? filter.psd : null;
   if (filter.onlyInconsistent && record.consistent !== false) return false;
-  if (psdSel) {
-    const v = psdVerdict(record);
-    const kind = v ? v.kind : null;
-    const ok = psdSel === 'na'
-      ? (kind === 'unsupported' || kind === 'skipped')
-      : kind === (psdSel === 'consistent' ? 'ok' : psdSel);
-    if (!ok) return false;
-  }
+  if (psdSel && psdBucket(record) !== psdSel) return false;
   if (filter.direction && filter.direction !== 'both') {
     if (!recordDirections(record).has(filter.direction)) return false;
   }
@@ -167,6 +160,9 @@ export function timelineGapsSVG(windowStart, windowEnd, mismatch) {
   const wd = (a, b) => Math.max(1, (b - a) * W).toFixed(1);
   const bands = gaps.map(s =>
     `<rect class="tl-gap-solid" x="${xf(s.x0)}" y="${Y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+  // No hatch here: this band is solid --bad, already far darker than the track,
+  // so it survives red-green CVD on lightness alone. Hatching red-on-red would
+  // be invisible. The coverage timeline's translucent overlay does need it.
   return `<svg class="tlsvg" viewBox="0 0 1000 64" role="img" aria-label="gap timeline">
     <text class="tl-lane" x="8" y="${Y + 15}">Window</text>
     <rect class="tl-track" x="${X0}" y="${Y}" width="${W}" height="${LH}" rx="2"></rect>
@@ -264,15 +260,27 @@ export function psdChecked(record) {
 export function psdVerdict(record) {
   if (!psdChecked(record)) return null;
   const st = record.psd_status;
-  if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
-  if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', text: 'PSD skipped (transient)' };
+  if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', short: 'n/a', text: 'PSD n/a — this node runs no PSD service' };
+  if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', short: 'skipped', text: 'PSD skipped — the check did not complete (transient)' };
   // PSD published for a day the archive has no data for — the reverse finding.
-  if (st === 'Orphan') return { kind: 'orphan', cls: 'info', text: 'PSD without data (no data that day)' };
+  if (st === 'Orphan') return { kind: 'orphan', cls: 'info', short: 'PSD without data', text: 'PSD without data — a PSD exists for a day the archive holds nothing for' };
+  // Missing PSD is the same fact either side of 2024-01-01; only the obligation
+  // differs, and the glyph is what says which: ✖ must fix, ⚠ informational.
   if (record.psd_consistent === false)
     return record.psd_required
-      ? { kind: 'violation', cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
-      : { kind: 'pregap', cls: 'warn', text: 'pre-2024 PSD gap (informational)' };
-  return { kind: 'ok', cls: 'ok', text: 'PSD consistent' };
+      ? { kind: 'violation', cls: 'bad', short: '✖ must fix ≥2024', text: 'PSD violation — data on/after 2024-01-01 with no PSD published' }
+      : { kind: 'pregap', cls: 'warn', short: '⚠ pre-2024 gap', text: 'pre-2024 PSD gap — the same finding, but PSD was not yet required' };
+  return { kind: 'ok', cls: 'ok', short: 'consistent', text: 'PSD consistent' };
+}
+
+// The two filter buckets. n/a (unsupported/skipped) is neither: nothing was
+// owed and nothing was learned, so those rows show only under "PSD: all".
+const _PSD_INCONSISTENT = new Set(['violation', 'pregap', 'orphan']);
+export function psdBucket(record) {
+  const v = psdVerdict(record);
+  if (!v) return null;
+  if (v.kind === 'ok') return 'consistent';
+  return _PSD_INCONSISTENT.has(v.kind) ? 'inconsistent' : null;
 }
 
 const _TRI = { av: ['▼', '▽'], ds: ['▲', '△'], psd: ['▶', '▷'] };
@@ -312,8 +320,11 @@ export function timelineSVG(windowStart, windowEnd, avail, ds, mismatch) {
   const lane = (segs, y, cls, label) => segs.map(s =>
     `<rect class="${cls}" x="${xf(s.x0)}" y="${y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>${esc(label)}: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
   const bands = gaps.map(s =>
-    `<rect class="tl-gap" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+    `<rect class="tl-gap" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"></rect>`
+    + `<rect class="tl-gap-hatch" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
   return `<svg class="tlsvg" viewBox="0 0 1000 92" role="img" aria-label="coverage timeline">
+    <defs><pattern id="tl-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" class="tl-hatch-bg"></rect><line x1="0" y1="0" x2="0" y2="6" class="tl-hatch-line"></line></pattern></defs>
     <text class="tl-lane" x="8" y="${AVY + 14}">Avail</text>
     <text class="tl-lane" x="8" y="${DSY + 14}">Data</text>
     <rect class="tl-track" x="${X0}" y="${AVY}" width="${W}" height="${LH}" rx="2"></rect>
@@ -364,15 +375,18 @@ function psdChips(results) {
     ? `<span class="chip info">${esc(c.orphans)} PSD without data</span>` : '';
   return `<div class="chips psd" title="Availability/Dataselect/PSD triangle — PSD required only for data on/after 2024-01-01">
     <span class="chip lbl">PSD</span>
-    <span class="chip bad">${esc(c.violations)} violations (≥2024)</span>
-    <span class="chip warn">${esc(c.pregaps)} pre-2024 gaps</span>
+    <span class="chip bad">✖ ${esc(c.violations)} must fix (≥2024)</span>
+    <span class="chip warn">⚠ ${esc(c.pregaps)} pre-2024 gaps</span>
     <span class="chip ok">${esc(c.consistent)} consistent</span>${orphan}${extra}</div>`;
 }
 
 const COLUMNS = [
   { label: 'Channel', sort: 'channel' },
   { label: 'Window', sort: 'time' },
-  { label: 'Disagreement', sort: null },
+  // Direction tags label themselves ("▼ Avail only"), so the heading is blank on
+  // screen — but a column with no accessible name is a hole for a screen reader,
+  // hence the visually-hidden text.
+  { label: '<span class="sr-only">Disagreement</span>', sort: null },
   { label: 'Gaps', sort: 'gap' },
   { label: 'Result', sort: 'status' },
 ];
@@ -382,7 +396,7 @@ export function renderResultsTable(results, filter, sort) {
   const hasPsd = (results || []).some(psdChecked);
   // The PSD column is always present, so a pre-PSD report renders the same UI as
   // a current one; its cells read "▼ ▲ ?" instead of carrying a verdict.
-  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶ PSD', sort: null }, ...COLUMNS.slice(3)];
+  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶', sort: null }, { label: 'PSD', sort: 'psd' }, ...COLUMNS.slice(3)];
   const head = cols.map(c => {
     if (!c.sort) return `<th>${c.label}</th>`;
     const active = c.sort === key;
@@ -399,33 +413,43 @@ export function renderResultsTable(results, filter, sort) {
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     const v = recordVerdict(r);
     const pv = psdVerdict(r);
-    const psdCell = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pv ? pv.text : 'PSD not checked in this report')}">${esc(psdTriad(r))}</span></td>`;
+    const pTitle = pv ? pv.text : 'PSD not checked in this report';
+    const psdCells = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(psdTriad(r))}</span></td>`
+      + `<td><span class="psd-word ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(pv ? pv.short : 'not checked')}</span></td>`;
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCell}
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCells}
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
   return `${psdLegend(hasPsd)}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-// Legend for the PSD triangle column: what each triangle means and how colour
-// encodes the verdict. Reports without PSD get the same box, saying why the
-// column is empty rather than explaining glyphs that never appear.
+// Legend for the triangle column: a glyph key, then one entry per verdict type.
+// Reports without PSD get the same box, saying why the third triangle is blank
+// rather than explaining colours that never appear.
 export function psdLegend(hasPsd = true) {
+  const key = `<div class="psd-key"><b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD`;
   if (!hasPsd) {
-    return `<div class="psd-legend"><strong>PSD triangle</strong> — `
-      + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD. `
-      + `PSD was <b>not checked</b> in this report, so every row shows `
-      + `<span class="psd mut">▼ ▲ ?</span> — re-run the check to include it.</div>`;
+    return `<div class="psd-legend">${key} — PSD was <b>not checked</b> in this report, so every row shows `
+      + `<span class="psd mut">▼ ▲ ?</span>. Re-run the check to include it.</div></div>`;
   }
-  return `<div class="psd-legend"><strong>PSD triangle</strong> — `
-    + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD · `
-    + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing). `
-    + `<span class="psd bad">▶ violation</span> data ≥ 2024 without PSD · `
-    + `<span class="psd warn">▶ pre-2024 gap</span> not required · `
+  return `<div class="psd-legend">${key} · `
+    + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing).</div>`
+    + `<div class="psd-types">`
+    + `<span class="psd bad">✖ must fix</span> data ≥ 2024 without PSD · `
+    + `<span class="psd warn">⚠ pre-2024 gap</span> same thing, not yet required · `
     + `<span class="psd info">▽ △ ▶ PSD without data</span> no data that whole day · `
-    + `<span class="psd ok">▶ consistent</span></div>`;
+    + `<span class="psd ok">▶ consistent</span></div></div>`;
 }
+
+// PSD sorts by how much it wants attention, not alphabetically: what must be
+// fixed first, what says nothing at all last.
+const _PSD_RANK = { violation: 0, pregap: 1, orphan: 2, ok: 3, unsupported: 4, skipped: 5 };
+const _psdRank = r => {
+  const v = psdVerdict(r);
+  // ?? keeps an unrecognised kind from yielding NaN, which would scramble the sort.
+  return v ? (_PSD_RANK[v.kind] ?? 6) : 6;   // never checked — after everything checked
+};
 
 export function sortRecords(results, key, dir) {
   const arr = [...(results || [])];
@@ -434,9 +458,11 @@ export function sortRecords(results, key, dir) {
   if (key === 'channel') cmp = (a, b) => nslc(a).localeCompare(nslc(b));
   else if (key === 'gap') cmp = (a, b) => gapStats(a).count - gapStats(b).count;
   else if (key === 'status') cmp = (a, b) => recordVerdict(a).text.localeCompare(recordVerdict(b).text);
+  else if (key === 'psd') cmp = (a, b) => _psdRank(a) - _psdRank(b);
   else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
   arr.sort(cmp);
   const desc = dir === undefined ? key === 'gap' : dir === 'desc'; // gap defaults largest-first
+  // _psdRank already counts up from most urgent, so ascending is the useful default.
   if (desc) arr.reverse();
   return arr;
 }
