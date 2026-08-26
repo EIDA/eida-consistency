@@ -1,105 +1,81 @@
 # Report viewer
 
-An interactive HTML view of the JSON reports produced by `eida-consistency`
-(issue #50). One page, `viewer.html`, in two modes:
+Browser view of the JSON reports `eida-consistency` produces: score, a findings
+table with filters and sort, a per-record timeline, and buttons that replay a
+finding's exact FDSN request.
 
-| Mode | What it is |
-|---|---|
-| `viewer.html` | **Landing page** — lists the reports found in the default reports directory, and takes a report by drag-drop, file picker, or pasted URL |
-| `viewer.html?report=…` | **Report view** — score gauge, PSD summary, sortable and filterable table of findings, per-record timeline, and buttons that replay each finding's exact availability/dataselect request |
+Vanilla ES modules and hand-written CSS — no framework, no bundler, no
+`package.json`, no CDN, no external asset of any kind.
 
-Reports produced before the PSD check render the same UI as current ones — same
-columns, chip row and legend. The PSD chip reads *not checked*, every PSD cell
-shows `▼ ▲ ?`, and the PSD filter is disabled rather than hidden.
-
-## No framework, no build step
-
-Plain ES modules and hand-written CSS. There is no React/Vue/Svelte, no
-bundler, no `package.json`, and no CDN or external asset of any kind — the only
-imports anywhere are `node:fs` and `node:path` in `make-index.mjs`, which runs
-under Node rather than in the browser. Rendering is template-literal HTML
-assigned to `innerHTML`; light/dark theming is CSS custom properties.
-
-That keeps the viewer copy-and-serve deployable: drop the directory behind any
-static web server and it works.
+## What deploys
 
 ```
-viewer.html            page shell (markup + CSS)
-viewer.js              browser wiring — loading, events, state
-viewer.core.js         pure render/filter/sort logic (no DOM), unit-tested
-viewer.core.test.mjs   62 tests, Node's built-in test runner
-sample-report.json     example report, including PSD fields
-make-index.mjs         build index.json — the landing page's report list
+viewer.html      page shell - all markup and all CSS
+viewer.js        browser wiring - fetch, state, events
+viewer.core.js   render / filter / sort logic
 ```
 
-## Setup
+Those three, in the same directory. Where that directory is does not matter.
+`dev/` is development-only and is not deployed.
 
-The page uses ES modules and `fetch()`, so it must be served over HTTP —
-opening it as `file://` will not work. Any static server will do:
+Static page, no build step. It has to be served over HTTP rather than opened as
+`file://`, because ES modules and `fetch()` do not work from the filesystem.
 
-```bash
-# from the repository root
-python3 -m http.server 8777
+## Pointing it at a report
+
+A report next to `viewer.html`, or by relative path:
+
+```
+viewer.html?report=noa_20260729_131402_471284.json
+viewer.html?report=../reports/noa_20260729_131402_471284.json
 ```
 
-Then open:
+By site-absolute path:
 
-- <http://localhost:8777/viewer/viewer.html> — landing page
-- `http://localhost:8777/viewer/viewer.html?report=sample-report.json` — the
-  bundled example, the quickest way to see the PSD rendering
-- `http://localhost:8777/viewer/viewer.html?report=../reports/<report>.json` —
-  one of your own reports
-
-The `report` parameter is a URL resolved relative to the page, so it can also
-point at another host (see *CORS* below).
-
-### The report list
-
-`viewer.html` looks for an `index.json` next to itself and, if it finds one,
-lists those reports on the landing page — name, node, score, timestamp and
-inconsistency count, newest first. Build it from your reports directory:
-
-```bash
-node viewer/make-index.mjs reports ../reports/ viewer/index.json
+```
+viewer.html?report=/consistency/NOA/2026/NOA_2026-08-23_140118_178556.json
 ```
 
-Arguments are `<reportsDir> <urlPrefix> <outFile>`. The prefix is prepended to
-each filename to form the URL the browser fetches, resolved relative to
-`viewer.html` — `../reports/` above points back at the repository's `reports/`
-directory, so nothing has to be copied. Re-run it after new reports are
-generated. `viewer/index.json` is gitignored.
+From another host — needs CORS on that host. The paste-a-URL box builds this one
+with `encodeURIComponent`, so `:` and `/` arrive as `%3A` and `%2F`:
 
-With no `index.json` present the landing page still works; it just shows the
-upload/paste-a-URL form on its own.
-
-### CORS
-
-Reports hosted elsewhere load only if that host sends permissive CORS headers.
-Oculus does, so `?report=https://eida-oculus.orfeus-eu.org/consistency/...json`
-works from a local copy of the viewer. If a report fails to load from another
-host, this is almost always why.
-
-The "Run availability" / "Run dataselect" buttons issue live requests to the
-node's FDSN services from the browser, and depend on those services' CORS
-headers in the same way.
-
-## Tests
-
-```bash
-node --test viewer/
+```
+viewer.html?report=https%3A%2F%2Feida-oculus.orfeus-eu.org%2Fconsistency%2FNOA%2F2026%2FNOA_2026-08-23_140118_178556.json
 ```
 
-No install needed — Node's built-in test runner. `viewer.core.js` holds the
-logic worth testing (filtering, sorting, URL building, timeline geometry, HTML
-rendering) and has no DOM dependency; `viewer.js` is the thin browser layer.
-These tests run in CI on every push and pull request via the `viewer` job in
-`.github/workflows/test.yml`.
+The unencoded form works too — both decode to the same URL — but the encoded one
+is what appears in the address bar after using the form.
 
-## Deploying
+No parameter at all gives the landing page:
 
-Copy the directory onto any static host. Two useful placements:
+```
+viewer.html
+```
 
-- **Next to the reports** (e.g. on Oculus) — no CORS concerns, and `index.json`
-  can be generated alongside the published reports.
-- **On the docs site** — the viewer is reachable publicly and users paste a
-  report URL into it.
+`?report=` is resolved against **viewer.html's own URL**, not against the page
+the link was on. That is the one thing worth checking when a report 404s.
+
+Reports produced before the PSD check render the same layout as current ones,
+with the PSD column reading *not checked*.
+
+## The landing page
+
+With no `?report=`, the viewer looks for `index.json` beside itself and lists
+what it finds, newest first:
+
+```json
+{ "reports": [
+    { "name": "noa_20260729_131402_471284",
+      "url": "../reports/noa_20260729_131402_471284.json",
+      "node": "NOA", "score": 90,
+      "timestamp": "2026-07-29T13:14:02.471284+00:00",
+      "inconsistent": 3 }
+] }
+```
+
+`url` is fetched relative to `viewer.html`. A bare array instead of
+`{"reports": [...]}` also works. With no `index.json` the landing page still
+works - it just shows its load-by-URL and drag-drop form alone.
+
+`dev/make-index.mjs <reports-dir> <url-prefix> <out-file>` generates one from a
+directory of reports.
