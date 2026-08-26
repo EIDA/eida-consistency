@@ -129,9 +129,57 @@ def test_classify_psd_inconsistent_data_but_no_psd():
 
 
 def test_classify_psd_psd_only_is_not_a_fault():
-    # dataselect empty (ground truth), psd present -> nothing to fault
+    # dataselect empty (ground truth), psd present, no day probe -> nothing to fault
     r = classify_psd(ds(success=False, status="NoData", segs=0), psd(day=True), W2024)
     assert r["consistent"] is True
+
+
+# --- orphan PSD: PSD present for a day the archive has no data for ---
+def _no_data_day(url="http://x/day"):
+    return lambda: {"ok": True, "has_spans": False, "url": url}
+
+
+def _day_with_data():
+    return lambda: {"ok": True, "has_spans": True, "url": "http://x/day"}
+
+
+def _failed_day():
+    return lambda: {"ok": False, "has_spans": False, "url": "http://x/day"}
+
+
+def test_classify_psd_orphan_when_no_data_all_day():
+    r = classify_psd(ds(success=False, status="NoData", segs=0), psd(day=True), W2024,
+                     day_check=_no_data_day("http://x/day?net=HL"))
+    assert r["status"] == "Orphan"
+    assert r["scoreable"] is False
+    assert r["consistent"] is None
+    assert r["day_url"] == "http://x/day?net=HL"
+
+
+def test_classify_psd_intra_day_gap_is_not_an_orphan():
+    # The day holds data; our 10-minute window simply fell in a gap.
+    r = classify_psd(ds(success=False, status="NoData", segs=0), psd(day=True), W2024,
+                     day_check=_day_with_data())
+    assert r["status"] == "Consistent"
+    assert r["consistent"] is True
+
+
+def test_classify_psd_orphan_probe_failure_is_skipped():
+    r = classify_psd(ds(success=False, status="NoData", segs=0), psd(day=True), W2024,
+                     day_check=_failed_day())
+    assert r["status"] == "Skipped"
+    assert r["scoreable"] is False
+
+
+def test_classify_psd_day_check_not_called_when_data_present():
+    calls = []
+
+    def probe():
+        calls.append(1)
+        return {"ok": True, "has_spans": False, "url": "u"}
+
+    classify_psd(ds(), psd(day=True), W2024, day_check=probe)
+    assert calls == []  # data present -> no reason to probe the day
 
 
 def test_classify_psd_unsupported():

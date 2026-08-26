@@ -89,8 +89,22 @@ function showReport(report) {
   state.report = report;
   $('#detail').innerHTML = '';
   $('#toolbar').style.display = '';
-  // The PSD filter only applies when the report carries PSD data.
-  $('#psd').style.display = report.results.some(r => r.psd_status != null) ? '' : 'none';
+  // The PSD filter stays in place for pre-PSD reports — same toolbar either way —
+  // but there is nothing to select, so it is disabled rather than hidden.
+  const hasPsd = report.results.some(r => r.psd_status != null);
+  const psd = $('#psd');
+  psd.disabled = !hasPsd;
+  psd.title = hasPsd ? '' : 'This report was produced before the PSD check existed';
+  if (!hasPsd) psd.value = 'all';
+  // Take the filter state from the controls rather than assuming the defaults:
+  // browsers restore form state across a reload, which would otherwise leave the
+  // toolbar showing one thing and the table filtered by another.
+  state.filter = {
+    onlyInconsistent: $('#onlyInc').checked,
+    direction: $('#dir').value,
+    psd: psd.value,
+    search: $('#search').value,
+  };
   wire();
   paint();
 }

@@ -194,6 +194,39 @@ def get_availability_spans(
         return []
 
 
+def day_has_spans(
+    base_url: str,
+    network: str,
+    station: str,
+    channel: str,
+    start: str,
+    end: str,
+    location: str = "*",
+) -> Dict[str, Any]:
+    """Does availability report any span in [start, end)? Probe for orphan PSD.
+
+    Unlike `get_availability_spans()`, a failed request is reported as such
+    (`ok=False`) instead of collapsing to "no spans" — an orphan-PSD finding
+    hinges on the difference between "the archive has nothing that day" and
+    "we could not ask".
+    """
+    url = ""
+    try:
+        resp, url = _availability_request(
+            base_url, network, station, channel, start, end, location
+        )
+        if resp.status_code == 204:
+            return {"ok": True, "has_spans": False, "url": url}
+        if resp.status_code >= 400:
+            logging.warning(f"[availability] day probe HTTP {resp.status_code} ({url})")
+            return {"ok": False, "has_spans": False, "url": url}
+        resp.raise_for_status()
+        return {"ok": True, "has_spans": bool(_parse_text_availability(resp.text)), "url": url}
+    except Exception as e:
+        logging.warning(f"[availability] day probe failed ({url}): {e}")
+        return {"ok": False, "has_spans": False, "url": url}
+
+
 def check_availability(
     base_url: str,
     network: str,

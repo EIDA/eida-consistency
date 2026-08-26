@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail, sortRecords, recordVerdict, explainRecord } from './viewer.core.js';
+import { queryTime, swapQueryTime, gapQueries, recordDirections, matchesFilter, timelineModel, summariseRequest, runRequest, renderSummary, renderResultsTable, renderDetail, sortRecords, recordVerdict, explainRecord } from '../viewer.core.js';
 
 test('queryTime strips UTC suffix', () => {
   assert.equal(queryTime('2014-02-15T05:18:25.0069+00:00'), '2014-02-15T05:18:25.0069');
@@ -224,7 +224,7 @@ test('renderSummary shows skipped + direction totals + timestamp and tolerates u
   assert.doesNotThrow(() => renderSummary(undefined));
 });
 
-import { timelineAscii } from './viewer.core.js';
+import { timelineAscii } from '../viewer.core.js';
 test('timelineAscii renders fixed-width glyphs with a gap boundary', () => {
   const s = timelineAscii('2020-01-01T00:00:00', '2020-01-01T00:10:00', [],
     [['2020-01-01T00:01:00','2020-01-01T00:02:00'], ['2020-01-01T00:06:00','2020-01-01T00:07:00']],
@@ -234,7 +234,7 @@ test('timelineAscii renders fixed-width glyphs with a gap boundary', () => {
   assert.doesNotMatch(s, /▼/);
 });
 
-import { fmtDuration, gapStats, renderIndex } from './viewer.core.js';
+import { fmtDuration, gapStats, renderIndex } from '../viewer.core.js';
 
 test('fmtDuration shows up to two largest units', () => {
   assert.equal(fmtDuration(0), '0s');
@@ -274,7 +274,7 @@ test('renderDetail shows per-gap duration and copy buttons', () => {
   assert.match(html, /data-copy=/);
 });
 
-import { timelineSVG } from './viewer.core.js';
+import { timelineSVG } from '../viewer.core.js';
 test('timelineSVG draws both lanes, a gap band, and time labels', () => {
   const svg = timelineSVG('2020-01-01T00:00:00', '2020-01-01T00:10:00',
     [['2020-01-01T00:00:00', '2020-01-01T00:06:00']],            // availability has data 0-6m
@@ -296,7 +296,7 @@ test('renderDetail embeds the SVG timeline alongside the ASCII line', () => {
   assert.match(html, /<pre class="tl">/);
 });
 
-import { timelineGapsSVG } from './viewer.core.js';
+import { timelineGapsSVG } from '../viewer.core.js';
 test('timelineGapsSVG marks gaps on a single window track', () => {
   const svg = timelineGapsSVG('2009-01-09T04:51:00', '2009-01-09T05:01:00',
     [{ start: '2009-01-09T04:55:00+00:00', end: '2009-01-09T04:57:00+00:00' }]);
@@ -316,7 +316,7 @@ test('renderDetail falls back to a gaps-only graph when coverage is absent', () 
   assert.doesNotMatch(html, /class="tl-av"/);   // no two-lane chart without coverage
 });
 
-import { buildDataselectUrl } from './viewer.core.js';
+import { buildDataselectUrl } from '../viewer.core.js';
 test('buildDataselectUrl returns the stored url when present', () => {
   assert.equal(buildDataselectUrl({ url: 'https://h/availability/1/query?x', dataselect_url: 'https://h/ds?y' }), 'https://h/ds?y');
 });
@@ -344,7 +344,7 @@ test('renderDetail offers a dataselect run button for coverage-less reports', ()
 });
 
 // ── PSD triangle (Availability / Dataselect / PSD) ────────────────────────
-import { psdChecked, psdVerdict, psdTriad, psdCounts } from './viewer.core.js';
+import { psdChecked, psdVerdict, psdTriad, psdCounts, psdBucket } from '../viewer.core.js';
 
 const psdViolation = {
   index: 9, network: 'IV', station: 'CESX', location: '', channel: 'HHZ',
@@ -358,6 +358,13 @@ const psdPregap = { ...psdViolation, index: 10, psd_required: false,
 const psdOk = { ...psdViolation, index: 11, psd_present: true, psd_consistent: true,
   psd_status: 'Consistent',
   coverage: { availability: [], dataselect: [], psd: [['2025-01-05T00:00:00Z', '2025-01-06T00:00:01Z']] } };
+const psdUnsupported = { ...psdViolation, index: 20, psd_status: 'Unsupported',
+  psd_present: null, psd_required: null, psd_consistent: null };
+const psdSkipped = { ...psdUnsupported, index: 21, psd_status: 'Skipped' };
+const psdOrphanCov = { ...psdViolation, index: 22, consistent: false,
+  mismatch: [{ start: '2025-01-05T05:57:00Z', end: '2025-01-05T05:59:00Z', who: 'availability' }],
+  coverage: { availability: [['2025-01-05T05:55:50Z', '2025-01-05T06:05:50Z']],
+              dataselect: [['2025-01-05T05:59:00Z', '2025-01-05T06:05:50Z']] } };
 const noPsd = { index: 12, network: 'HL', station: 'X', location: '', channel: 'HHZ',
   available: true, dataselect_success: true, consistent: true, mismatch: [] };
 
@@ -390,13 +397,13 @@ test('psdCounts rolls up the PSD dimension', () => {
 
 test('renderSummary shows PSD chips when records carry PSD', () => {
   const html = renderSummary({ node: 'IV', score: 70 }, [psdViolation, psdPregap, psdOk]);
-  assert.match(html, /1 violations/);
-  assert.match(html, /pre-2024 gaps/);
+  assert.match(html, /✖ 1 must fix/);
+  assert.match(html, /⚠ 1 pre-2024 gaps/);
 });
 
-test('renderSummary omits PSD chips for pre-PSD reports', () => {
+test('renderSummary reports no counts for pre-PSD reports', () => {
   const html = renderSummary({ node: 'X', score: 80 }, [noPsd]);
-  assert.doesNotMatch(html, /PSD/);
+  assert.doesNotMatch(html, /violations|pre-2024 gaps/);
 });
 
 test('renderResultsTable adds a PSD column with the triad when data present', () => {
@@ -405,9 +412,9 @@ test('renderResultsTable adds a PSD column with the triad when data present', ()
   assert.match(html, /▼ ▲ ▷/);
 });
 
-test('renderResultsTable has no PSD column for pre-PSD reports', () => {
+test('renderResultsTable carries no PSD verdict for pre-PSD reports', () => {
   const html = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
-  assert.doesNotMatch(html, /PSD/);
+  assert.doesNotMatch(html, /violation|pre-2024 gap|PSD consistent/);
 });
 
 test('renderDetail shows the PSD line when checked', () => {
@@ -416,20 +423,61 @@ test('renderDetail shows the PSD line when checked', () => {
   assert.match(html, /PSD consistent/);
 });
 
-import { psdLegend } from './viewer.core.js';
+import { psdLegend } from '../viewer.core.js';
 
-test('matchesFilter psd=violation shows >=2024 data-without-PSD even when A-D consistent', () => {
-  const f = { onlyInconsistent: true, direction: 'both', psd: 'violation', search: '' };
+test('psd=inconsistent gathers both severities under one option', () => {
+  // The filter has two buckets; ✖ (>=2024) and ⚠ (<2024) differ in urgency, not
+  // in whether they are a finding, so one option selects both.
+  const f = { onlyInconsistent: false, direction: 'both', psd: 'inconsistent', search: '' };
   assert.equal(matchesFilter(psdViolation, f), true);
-  assert.equal(matchesFilter(psdPregap, f), false);
+  assert.equal(matchesFilter(psdPregap, f), true);
   assert.equal(matchesFilter(psdOk, f), false);
 });
 
-test('matchesFilter psd=pregap / psd=consistent select their categories', () => {
-  assert.equal(matchesFilter(psdPregap, { psd: 'pregap' }), true);
-  assert.equal(matchesFilter(psdViolation, { psd: 'pregap' }), false);
+test('matchesFilter composes the PSD filter with "only inconsistent"', () => {
+  // The PSD selector narrows what is already on screen; it never widens it. So
+  // with the box ticked an A/D-consistent record stays hidden even when it is a
+  // PSD violation, and an inconsistent one in the same category shows.
+  const f = { onlyInconsistent: true, direction: 'both', psd: 'inconsistent', search: '' };
+  assert.equal(matchesFilter(psdViolation, f), false);          // consistent: true
+  assert.equal(matchesFilter({ ...psdViolation, consistent: false }, f), true);
+});
+
+test('the PSD column spells out the verdict beside the triad', () => {
+  const f = { onlyInconsistent: false, direction: 'both', psd: 'all', search: '' };
+  // Only the rows — the legend above the table names both glyphs by design.
+  const body = r => renderResultsTable([r], f).split('<tbody>')[1];
+  assert.match(body(psdViolation), /psd-word bad[^>]*>✖ must fix ≥2024</);
+  assert.match(body(psdPregap), /psd-word warn[^>]*>⚠ pre-2024 gap</);
+  assert.match(body(psdOrphan), /psd-word info[^>]*>PSD without data</);
+  assert.match(body(psdOk), /psd-word ok[^>]*>consistent</);
+  assert.match(body(psdUnsupported), /psd-word mut[^>]*>n\/a</);
+  assert.match(body(noPsd), /psd-word mut[^>]*>not checked</);
+  // The triad cell itself stays glyphs-only.
+  assert.doesNotMatch(body(psdViolation).split('psd-word')[0], /[✖⚠]/);
+});
+
+test('the PSD column sorts by urgency, not alphabetically', () => {
+  const order = sortRecords([psdOk, psdUnsupported, psdPregap, psdViolation, psdOrphan], 'psd', 'asc');
+  assert.deepEqual(order.map(r => psdVerdict(r).kind),
+    ['violation', 'pregap', 'orphan', 'ok', 'unsupported']);
+});
+
+test('psd=consistent selects only the clean rows', () => {
   assert.equal(matchesFilter(psdOk, { psd: 'consistent' }), true);
   assert.equal(matchesFilter(psdViolation, { psd: 'consistent' }), false);
+  assert.equal(matchesFilter(psdPregap, { psd: 'consistent' }), false);
+});
+
+test('an n/a row belongs to neither bucket, so it shows only under "all"', () => {
+  // Nothing was owed and nothing was learned — calling it either consistent or
+  // inconsistent would be a claim the check never made.
+  for (const r of [psdUnsupported, psdSkipped]) {
+    assert.equal(psdBucket(r), null);
+    assert.equal(matchesFilter(r, { psd: 'consistent' }), false);
+    assert.equal(matchesFilter(r, { psd: 'inconsistent' }), false);
+    assert.equal(matchesFilter(r, { psd: 'all' }), true);
+  }
 });
 
 test('matchesFilter psd=all keeps the normal onlyInconsistent behavior', () => {
@@ -437,12 +485,39 @@ test('matchesFilter psd=all keeps the normal onlyInconsistent behavior', () => {
   assert.equal(matchesFilter(psdOk, { onlyInconsistent: false, psd: 'all' }), true);
 });
 
-test('renderResultsTable includes the PSD legend when data present, omits it otherwise', () => {
-  const withPsd = renderResultsTable([psdViolation], { onlyInconsistent: false, direction: 'both', search: '' });
+// A report from before the PSD check must render the same UI as one with PSD:
+// same columns, same chip row, same legend box — only the values say "not
+// checked". Otherwise old and new reports look like two different tools.
+const _filter = { onlyInconsistent: false, direction: 'both', search: '' };
+const _cols = html => [...html.matchAll(/<th[^>]*>(.*?)<\/th>/g)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+
+test('renderResultsTable keeps the PSD column for reports without PSD', () => {
+  const withPsd = renderResultsTable([psdViolation], _filter);
+  const without = renderResultsTable([noPsd], _filter);
+  assert.deepEqual(_cols(without), _cols(withPsd));
+  assert.match(_cols(without).join(' '), /▼▲▶/);   // the triangle column carries no word
+});
+
+test('renderResultsTable marks unchecked PSD cells with ? and a title', () => {
+  const html = renderResultsTable([noPsd], _filter);
+  assert.match(html, /▼ ▲ \?/);
+  assert.match(html, /PSD not checked/);
+});
+
+test('renderResultsTable always shows the legend, noting when PSD is unchecked', () => {
+  const withPsd = renderResultsTable([psdViolation], _filter);
   assert.match(withPsd, /psd-legend/);
-  assert.match(withPsd, /PSD triangle/);
-  const without = renderResultsTable([noPsd], { onlyInconsistent: false, direction: 'both', search: '' });
-  assert.doesNotMatch(without, /psd-legend/);
+  assert.match(withPsd, /filled = has data/);
+  const without = renderResultsTable([noPsd], _filter);
+  assert.match(without, /psd-legend/);
+  assert.match(without, /not checked/i);
+});
+
+test('renderSummary keeps the PSD chip row for reports without PSD', () => {
+  const html = renderSummary({ node: 'HL', score: 70 }, [noPsd]);
+  assert.match(html, /chips psd/);
+  assert.match(html, /not checked/i);
+  assert.doesNotMatch(html, /violations/);   // no counts to report
 });
 
 test('psdLegend explains the glyphs', () => {
@@ -450,4 +525,135 @@ test('psdLegend explains the glyphs', () => {
   assert.match(l, /Availability/);
   assert.match(l, /Dataselect/);
   assert.match(l, /filled = has data/);
+});
+
+
+// ── orphan PSD (PSD published for a day with no data at all) ──────────────
+const psdOrphan = {
+  index: 13, network: 'HL', station: 'ORPH', location: '', channel: 'HHZ',
+  available: false, dataselect_success: false, consistent: true, mismatch: [],
+  psd_status: 'Orphan', psd_present: true, psd_required: true, psd_consistent: null,
+  psd_day_url: 'https://node/fdsnws/availability/1/query?day',
+  starttime: '2025-03-04T00:10:00', endtime: '2025-03-04T00:20:00',
+  coverage: { availability: [], dataselect: [] },
+};
+
+test('psdVerdict recognises an orphan PSD', () => {
+  const v = psdVerdict(psdOrphan);
+  assert.equal(v.kind, 'orphan');
+  assert.equal(v.cls, 'info');
+  assert.match(v.text, /without data/i);
+});
+
+test('psdTriad shows PSD alone for an orphan', () => {
+  assert.equal(psdTriad(psdOrphan), '▽ △ ▶');
+});
+
+test('psdCounts buckets orphans separately', () => {
+  const c = psdCounts([psdViolation, psdOrphan, psdOk]);
+  assert.equal(c.orphans, 1);
+  assert.equal(c.violations, 1);
+  assert.equal(c.consistent, 1);
+  assert.equal(c.checked, 3);
+});
+
+test('renderSummary chips the orphan count only when there is one', () => {
+  assert.match(renderSummary({ node: 'HL', score: 90 }, [psdOrphan, psdOk]), /1 PSD without data/);
+  assert.doesNotMatch(renderSummary({ node: 'HL', score: 90 }, [psdOk]), /PSD without data/);
+});
+
+test('an orphan counts as inconsistent, not consistent', () => {
+  assert.equal(psdBucket(psdOrphan), 'inconsistent');
+  assert.equal(matchesFilter(psdOrphan, { psd: 'inconsistent' }), true);
+  assert.equal(matchesFilter(psdOrphan, { psd: 'consistent' }), false);
+});
+
+test('psdLegend explains the orphan glyph', () => {
+  assert.match(psdLegend(), /without data/i);
+});
+
+test('renderDetail links the day availability query for an orphan', () => {
+  const html = renderDetail(psdOrphan);
+  assert.match(html, /availability\/1\/query\?day/);
+});
+
+
+// ── PSD request button (the coverage CSV) ─────────────────────────────────
+test('summariseRequest counts PSD coverage records', () => {
+  const csv = 'Network,Station,Start time,End time,Is valid\nHL,A,2025-01-05,2025-01-06,true\n';
+  assert.match(summariseRequest('psd', 200, csv, 0), /1 PSD record/);
+  assert.match(summariseRequest('psd', 204, '', 0), /no data/i);
+});
+
+test('runRequest reads PSD responses as text, not bytes', async () => {
+  const csv = 'Network,Station,Start time,End time,Is valid\nHL,A,2025-01-05,2025-01-06,true\n';
+  const r = await runRequest('psd', 'http://x', async () => ({
+    status: 200, text: async () => csv,
+    arrayBuffer: async () => { throw new Error('should not be called for psd'); },
+  }));
+  assert.equal(r.ok, true);
+  assert.equal(r.hasData, true);
+  assert.match(r.summary, /1 PSD record/);
+});
+
+test('renderDetail offers a Run psd button when the report has a PSD url', () => {
+  const withPsd = { ...psdViolation, url: 'https://h/availability/1/query?net=IV',
+    psd_url: 'https://h/eidaws/psd/1/coverage?net=IV' };
+  const html = renderDetail(withPsd);
+  assert.match(html, /data-kind="psd"/);
+  assert.match(html, /eidaws\/psd\/1\/coverage/);
+});
+
+test('renderDetail omits the PSD button for reports without a PSD url', () => {
+  assert.doesNotMatch(renderDetail({ ...rec }), /data-kind="psd"/);
+});
+
+
+// ── detail panel polish ───────────────────────────────────────────────────
+test('renderDetail drops the requirement clause for verdicts it cannot apply to', () => {
+  // "not required (pre-2024)" is meaningless for an orphan: nothing is missing.
+  const html = renderDetail({ ...psdOrphan, psd_url: 'https://h/eidaws/psd/1/coverage' });
+  assert.doesNotMatch(html, /required|2024-01-01/);
+  assert.match(html, /without data/i);
+});
+
+test('renderDetail keeps the requirement clause where it decides the verdict', () => {
+  assert.match(renderDetail(psdViolation), /required \(data on\/after 2024-01-01\)/);
+  assert.match(renderDetail(psdPregap), /not required \(pre-2024\)/);
+});
+
+test('renderDetail labels the day query as an action', () => {
+  const html = renderDetail(psdOrphan);
+  assert.match(html, /check the day's availability/);
+});
+
+test('renderDetail leaves the glyph key to the table legend', () => {
+  // The legend box above the table already explains the triangles; repeating it
+  // in every detail panel is noise.
+  assert.doesNotMatch(renderDetail(psdViolation), /filled = present, hollow = absent/);
+});
+
+test('renderDetail skips the ASCII timeline when neither service has data', () => {
+  const empty = { ...psdOrphan, coverage: { availability: [], dataselect: [] } };
+  const html = renderDetail(empty);
+  assert.doesNotMatch(html, /<pre class="tl">/);
+  assert.match(html, /Neither service returned data/);
+});
+
+test('gap bands are hatched, not only tinted', () => {
+  // Red-green colour vision flattens --bad into the track grey, so the tint
+  // alone would erase the gap. The hatch is the colour-independent channel.
+  const html = renderDetail(psdOrphanCov);
+  assert.match(html, /<pattern id="tl-hatch"/);
+  assert.match(html, /class="tl-gap-hatch"/);
+});
+
+test('renderDetail still draws the ASCII timeline when there is coverage', () => {
+  assert.match(renderDetail(rec), /<pre class="tl">/);
+});
+
+test('renderDetail formats gap timestamps like the rest of the panel', () => {
+  const html = renderDetail(rec);
+  assert.match(html, /2014-02-15 05:18:25 → 2014-02-15 05:19:01/);
+  assert.doesNotMatch(html, /05:18:25\+00:00/);
 });

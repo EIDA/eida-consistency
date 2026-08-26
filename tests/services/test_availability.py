@@ -203,3 +203,45 @@ def test_check_availability_wrapper_return_url(monkeypatch):
                                        return_url=True)
     assert isinstance(url, str)
     assert ok is True
+
+
+# -----------------
+# day_has_spans — the orphan-PSD day probe
+# -----------------
+
+def test_day_has_spans_true_when_spans_returned(monkeypatch):
+    txt = "HL STA -- HHZ D 100.0 2024-01-01T00:00:00Z 2024-01-02T00:00:00Z"
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text=txt))
+    res = avail.day_has_spans("http://x/", "HL", "STA", "HHZ",
+                              "2024-01-01T00:00:00", "2024-01-02T00:00:00")
+    assert res["ok"] is True
+    assert res["has_spans"] is True
+    assert "availability/1/query" in res["url"]
+
+
+def test_day_has_spans_false_when_no_content(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text="", status=204))
+    res = avail.day_has_spans("http://x/", "HL", "STA", "HHZ",
+                              "2024-01-01T00:00:00", "2024-01-02T00:00:00")
+    assert res["ok"] is True
+    assert res["has_spans"] is False
+
+
+def test_day_has_spans_marks_request_failure_not_empty(monkeypatch):
+    # A failed probe must not read as "no data all day" — that would manufacture
+    # false orphan-PSD findings.
+    def boom(*a, **k):
+        raise requests.exceptions.ConnectionError("down")
+
+    monkeypatch.setattr(requests, "get", boom)
+    res = avail.day_has_spans("http://x/", "HL", "STA", "HHZ",
+                              "2024-01-01T00:00:00", "2024-01-02T00:00:00")
+    assert res["ok"] is False
+    assert res["has_spans"] is False
+
+
+def test_day_has_spans_marks_http_error_not_empty(monkeypatch):
+    monkeypatch.setattr(requests, "get", lambda *a, **k: DummyResp(text="", status=500))
+    res = avail.day_has_spans("http://x/", "HL", "STA", "HHZ",
+                              "2024-01-01T00:00:00", "2024-01-02T00:00:00")
+    assert res["ok"] is False

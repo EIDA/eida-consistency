@@ -15,8 +15,6 @@ from eida_consistency.core.coverage import parse_iso
 
 REPORT_DIR = Path("reports")
 
-VIEWER_BASE = "../../viewer.html"  # relative to a rendered report page; override for Oculus
-
 # Which service holds the data inside a mismatch gap -> display glyph + label.
 _DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲", "psd": "▶"}
 _DIRECTION_LABEL = {
@@ -117,8 +115,8 @@ def _psd_bucket(rec: Dict[str, Any]) -> Optional[str]:
 
     Buckets: ``consistent`` (data and PSD both present), ``violation`` (data on/after
     2024-01-01 but no PSD — a real fault), ``pregap`` (data before 2024-01-01 but
-    no PSD — informational, PSD not required), ``nodata``, ``skipped``,
-    ``unsupported``.
+    no PSD — informational, PSD not required), ``orphan`` (PSD for a day the
+    archive has no data for), ``nodata``, ``skipped``, ``unsupported``.
     """
     status = rec.get("psd_status")
     if status is None:
@@ -127,6 +125,8 @@ def _psd_bucket(rec: Dict[str, Any]) -> Optional[str]:
         return "unsupported"
     if status == "Skipped":
         return "skipped"
+    if status == "Orphan":
+        return "orphan"
     if not rec.get("dataselect_success"):
         return "nodata"
     if rec.get("psd_present"):
@@ -170,6 +170,7 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
     consistent = buckets.get("consistent", [])
     violations = buckets.get("violation", [])
     pregaps = buckets.get("pregap", [])
+    orphans = buckets.get("orphan", [])
     nodata = buckets.get("nodata", [])
     skipped = buckets.get("skipped", []) + buckets.get("unsupported", [])
 
@@ -216,6 +217,7 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
         f"**PSD summary:** {len(consistent)} consistent · "
         f"{len(violations)} violation(s) — data ≥ 2024 without PSD · "
         f"{len(pregaps)} pre-2024 gap(s) (informational) · "
+        f"{len(orphans)} PSD without data · "
         f"{len(nodata)} window(s) with no data"
         + (f" · {len(skipped)} skipped/unsupported" if skipped else "")
         + ".",
@@ -246,6 +248,25 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
     ]
     if pregaps:
         lines += _psd_table(pregaps)
+    else:
+        lines.append("None.")
+    lines += [
+        "",
+        "### PSD without data — PSD published for a day the archive cannot serve",
+        "",
+        "The reverse case: a valid PSD record exists, but neither the tested "
+        "window nor **any part of that UTC day** has waveform data. An ordinary "
+        "gap inside a covered day is not listed here — only days that are empty "
+        "end to end, checked against the availability service.",
+        "",
+    ]
+    if orphans:
+        lines += _psd_table(orphans)
+        lines += ["", "Day availability queries:", ""]
+        lines += [
+            f"- `{r['network']}.{r['station']}.{r['location']}.{r['channel']}` — "
+            f"<{r['psd_day_url']}>" for r in orphans if r.get("psd_day_url")
+        ]
     else:
         lines.append("None.")
     lines.append("")
@@ -435,6 +456,7 @@ def create_report_object(
     )
 
     data_yes_psd_no = sum(1 for r in records if r.get("psd_consistent") is False)
+    psd_yes_data_no = sum(1 for r in records if r.get("psd_status") == "Orphan")
     psd_unsupported = sum(1 for r in records if r.get("psd_status") == "Unsupported")
     psd_skipped = sum(1 for r in records if r.get("psd_status") == "Skipped")
     psd_required_count = sum(1 for r in records if r.get("psd_required") is True)
@@ -460,6 +482,7 @@ def create_report_object(
             "availability_yes_dataselect_no": avail_yes_ds_no,
             "availability_no_dataselect_yes": avail_no_ds_yes,
             "data_yes_psd_no": data_yes_psd_no,
+            "psd_yes_data_no": psd_yes_data_no,
             "psd_unsupported": psd_unsupported,
             "psd_skipped": psd_skipped,
             "psd_required_count": psd_required_count,
@@ -510,13 +533,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     inconsistent_recs = [r for r in results if r.get("consistent") is False]
     skipped_recs = [r for r in results if not r.get("scoreable", True)]
 
-    json_name = filename.rsplit(".", 1)[0] + ".json"
-    md_lines = [
-        f"# EIDA Consistency Report: `{summary['node']}`",
-        "",
-        f"🔍 [Interactive view]({VIEWER_BASE}?report={json_name})",
-        "",
-    ]
+    md_lines = [f"# EIDA Consistency Report: `{summary['node']}`", ""]
 
     if inconsistent_recs:
         md_lines.extend(["## Detected Inconsistencies", ""])

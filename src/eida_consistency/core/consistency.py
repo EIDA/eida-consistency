@@ -94,8 +94,17 @@ def classify_consistency(spans, ds_result: Dict[str, Any], window) -> Dict[str, 
     }
 
 
-def classify_psd(ds_result: Dict[str, Any], psd_result: Dict[str, Any], window) -> Dict[str, Any]:
-    """Compare dataselect (ground truth) vs PSD day-coverage for `window`."""
+def classify_psd(ds_result: Dict[str, Any], psd_result: Dict[str, Any], window,
+                 day_check=None) -> Dict[str, Any]:
+    """Compare dataselect (ground truth) vs PSD day-coverage for `window`.
+
+    `day_check` is an optional zero-argument probe returning
+    ``{"ok", "has_spans", "url"}``. It is called only when PSD exists for a
+    window that carries no data, to tell an ordinary intra-day gap (PSD is a
+    per-day product, our windows are minutes) from an orphan PSD — a day the
+    archive has no data for at all. Callers that cannot probe omit it and keep
+    the previous behaviour.
+    """
     w1 = parse_iso(window[1])
     required = bool(w1 and w1 >= parse_iso(PSD_REQUIRED_SINCE))
 
@@ -115,6 +124,16 @@ def classify_psd(ds_result: Dict[str, Any], psd_result: Dict[str, Any], window) 
 
     if not psd_result.get("success"):
         return {**base, "status": "Skipped", "scoreable": False, "consistent": None}
+
+    # PSD without data: only a finding when the whole day is dataless.
+    if base["p_present"] and not base["d_present"] and day_check is not None:
+        probe = day_check() or {}
+        if not probe.get("ok"):
+            return {**base, "status": "Skipped", "scoreable": False, "consistent": None,
+                    "day_url": probe.get("url")}
+        if not probe.get("has_spans"):
+            return {**base, "status": "Orphan", "scoreable": False, "consistent": None,
+                    "day_url": probe.get("url")}
 
     consistent = not (base["d_present"] and not base["p_present"])
     return {**base, "scoreable": True, "consistent": consistent,

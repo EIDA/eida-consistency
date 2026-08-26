@@ -9,6 +9,9 @@ GEMINI.md
 .aider*
 .mcp.json
 .github/copilot-instructions.md
+# Drafts written for a human to paste elsewhere (PR/issue bodies, notes)
+PR_BODY*
+*.draft.md
 
 # Local MinIO dev server
 infra/minio-data/
@@ -192,3 +195,6 @@ __marimo__/
 scratch/
 viewer/index.json
 viewer/reports
+
+# Local NOA full-archive scan tool (not for version control)
+noa_tools/

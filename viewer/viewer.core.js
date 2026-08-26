@@ -44,19 +44,12 @@ export function recordDirections(record) {
 }
 
 export function matchesFilter(record, filter) {
-  // An explicit PSD filter takes over from "only inconsistent" (a PSD violation
-  // can be availability/dataselect-consistent), so picking a PSD category shows
-  // all rows in it regardless of the A–D verdict.
+  // The PSD selector narrows the rows already on screen rather than overriding
+  // "only inconsistent", so the checkbox always means the same thing. PSD
+  // findings on availability/dataselect-consistent rows appear once it is off.
   const psdSel = filter.psd && filter.psd !== 'all' ? filter.psd : null;
-  if (!psdSel && filter.onlyInconsistent && record.consistent !== false) return false;
-  if (psdSel) {
-    const v = psdVerdict(record);
-    const kind = v ? v.kind : null;
-    const ok = psdSel === 'na'
-      ? (kind === 'unsupported' || kind === 'skipped')
-      : kind === (psdSel === 'consistent' ? 'ok' : psdSel);
-    if (!ok) return false;
-  }
+  if (filter.onlyInconsistent && record.consistent !== false) return false;
+  if (psdSel && psdBucket(record) !== psdSel) return false;
   if (filter.direction && filter.direction !== 'both') {
     if (!recordDirections(record).has(filter.direction)) return false;
   }
@@ -167,6 +160,9 @@ export function timelineGapsSVG(windowStart, windowEnd, mismatch) {
   const wd = (a, b) => Math.max(1, (b - a) * W).toFixed(1);
   const bands = gaps.map(s =>
     `<rect class="tl-gap-solid" x="${xf(s.x0)}" y="${Y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+  // No hatch here: this band is solid --bad, already far darker than the track,
+  // so it survives red-green CVD on lightness alone. Hatching red-on-red would
+  // be invisible. The coverage timeline's translucent overlay does need it.
   return `<svg class="tlsvg" viewBox="0 0 1000 64" role="img" aria-label="gap timeline">
     <text class="tl-lane" x="8" y="${Y + 15}">Window</text>
     <rect class="tl-track" x="${X0}" y="${Y}" width="${W}" height="${LH}" rx="2"></rect>
@@ -177,10 +173,19 @@ export function timelineGapsSVG(windowStart, windowEnd, mismatch) {
   </svg>`;
 }
 
+// PSD coverage answers as CSV with a header row; count the data rows.
+const _psdRows = text => Math.max(0, (text || '').trim().split('\n')
+  .filter(l => l && !l.startsWith('#')).length - 1);
+
 export function summariseRequest(kind, status, bodyText, byteLength) {
   if (kind === 'availability') {
     const n = (bodyText || '').split('\n').filter(l => l && !l.startsWith('#')).length;
     return `HTTP ${status} — ${n} span${n === 1 ? '' : 's'}`;
+  }
+  if (kind === 'psd') {
+    if (status === 204 || !(bodyText || '').trim()) return `HTTP ${status} — no data`;
+    const n = _psdRows(bodyText);
+    return `HTTP ${status} — ${n} PSD record${n === 1 ? '' : 's'}`;
   }
   if (status === 204) return `HTTP 204 — no data`;
   return `HTTP ${status} — ${byteLength} bytes`;
@@ -193,6 +198,10 @@ export async function runRequest(kind, url, fetchImpl) {
       const text = await res.text();
       const n = (text || '').split('\n').filter(l => l && !l.startsWith('#')).length;
       return { ok: true, status: res.status, hasData: res.status === 200 && n > 0, summary: summariseRequest(kind, res.status, text, 0) };
+    }
+    if (kind === 'psd') {
+      const text = await res.text();
+      return { ok: true, status: res.status, hasData: res.status === 200 && _psdRows(text) > 0, summary: summariseRequest(kind, res.status, text, 0) };
     }
     const buf = await res.arrayBuffer();
     return { ok: true, status: res.status, hasData: res.status === 200 && buf.byteLength > 0, summary: summariseRequest(kind, res.status, '', buf.byteLength) };
@@ -251,13 +260,27 @@ export function psdChecked(record) {
 export function psdVerdict(record) {
   if (!psdChecked(record)) return null;
   const st = record.psd_status;
-  if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', text: 'PSD n/a (node has no PSD service)' };
-  if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', text: 'PSD skipped (transient)' };
+  if (st === 'Unsupported') return { kind: 'unsupported', cls: 'mut', short: 'n/a', text: 'PSD n/a — this node runs no PSD service' };
+  if (st === 'Skipped') return { kind: 'skipped', cls: 'mut', short: 'skipped', text: 'PSD skipped — the check did not complete (transient)' };
+  // PSD published for a day the archive has no data for — the reverse finding.
+  if (st === 'Orphan') return { kind: 'orphan', cls: 'info', short: 'PSD without data', text: 'PSD without data — a PSD exists for a day the archive holds nothing for' };
+  // Missing PSD is the same fact either side of 2024-01-01; only the obligation
+  // differs, and the glyph is what says which: ✖ must fix, ⚠ informational.
   if (record.psd_consistent === false)
     return record.psd_required
-      ? { kind: 'violation', cls: 'bad', text: 'PSD violation (data ≥2024, no PSD)' }
-      : { kind: 'pregap', cls: 'warn', text: 'pre-2024 PSD gap (informational)' };
-  return { kind: 'ok', cls: 'ok', text: 'PSD consistent' };
+      ? { kind: 'violation', cls: 'bad', short: '✖ must fix ≥2024', text: 'PSD violation — data on/after 2024-01-01 with no PSD published' }
+      : { kind: 'pregap', cls: 'warn', short: '⚠ pre-2024 gap', text: 'pre-2024 PSD gap — the same finding, but PSD was not yet required' };
+  return { kind: 'ok', cls: 'ok', short: 'consistent', text: 'PSD consistent' };
+}
+
+// The two filter buckets. n/a (unsupported/skipped) is neither: nothing was
+// owed and nothing was learned, so those rows show only under "PSD: all".
+const _PSD_INCONSISTENT = new Set(['violation', 'pregap', 'orphan']);
+export function psdBucket(record) {
+  const v = psdVerdict(record);
+  if (!v) return null;
+  if (v.kind === 'ok') return 'consistent';
+  return _PSD_INCONSISTENT.has(v.kind) ? 'inconsistent' : null;
 }
 
 const _TRI = { av: ['▼', '▽'], ds: ['▲', '△'], psd: ['▶', '▷'] };
@@ -269,9 +292,9 @@ export function psdTriad(record) {
 }
 
 // Roll up the PSD dimension across the records for the summary header.
-const _PSD_BUCKET = { violation: 'violations', pregap: 'pregaps', unsupported: 'unsupported', skipped: 'skipped', ok: 'consistent' };
+const _PSD_BUCKET = { violation: 'violations', pregap: 'pregaps', orphan: 'orphans', unsupported: 'unsupported', skipped: 'skipped', ok: 'consistent' };
 export function psdCounts(results) {
-  const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, unsupported: 0, skipped: 0 };
+  const c = { checked: 0, consistent: 0, violations: 0, pregaps: 0, orphans: 0, unsupported: 0, skipped: 0 };
   for (const r of results || []) {
     if (!psdChecked(r)) continue;
     c.checked++;
@@ -297,8 +320,11 @@ export function timelineSVG(windowStart, windowEnd, avail, ds, mismatch) {
   const lane = (segs, y, cls, label) => segs.map(s =>
     `<rect class="${cls}" x="${xf(s.x0)}" y="${y}" width="${wd(s.x0, s.x1)}" height="${LH}" rx="2"><title>${esc(label)}: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
   const bands = gaps.map(s =>
-    `<rect class="tl-gap" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
+    `<rect class="tl-gap" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"></rect>`
+    + `<rect class="tl-gap-hatch" x="${xf(s.x0)}" y="${AVY - 2}" width="${wd(s.x0, s.x1)}" height="${DSY + LH - AVY + 4}"><title>gap: ${esc(_fmtTime(s.a))} → ${esc(_fmtTime(s.b))}</title></rect>`).join('');
   return `<svg class="tlsvg" viewBox="0 0 1000 92" role="img" aria-label="coverage timeline">
+    <defs><pattern id="tl-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" class="tl-hatch-bg"></rect><line x1="0" y1="0" x2="0" y2="6" class="tl-hatch-line"></line></pattern></defs>
     <text class="tl-lane" x="8" y="${AVY + 14}">Avail</text>
     <text class="tl-lane" x="8" y="${DSY + 14}">Data</text>
     <rect class="tl-track" x="${X0}" y="${AVY}" width="${W}" height="${LH}" rx="2"></rect>
@@ -334,23 +360,33 @@ export function renderSummary(s, results) {
   </header>`;
 }
 
-// PSD chip row for the summary header; empty when the run didn't check PSD.
+// PSD chip row for the summary header. Reports predating the PSD check keep the
+// row — saying so explicitly — so that they render the same UI as newer ones.
 function psdChips(results) {
   const c = psdCounts(results);
-  if (!c.checked) return '';
+  if (!c.checked) {
+    return `<div class="chips psd" title="This report was produced before the PSD check existed">
+    <span class="chip lbl">PSD</span><span class="chip mut">not checked</span></div>`;
+  }
   const extra = (c.unsupported || c.skipped)
     ? `<span class="chip mut">${esc(c.unsupported + c.skipped)} PSD n/a</span>` : '';
+  // The reverse finding is rare; show it only when it happened.
+  const orphan = c.orphans
+    ? `<span class="chip info">${esc(c.orphans)} PSD without data</span>` : '';
   return `<div class="chips psd" title="Availability/Dataselect/PSD triangle — PSD required only for data on/after 2024-01-01">
     <span class="chip lbl">PSD</span>
-    <span class="chip bad">${esc(c.violations)} violations (≥2024)</span>
-    <span class="chip warn">${esc(c.pregaps)} pre-2024 gaps</span>
-    <span class="chip ok">${esc(c.consistent)} consistent</span>${extra}</div>`;
+    <span class="chip bad">✖ ${esc(c.violations)} must fix (≥2024)</span>
+    <span class="chip warn">⚠ ${esc(c.pregaps)} pre-2024 gaps</span>
+    <span class="chip ok">${esc(c.consistent)} consistent</span>${orphan}${extra}</div>`;
 }
 
 const COLUMNS = [
   { label: 'Channel', sort: 'channel' },
   { label: 'Window', sort: 'time' },
-  { label: 'Disagreement', sort: null },
+  // Direction tags label themselves ("▼ Avail only"), so the heading is blank on
+  // screen — but a column with no accessible name is a hole for a screen reader,
+  // hence the visually-hidden text.
+  { label: '<span class="sr-only">Disagreement</span>', sort: null },
   { label: 'Gaps', sort: 'gap' },
   { label: 'Result', sort: 'status' },
 ];
@@ -358,11 +394,9 @@ const COLUMNS = [
 export function renderResultsTable(results, filter, sort) {
   const key = sort && sort.key, dir = sort && sort.dir;
   const hasPsd = (results || []).some(psdChecked);
-  // Insert the PSD column after "Disagreement" only when the report has PSD data,
-  // so pre-PSD reports render exactly as before.
-  const cols = hasPsd
-    ? [...COLUMNS.slice(0, 3), { label: '▼▲▶ PSD', sort: null }, ...COLUMNS.slice(3)]
-    : COLUMNS;
+  // The PSD column is always present, so a pre-PSD report renders the same UI as
+  // a current one; its cells read "▼ ▲ ?" instead of carrying a verdict.
+  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶', sort: null }, { label: 'PSD', sort: 'psd' }, ...COLUMNS.slice(3)];
   const head = cols.map(c => {
     if (!c.sort) return `<th>${c.label}</th>`;
     const active = c.sort === key;
@@ -378,29 +412,44 @@ export function renderResultsTable(results, filter, sort) {
     const { count } = gapStats(r);
     const badge = count ? `<span class="badge">${esc(count)}</span>` : '';
     const v = recordVerdict(r);
-    let psdCell = '';
-    if (hasPsd) {
-      const pv = psdVerdict(r);
-      psdCell = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pv ? pv.text : 'PSD not checked')}">${esc(psdTriad(r))}</span></td>`;
-    }
+    const pv = psdVerdict(r);
+    const pTitle = pv ? pv.text : 'PSD not checked in this report';
+    const psdCells = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(psdTriad(r))}</span></td>`
+      + `<td><span class="psd-word ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(pv ? pv.short : 'not checked')}</span></td>`;
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCell}
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCells}
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
-  return `${hasPsd ? psdLegend() : ''}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  return `${psdLegend(hasPsd)}<table class="results"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-// Legend for the PSD triangle column: what each triangle means and how colour
-// encodes the verdict.
-export function psdLegend() {
-  return `<div class="psd-legend"><strong>PSD triangle</strong> — `
-    + `<b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD · `
-    + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing). `
-    + `<span class="psd bad">▶ violation</span> data ≥ 2024 without PSD · `
-    + `<span class="psd warn">▶ pre-2024 gap</span> not required · `
-    + `<span class="psd ok">▶ consistent</span></div>`;
+// Legend for the triangle column: a glyph key, then one entry per verdict type.
+// Reports without PSD get the same box, saying why the third triangle is blank
+// rather than explaining colours that never appear.
+export function psdLegend(hasPsd = true) {
+  const key = `<div class="psd-key"><b>▼</b> Availability · <b>▲</b> Dataselect (ground truth) · <b>▶</b> PSD`;
+  if (!hasPsd) {
+    return `<div class="psd-legend">${key} — PSD was <b>not checked</b> in this report, so every row shows `
+      + `<span class="psd mut">▼ ▲ ?</span>. Re-run the check to include it.</div></div>`;
+  }
+  return `<div class="psd-legend">${key} · `
+    + `<em>filled = has data, hollow = missing</em> (e.g. <b>▼ ▲ ▷</b> = data present but PSD missing).</div>`
+    + `<div class="psd-types">`
+    + `<span class="psd bad">✖ must fix</span> data ≥ 2024 without PSD · `
+    + `<span class="psd warn">⚠ pre-2024 gap</span> same thing, not yet required · `
+    + `<span class="psd info">▽ △ ▶ PSD without data</span> no data that whole day · `
+    + `<span class="psd ok">▶ consistent</span></div></div>`;
 }
+
+// PSD sorts by how much it wants attention, not alphabetically: what must be
+// fixed first, what says nothing at all last.
+const _PSD_RANK = { violation: 0, pregap: 1, orphan: 2, ok: 3, unsupported: 4, skipped: 5 };
+const _psdRank = r => {
+  const v = psdVerdict(r);
+  // ?? keeps an unrecognised kind from yielding NaN, which would scramble the sort.
+  return v ? (_PSD_RANK[v.kind] ?? 6) : 6;   // never checked — after everything checked
+};
 
 export function sortRecords(results, key, dir) {
   const arr = [...(results || [])];
@@ -409,9 +458,11 @@ export function sortRecords(results, key, dir) {
   if (key === 'channel') cmp = (a, b) => nslc(a).localeCompare(nslc(b));
   else if (key === 'gap') cmp = (a, b) => gapStats(a).count - gapStats(b).count;
   else if (key === 'status') cmp = (a, b) => recordVerdict(a).text.localeCompare(recordVerdict(b).text);
+  else if (key === 'psd') cmp = (a, b) => _psdRank(a) - _psdRank(b);
   else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
   arr.sort(cmp);
   const desc = dir === undefined ? key === 'gap' : dir === 'desc'; // gap defaults largest-first
+  // _psdRank already counts up from most urgent, so ascending is the useful default.
   if (desc) arr.reverse();
   return arr;
 }
@@ -420,7 +471,8 @@ function reqLinks(kind, url) {
   const safe = safeUrl(url);
   const open = safe ? ` <a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">open</a>` : '';
   const copy = ` <button class="copy" data-copy="${esc(url)}">copy</button>`;
-  return `<button data-kind="${kind}" data-url="${esc(url)}">Run ${kind}</button>${open}${copy}`;
+  // Keep the button, its links and its result badge together when the row wraps.
+  return `<span class="reqitem"><button data-kind="${kind}" data-url="${esc(url)}">Run ${kind}</button>${open}${copy}</span>`;
 }
 
 export function renderDetail(record) {
@@ -428,25 +480,39 @@ export function renderDetail(record) {
   const parts = [`<p class="explain ${ex.cls}">${esc(ex.text)}</p>`];
   if (psdChecked(record)) {
     const pv = psdVerdict(record);
-    const req = record.psd_required ? 'required (data on/after 2024-01-01)' : 'not required (pre-2024)';
+    // The 2024 obligation only decides the verdict when PSD is missing; on an
+    // orphan (or an unsupported/skipped check) it is noise.
+    const meta = [];
+    if (pv.kind === 'violation' || pv.kind === 'pregap') {
+      meta.push(record.psd_required ? 'required (data on/after 2024-01-01)' : 'not required (pre-2024)');
+    }
     const covPsd = (record.coverage && record.coverage.psd) || [];
-    const covNote = covPsd.length
-      ? ` · PSD day record: ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}` : '';
-    parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> `
-      + `${esc(pv.text)} — ${esc(req)}${covNote}<br>`
-      + `<span class="mut">▼ Availability · ▲ Dataselect (ground truth) · ▶ PSD — filled = present, hollow = absent</span></p>`);
+    if (covPsd.length) meta.push(`day record ${esc(_fmtTime(covPsd[0][0]))} → ${esc(_fmtTime(covPsd[0][1]))}`);
+    // An orphan is only a finding because the whole day is empty — link the
+    // availability query that established it so the claim can be re-checked.
+    const dayUrl = safeUrl(record.psd_day_url);
+    if (dayUrl) meta.push(`<a href="${esc(dayUrl)}" target="_blank" rel="noopener noreferrer">check the day's availability</a>`);
+    parts.push(`<p class="psd-line ${pv.cls}"><span class="psd-tri">${esc(psdTriad(record))}</span> ${esc(pv.text)}</p>`
+      + (meta.length ? `<p class="psd-meta">${meta.join(' · ')}</p>` : ''));
   }
   const cov = record.coverage;
   if (cov && (cov.availability || cov.dataselect)) {
+    const segs = (cov.availability || []).length + (cov.dataselect || []).length;
     const svg = timelineSVG(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    const tl = timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []);
-    parts.push(`${svg}<pre class="tl">${esc(tl)}</pre>
-      <div class="legend"><span class="lg av">█</span> availability has data &nbsp; <span class="lg ds">█</span> dataselect has data &nbsp; <span class="lg gap">█</span> mismatch &nbsp;·&nbsp; ASCII: ▲ data-only ▼ avail-only █ both · none | boundary</div>`);
+    // With nothing on either lane the ASCII strip is a row of dots — say what
+    // happened instead of drawing an empty picture twice.
+    const tl = segs
+      ? `<pre class="tl">${esc(timelineAscii(record.starttime, record.endtime, cov.availability || [], cov.dataselect || [], record.mismatch || []))}</pre>` : '';
+    const legend = segs
+      ? `<span class="lg av">█</span> availability has data &nbsp; <span class="lg ds">█</span> dataselect has data &nbsp; <span class="lg gap">█</span> mismatch &nbsp;·&nbsp; ASCII: ▲ data-only ▼ avail-only █ both · none | boundary`
+      : `Neither service returned data in this window.`;
+    parts.push(`${svg}${tl}<div class="legend">${legend}</div>`);
   } else {
     const svg = timelineGapsSVG(record.starttime, record.endtime, record.mismatch || []);
     if (svg) parts.push(`${svg}<div class="legend"><span class="lg gap">█</span> mismatch (gap) within the requested window — older report without full coverage data</div>`);
   }
-  const full = [['availability', record.url], ['dataselect', buildDataselectUrl(record)]]
+  const full = [['availability', record.url], ['dataselect', buildDataselectUrl(record)],
+                ['psd', record.psd_url]]
     .filter(([, u]) => u).map(([k, u]) => reqLinks(k, u)).join(' ');
   if (full) parts.push(`<div class="req full">Requests: ${full}</div>`);
   const gaps = record.mismatch || [];
@@ -455,7 +521,7 @@ export function renderDetail(record) {
       const q = gapQueries(record, m);
       const dur = fmtDuration((_parseUTC(m.end) - _parseUTC(m.start)) / 1000);
       const btns = ['availability', 'dataselect'].filter(k => q[k]).map(k => reqLinks(k, q[k])).join(' ');
-      return `<div class="gap"><div class="ghead">${esc(m.start)} → ${esc(m.end)} <span class="gdur">${esc(dur)}</span> ${esc(DIR_LABEL[m.who] || '')}</div><div class="req">${btns}</div></div>`;
+      return `<div class="gap"><div class="ghead">${esc(_fmtTime(m.start))} → ${esc(_fmtTime(m.end))} <span class="gdur">${esc(dur)}</span> ${esc(DIR_LABEL[m.who] || '')}</div><div class="req">${btns}</div></div>`;
     }).join('');
     parts.push(`<div class="gaps"><h2>${esc(gaps.length)} gap${gaps.length === 1 ? '' : 's'}</h2>${items}</div>`);
   }
