@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-08-26
+
 ### Added — `rerun` command — #55
 
 Re-verify the inconsistencies of a report against the live services, without the
