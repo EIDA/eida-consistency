@@ -44,7 +44,11 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        # v1.12.4 bundled a Twine too old to accept core metadata 2.5, which
+        # current uv emits, so it rejected our own wheel:
+        #   InvalidDistribution: '2.5' is not a valid metadata version
+        # v1.14.2 ships Twine v7, which accepts it.
+        uses: pypa/gh-action-pypi-publish@v1.14.2
 
   github-release:
     if: startsWith(github.ref, 'refs/tags/')
