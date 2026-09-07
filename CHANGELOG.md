@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Changed — PSD is checked over the tested window's whole UTC day — #51
+### Changed — PSD is checked over the tested window's UTC day — #51
 
 SeedPSD can fail to compute one narrow time window and answer `204` for it even
 when the day's file processed correctly. To avoid reporting that as a finding,
@@ -10,11 +10,16 @@ when the day's file processed correctly. To avoid reporting that as a finding,
 (exactly 24 h for the usual same-day window) rather than the window padded by
 ±1 day. The query span is now the same one the verdict is evaluated over.
 
-Note that padding ±12 h around the window instead would not be equivalent: for a
-window late in the day it drifts into the next one and can miss a short record
-early in the target day. Observed on `HL.VLI..HHZ` for 2026-01-10, whose only
-PSD record covers 00:00:01–02:44:25 — a ±12 h query around a 23:50 window
-returns nothing, while the whole-day query returns the record.
+The query runs to **day + 2**, not day + 1. `/coverage` matches records by
+containment rather than overlap, and a day file always runs a second or so past
+midnight (`HL.VLI..HHZ` 2026-06-02: `00:00:05.31Z → 2026-06-03T00:00:02.50Z`).
+Asking for exactly `[day, day+1)` therefore excludes the very record being looked
+for and the day reads as having no PSD. The day-boundary *start* is what keeps
+the previous day's record out, since it begins before the range.
+
+Padding ±12 h around the window instead would not work either: for a window late
+in the day it drifts into the next one and can miss a short record early in the
+target day.
 
 
 ## 0.7.0 — 2026-08-26

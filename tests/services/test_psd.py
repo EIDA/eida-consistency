@@ -88,7 +88,7 @@ def test_psd_coverage_queries_the_whole_utc_day(monkeypatch):
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T12:00:00", "2024-06-02T12:10:00", loc="00")
     assert captured["params"]["start"] == "2024-06-02T00:00:00"
-    assert captured["params"]["end"] == "2024-06-03T00:00:00"    # 24 h exactly
+    assert captured["params"]["end"] == "2024-06-04T00:00:00"
 
 
 def test_psd_day_query_is_24h_wherever_the_window_sits(monkeypatch):
@@ -101,7 +101,27 @@ def test_psd_day_query_is_24h_wherever_the_window_sits(monkeypatch):
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T23:50:00", "2024-06-02T23:59:00", loc="00")
     assert captured["params"]["start"] == "2024-06-02T00:00:00"
-    assert captured["params"]["end"] == "2024-06-03T00:00:00"
+    assert captured["params"]["end"] == "2024-06-04T00:00:00"
+
+
+def test_psd_day_query_end_clears_a_record_that_spills_past_midnight(monkeypatch):
+    """The service matches by containment, not overlap.
+
+    A day file runs a second or so past midnight, e.g. the real HL.VLI..HHZ
+    record 2026-06-02T00:00:05.31Z -> 2026-06-03T00:00:02.50Z. Asking for
+    exactly [Jun 2, Jun 3) excludes it and the day looks like it has no PSD.
+    The end must clear the spill; the start still excludes the previous day.
+    """
+    captured = {}
+    monkeypatch.setattr(psd_mod.requests, "get",
+                        lambda url, params=None, **k: captured.update(params=params) or DummyResp(status=200, text=CSV))
+    psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "VLI", "HHZ",
+                         "2026-06-02T12:00:00", "2026-06-02T12:10:00")
+    lo, hi = captured["params"]["start"], captured["params"]["end"]
+    rec_start, rec_end = "2026-06-02T00:00:05", "2026-06-03T00:00:02"
+    assert lo <= rec_start and rec_end <= hi, "target day's record must be contained"
+    prev_start = "2026-06-01T00:00:01"
+    assert prev_start < lo, "previous day's record must still fall outside"
 
 
 def test_psd_day_query_spans_both_days_across_midnight(monkeypatch):
@@ -111,7 +131,7 @@ def test_psd_day_query_spans_both_days_across_midnight(monkeypatch):
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T23:55:00", "2024-06-03T00:05:00", loc="00")
     assert captured["params"]["start"] == "2024-06-02T00:00:00"
-    assert captured["params"]["end"] == "2024-06-04T00:00:00"
+    assert captured["params"]["end"] == "2024-06-05T00:00:00"
 
 
 def test_psd_coverage_timeout_is_transient(monkeypatch):

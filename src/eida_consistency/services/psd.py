@@ -1,11 +1,12 @@
 """EIDA PSD (seedpsd) coverage service.
 
 PSD is a once-per-day product served as CSV by {host}/eidaws/psd/1/coverage.
-We query the whole UTC day the tested window falls in, not the window itself:
-SeedPSD can fail to compute one narrow time window and answer 204 for it even
-though the day's file processed correctly, and we do not want to report that as
-a finding. The response is reduced to "is there a valid PSD record for this
-slice's day".
+We query the tested window's UTC day rather than the window itself: SeedPSD can
+fail to compute one narrow time window and answer 204 for it even though the
+day's file processed correctly, and we do not want to report that as a finding.
+The range runs to day+2 because the service matches records by containment and a
+day file spills past midnight -- see `_day_bounds`. The response is reduced to
+"is there a valid PSD record for this slice's day".
 """
 from __future__ import annotations
 
@@ -60,15 +61,23 @@ def _endpoint_from_base(base_url: str) -> str:
 
 
 def _day_bounds(start: str, end: str) -> tuple[str, str]:
-    """Query bounds covering the whole UTC day(s) the window falls in.
+    """Query bounds for the UTC day(s) the window falls in.
 
-    Deliberately the same span `_day_covered` then evaluates over, so the query
-    asks for exactly what the verdict is based on. For the usual same-day window
-    this is 24 h; a window straddling midnight spans both days.
+    The service returns only records that fit ENTIRELY inside the requested
+    range -- containment, not overlap -- and a day file always runs a second or
+    so past midnight (Jun 12 00:00:00.04 -> Jun 13 00:00:01.45). So asking for
+    exactly [day, day+1) excludes the very record we want, and the day reads as
+    having no PSD when it plainly has one.
+
+    Hence +2 days at the end: the target day's record then fits. The start stays
+    at the day boundary, and that is what keeps the *previous* day's record out
+    -- it begins before the range, so containment excludes it. `_day_covered`
+    still checks what actually overlaps the day, so a wider ask cannot produce a
+    false positive.
     """
     t0, t1 = parse_iso(start), parse_iso(end)
     lo = t0.replace(hour=0, minute=0, second=0, microsecond=0)
-    hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
     fmt = "%Y-%m-%dT%H:%M:%S"
     return lo.strftime(fmt), hi.strftime(fmt)
 
