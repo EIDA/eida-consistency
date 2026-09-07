@@ -77,7 +77,9 @@ def test_psd_coverage_404_is_unsupported(monkeypatch):
     assert res["status"] == "Unsupported"
 
 
-def test_psd_coverage_pads_window_by_one_day(monkeypatch):
+def test_psd_coverage_queries_the_whole_utc_day(monkeypatch):
+    # SeedPSD can answer 204 for one narrow time window even though the day's
+    # file processed fine, so the query covers the window's whole day instead.
     captured = {}
     def fake_get(url, params=None, **k):
         captured["params"] = params
@@ -85,8 +87,31 @@ def test_psd_coverage_pads_window_by_one_day(monkeypatch):
     monkeypatch.setattr(psd_mod.requests, "get", fake_get)
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T12:00:00", "2024-06-02T12:10:00", loc="00")
-    assert captured["params"]["start"] == "2024-06-01T12:00:00"  # t0 - 1 day
-    assert captured["params"]["end"] == "2024-06-03T12:10:00"    # t1 + 1 day
+    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["end"] == "2024-06-03T00:00:00"    # 24 h exactly
+
+
+def test_psd_day_query_is_24h_wherever_the_window_sits(monkeypatch):
+    # A window minutes before midnight must still ask for its own whole day --
+    # padding +-12h around the window would drift into the next day and could
+    # miss a short record sitting early in this one.
+    captured = {}
+    monkeypatch.setattr(psd_mod.requests, "get",
+                        lambda url, params=None, **k: captured.update(params=params) or DummyResp(status=200, text=CSV))
+    psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
+                         "2024-06-02T23:50:00", "2024-06-02T23:59:00", loc="00")
+    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["end"] == "2024-06-03T00:00:00"
+
+
+def test_psd_day_query_spans_both_days_across_midnight(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(psd_mod.requests, "get",
+                        lambda url, params=None, **k: captured.update(params=params) or DummyResp(status=200, text=CSV))
+    psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
+                         "2024-06-02T23:55:00", "2024-06-03T00:05:00", loc="00")
+    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["end"] == "2024-06-04T00:00:00"
 
 
 def test_psd_coverage_timeout_is_transient(monkeypatch):

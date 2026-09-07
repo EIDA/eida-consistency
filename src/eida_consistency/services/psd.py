@@ -1,8 +1,11 @@
 """EIDA PSD (seedpsd) coverage service.
 
 PSD is a once-per-day product served as CSV by {host}/eidaws/psd/1/coverage.
-We query a ±1-day-padded window (tight windows return a false 204) and reduce
-the response to a per-day "is there a valid PSD record for this slice's day".
+We query the whole UTC day the tested window falls in, not the window itself:
+SeedPSD can fail to compute one narrow time window and answer 204 for it even
+though the day's file processed correctly, and we do not want to report that as
+a finding. The response is reduced to "is there a valid PSD record for this
+slice's day".
 """
 from __future__ import annotations
 
@@ -56,19 +59,29 @@ def _endpoint_from_base(base_url: str) -> str:
     return f"{scheme}://{host}".rstrip("/")
 
 
-def _pad(iso: str, days: int) -> str:
-    dt = parse_iso(iso) + timedelta(days=days)
-    return dt.strftime("%Y-%m-%dT%H:%M:%S")
+def _day_bounds(start: str, end: str) -> tuple[str, str]:
+    """Query bounds covering the whole UTC day(s) the window falls in.
+
+    Deliberately the same span `_day_covered` then evaluates over, so the query
+    asks for exactly what the verdict is based on. For the usual same-day window
+    this is 24 h; a window straddling midnight spans both days.
+    """
+    t0, t1 = parse_iso(start), parse_iso(end)
+    lo = t0.replace(hour=0, minute=0, second=0, microsecond=0)
+    hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    return lo.strftime(fmt), hi.strftime(fmt)
 
 
 def psd_coverage(base_url, net, sta, cha, start, end, loc="",
                  timeout: int = 25, max_attempts: int = 3) -> dict:
-    """Query {host}/eidaws/psd/1/coverage for the slice's day(s), padded ±1 day."""
+    """Query {host}/eidaws/psd/1/coverage for the whole UTC day(s) of the slice."""
     endpoint = _endpoint_from_base(base_url)
     url = f"{endpoint}/eidaws/psd/1/coverage"
+    day_start, day_end = _day_bounds(start, end)
     params = {
         "net": net, "sta": sta, "loc": loc if loc else "--", "cha": cha,
-        "start": _pad(start, -1), "end": _pad(end, 1),
+        "start": day_start, "end": day_end,
     }
 
     last_status, last_error = "Unknown", None
