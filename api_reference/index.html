@@ -1,0 +1,1515 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://EIDA.github.io/eida-consistency/api_reference/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../cli/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>API Reference - EIDA Consistency</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="EIDA Consistency" class="md-header__button md-logo" aria-label="EIDA Consistency" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EIDA Consistency
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="lime"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/EIDA/eida-consistency" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    EIDA/eida-consistency
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EIDA Consistency" class="md-nav__button md-logo" aria-label="EIDA Consistency" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EIDA Consistency
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/EIDA/eida-consistency" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    EIDA/eida-consistency
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Checker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        checker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="checker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker.check_candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_candidate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="check_candidate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker.check_candidate--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eida_consistency.runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        runner
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.runner.run_consistency_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_consistency_check
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="run_consistency_check">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.runner.run_consistency_check--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Checker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        checker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="checker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker.check_candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_candidate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="check_candidate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.core.checker.check_candidate--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eida_consistency.runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        runner
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.runner.run_consistency_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_consistency_check
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="run_consistency_check">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#eida_consistency.runner.run_consistency_check--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference">API Reference</h1>
+<p>This reference documents the core modules of <code>eida-consistency</code>.</p>
+<h2 id="core-checker">Core Checker</h2>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="eida_consistency.core.checker" class="doc doc-heading">
+            <code>eida_consistency.core.checker</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Pick random epochs and check availability coverage (returns location and matched span).</p>
+<p>This module selects up to <code>epochs</code> unique (network, station, channel) items from the
+candidate pool. For each channel, it queries /availability/1/query?format=json once for
+the entire epoch-span (from StationXML). Then, within that span, it picks random test
+epochs of length <code>duration</code> seconds.</p>
+
+
+<details class="return-value" open>
+  <summary>Return value</summary>
+  <p>results, stats</p>
+</details>        <p>results = [
+      (
+        availability_url,    # the availability request URL (full epoch-span)
+        availability_ok,     # True/False depending on slice coverage
+        epoch_start_iso,     # slice start
+        epoch_end_iso,       # slice end
+        location_exact,      # location code (from matched span or StationXML)
+        matched_span         # the span dict that covered the slice (or None)
+      ),
+      ...
+]</p>
+<p>stats = {
+    "candidates_requested": epochs,
+    "candidates_generated": len(results),
+    "candidates_pool": len(pool),
+    "queries_performed": attempts,
+}</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="eida_consistency.core.checker.check_candidate" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">check_candidate</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">candidates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">600</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Build up to <code>epochs</code> test cases and check availability coverage.</p>
+<h5 id="eida_consistency.core.checker.check_candidate--returns">Returns</h5>
+<p>results : list of tuples
+    (availability_url, availability_ok, epoch_start_iso, epoch_end_iso,
+     location_exact, matched_span)
+stats : dict
+    {"candidates_requested", "candidates_generated", "candidates_pool", "queries_performed"}</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/eida_consistency/core/checker.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_candidate</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">candidate</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">duration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">600</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Build up to `epochs` test cases and check availability coverage.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    results : list of tuples</span>
+<span class="sd">        (availability_url, availability_ok, epoch_start_iso, epoch_end_iso,</span>
+<span class="sd">         location_exact, matched_span)</span>
+<span class="sd">    stats : dict</span>
+<span class="sd">        {"candidates_requested", "candidates_generated", "candidates_pool", "queries_performed"}</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">duration</span> <span class="o">&lt;</span> <span class="mi">600</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Duration must be at least 600 seconds (10 minutes)."</span><span class="p">)</span>
+
+    <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">pool</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="n">candidates</span> <span class="ow">or</span> <span class="p">[</span><span class="n">candidate</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">c</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"network"</span><span class="p">,</span> <span class="s2">"station"</span><span class="p">,</span> <span class="s2">"channel"</span><span class="p">,</span> <span class="s2">"starttime"</span><span class="p">))</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s2">"candidates_requested"</span><span class="p">:</span> <span class="n">epochs</span><span class="p">,</span>
+            <span class="s2">"candidates_generated"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">"candidates_pool"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">"queries_performed"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="n">used</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">attempts</span><span class="p">,</span> <span class="n">max_attempts</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">epochs</span> <span class="o">*</span> <span class="mi">20</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">epochs</span> <span class="ow">and</span> <span class="n">attempts</span> <span class="o">&lt;</span> <span class="n">max_attempts</span><span class="p">:</span>
+        <span class="n">attempts</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">sample</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span> <span class="n">sample</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span> <span class="n">sample</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">])</span>
+        <span class="c1"># Allow checking same channel multiple times if needed, but keeping uniqueness for now if preferred</span>
+        <span class="c1"># or we rely on random selection from large pool.</span>
+        <span class="c1"># Original logic was 'used' per query, but now we do multiple per channel.</span>
+        <span class="c1"># Let's drop unique constraint to allow multiple epochs per channel if pool is small.</span>
+        <span class="c1"># Logic change: The user requested N *epochs*, potentially from same channel.</span>
+        <span class="c1"># But original logic had `if key in used: continue`.</span>
+        <span class="c1"># We'll stick to unique channels if possible, or relax it if epochs &gt; pool.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">epochs</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">used</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">ch_start</span> <span class="o">=</span> <span class="n">_parse_iso</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"starttime"</span><span class="p">))</span>
+        <span class="n">ch_end</span> <span class="o">=</span> <span class="n">_parse_iso</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"endtime"</span><span class="p">))</span> <span class="ow">or</span> <span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ch_start</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">ch_end</span> <span class="ow">or</span> <span class="n">ch_start</span> <span class="o">&gt;=</span> <span class="n">ch_end</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Random slice of `duration` seconds inside [ch_start, ch_end]</span>
+        <span class="n">duration_td</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">duration</span><span class="p">)</span>
+        <span class="n">latest_start</span> <span class="o">=</span> <span class="n">ch_end</span> <span class="o">-</span> <span class="n">duration_td</span>
+        <span class="k">if</span> <span class="n">ch_start</span> <span class="o">&gt;=</span> <span class="n">latest_start</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">((</span><span class="n">latest_start</span> <span class="o">-</span> <span class="n">ch_start</span><span class="p">)</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()))</span>
+        <span class="n">epoch_start_dt</span> <span class="o">=</span> <span class="n">ch_start</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">offset</span><span class="p">)</span>
+        <span class="n">epoch_end_dt</span> <span class="o">=</span> <span class="n">epoch_start_dt</span> <span class="o">+</span> <span class="n">duration_td</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">epoch_start_dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S"</span><span class="p">)</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">epoch_end_dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S"</span><span class="p">)</span>
+
+        <span class="c1"># Query availability for THIS specific epoch</span>
+        <span class="c1"># Return format: {"ok": bool, "matched_span": dict|None, ...}</span>
+        <span class="n">av_res</span> <span class="o">=</span> <span class="n">check_availability_query</span><span class="p">(</span>
+            <span class="n">base_url</span><span class="p">,</span>
+            <span class="n">sample</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span>
+            <span class="n">sample</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span>
+            <span class="n">sample</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">],</span>
+            <span class="n">s</span><span class="p">,</span>
+            <span class="n">e</span><span class="p">,</span>
+            <span class="n">location</span><span class="o">=</span><span class="n">sample</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">,</span> <span class="s2">"*"</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">available</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">av_res</span><span class="p">[</span><span class="s2">"ok"</span><span class="p">])</span>
+        <span class="n">matched_span</span> <span class="o">=</span> <span class="n">av_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"matched_span"</span><span class="p">)</span>
+        <span class="n">loc</span> <span class="o">=</span> <span class="n">matched_span</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="n">matched_span</span> <span class="ow">and</span> <span class="n">matched_span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">))</span> <span class="k">else</span> <span class="n">sample</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="n">av_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"spans"</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">av_res</span><span class="p">[</span><span class="s2">"url"</span><span class="p">],</span> <span class="n">available</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">loc</span><span class="p">,</span> <span class="n">matched_span</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">av_res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)))</span>
+        <span class="n">used</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="c1"># Final summary line</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Final usable epochs: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2"> "</span>
+        <span class="sa">f</span><span class="s2">"(from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span><span class="si">}</span><span class="s2"> candidates, </span><span class="si">{</span><span class="n">attempts</span><span class="si">}</span><span class="s2"> attempts)"</span>
+    <span class="p">)</span>
+
+    <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"candidates_requested"</span><span class="p">:</span> <span class="n">epochs</span><span class="p">,</span>
+        <span class="s2">"candidates_generated"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">),</span>
+        <span class="s2">"candidates_pool"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">),</span>
+        <span class="s2">"queries_performed"</span><span class="p">:</span> <span class="n">attempts</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">stats</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="runner">Runner</h2>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="eida_consistency.runner" class="doc doc-heading">
+            <code>eida_consistency.runner</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>CLI entry point and orchestration for running consistency checks.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="eida_consistency.runner.run_consistency_check" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_consistency_check</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">percentage</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">delete_old</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">print_stdout</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">report_dir</span><span class="o">=</span><span class="n">REPORT_DIR</span><span class="p">,</span> <span class="n">station_multiplier</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">check_psd</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Run the availability + dataselect consistency check and write reports.</p>
+<h5 id="eida_consistency.runner.run_consistency_check--returns">Returns</h5>
+<p>Optional[Path]
+    The path to the saved JSON report, or None if nothing was generated
+    (e.g., no candidates).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/eida_consistency/runner.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_consistency_check</span><span class="p">(</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">percentage</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">duration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">600</span><span class="p">,</span>
+    <span class="n">delete_old</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">print_stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">report_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">REPORT_DIR</span><span class="p">,</span>
+    <span class="n">station_multiplier</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">check_psd</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Run the availability + dataselect consistency check and write reports.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[Path]</span>
+<span class="sd">        The path to the saved JSON report, or None if nothing was generated</span>
+<span class="sd">        (e.g., no candidates).</span>
+<span class="sd">    """</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>  <span class="c1"># ⬅️ measure runtime start</span>
+
+    <span class="c1"># Parse epochs arg (can be int or percentage) if percentage is not explicitly provided</span>
+    <span class="k">if</span> <span class="n">percentage</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">epochs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"%"</span><span class="p">):</span>
+                <span class="n">percentage</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"%"</span><span class="p">))</span> <span class="o">/</span> <span class="mf">100.0</span>
+                <span class="n">epochs</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">elif</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">raw</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">val</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+                    <span class="n">percentage</span> <span class="o">=</span> <span class="n">val</span>
+                    <span class="n">epochs</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Invalid format for epochs: </span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># The seed mechanism was removed: a seed cannot reproduce a run because the</span>
+    <span class="c1"># node's live inventory changes over time, so the same seed selects</span>
+    <span class="c1"># different channels later. To re-verify a specific finding, replay its</span>
+    <span class="c1"># exact window with 'explore'/'check' (deterministic; see</span>
+    <span class="c1"># explorer._check_window). Sampling is therefore unseeded.</span>
+    <span class="n">base_url</span> <span class="o">=</span> <span class="n">load_node_url</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">" Fetching candidates (Percentage </span><span class="si">{</span><span class="n">percentage</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2"> of available stations)..."</span><span class="p">)</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="n">fetch_candidates</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">percentage</span><span class="o">=</span><span class="n">percentage</span><span class="p">)</span>
+        <span class="c1"># If percentage logic is used, we test ONE epoch per selected candidate.</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">" Fetching random candidates for node: </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
+        <span class="c1"># Always fetch station_multiplier × epochs candidates</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="n">epochs</span> <span class="ow">or</span> <span class="mi">10</span>  <span class="c1"># fallback if None</span>
+        <span class="n">target_candidates</span> <span class="o">=</span> <span class="n">epochs</span> <span class="o">*</span> <span class="n">station_multiplier</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="n">fetch_candidates</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">max_candidates</span><span class="o">=</span><span class="n">target_candidates</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No candidates fetched. No report will be generated."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># Each item: (url, available, start, end, loc_exact, matched_span)</span>
+    <span class="n">results</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">check_candidate</span><span class="p">(</span>
+        <span class="n">base_url</span><span class="p">,</span>
+        <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">candidates</span><span class="o">=</span><span class="n">candidates</span><span class="p">,</span>
+        <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+        <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Checking availability + dataselect consistency in parallel:</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">all_logs</span><span class="p">,</span> <span class="n">all_records</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">worker</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">available</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">loc_exact</span><span class="p">,</span> <span class="n">matched_span</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">avail_status</span><span class="p">),</span> <span class="n">match</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">loc_final</span> <span class="o">=</span> <span class="n">loc_exact</span> <span class="ow">or</span> <span class="n">match</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">ds_result</span> <span class="o">=</span> <span class="n">dataselect</span><span class="p">(</span>
+            <span class="n">base_url</span><span class="p">,</span>
+            <span class="k">match</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">],</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">loc_final</span>
+        <span class="p">)</span>
+        <span class="n">classification</span> <span class="o">=</span> <span class="n">classify_consistency</span><span class="p">(</span><span class="n">spans</span><span class="p">,</span> <span class="n">ds_result</span><span class="p">,</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+        <span class="n">psd_result</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">psd_class</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">check_psd</span><span class="p">:</span>
+            <span class="n">psd_result</span> <span class="o">=</span> <span class="n">psd_coverage</span><span class="p">(</span>
+                <span class="n">base_url</span><span class="p">,</span> <span class="n">match</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">],</span>
+                <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">loc_final</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># Probe the whole UTC day only if PSD exists for a window with no</span>
+            <span class="c1"># data — see classify_psd(): it separates an intra-day gap from an</span>
+            <span class="c1"># orphan PSD.</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">day_probe</span><span class="p">():</span>
+                <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">_utc_day_range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">day_has_spans</span><span class="p">(</span>
+                    <span class="n">base_url</span><span class="p">,</span> <span class="n">match</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span> <span class="n">match</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">],</span>
+                    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="n">loc_final</span> <span class="ow">or</span> <span class="s2">"*"</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">psd_class</span> <span class="o">=</span> <span class="n">classify_psd</span><span class="p">(</span><span class="n">ds_result</span><span class="p">,</span> <span class="n">psd_result</span><span class="p">,</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">),</span>
+                                     <span class="n">day_check</span><span class="o">=</span><span class="n">day_probe</span><span class="p">)</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="n">format_result</span><span class="p">(</span>
+            <span class="n">idx</span><span class="p">,</span>
+            <span class="n">url</span><span class="p">,</span>
+            <span class="n">available</span><span class="p">,</span>
+            <span class="n">ds_result</span><span class="p">,</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">match</span><span class="p">,</span> <span class="s2">"location"</span><span class="p">:</span> <span class="n">loc_final</span><span class="p">,</span> <span class="s2">"matched_span"</span><span class="p">:</span> <span class="n">matched_span</span><span class="p">},</span>
+            <span class="n">classification</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"index"</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+            <span class="s2">"url"</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+            <span class="s2">"network"</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s2">"network"</span><span class="p">],</span>
+            <span class="s2">"station"</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s2">"station"</span><span class="p">],</span>
+            <span class="s2">"channel"</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">],</span>
+            <span class="s2">"location"</span><span class="p">:</span> <span class="n">loc_final</span><span class="p">,</span>
+            <span class="s2">"available"</span><span class="p">:</span> <span class="n">available</span><span class="p">,</span>
+            <span class="s2">"availability_status"</span><span class="p">:</span> <span class="n">avail_status</span><span class="p">,</span>
+            <span class="s2">"dataselect_success"</span><span class="p">:</span> <span class="n">ds_result</span><span class="p">[</span><span class="s2">"success"</span><span class="p">],</span>
+            <span class="s2">"dataselect_status"</span><span class="p">:</span> <span class="n">ds_result</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span>
+            <span class="s2">"dataselect_url"</span><span class="p">:</span> <span class="n">ds_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">),</span>
+            <span class="s2">"dataselect_type"</span><span class="p">:</span> <span class="n">ds_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"type"</span><span class="p">,</span> <span class="s2">"?"</span><span class="p">),</span>
+            <span class="s2">"consistent"</span><span class="p">:</span> <span class="n">classification</span><span class="p">[</span><span class="s2">"consistent"</span><span class="p">],</span>
+            <span class="s2">"scoreable"</span><span class="p">:</span> <span class="n">classification</span><span class="p">[</span><span class="s2">"scoreable"</span><span class="p">],</span>
+            <span class="s2">"consistency_status"</span><span class="p">:</span> <span class="n">classification</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span>
+            <span class="s2">"consistency_reason"</span><span class="p">:</span> <span class="n">classification</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">],</span>
+            <span class="s2">"mismatch"</span><span class="p">:</span> <span class="n">classification</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mismatch"</span><span class="p">,</span> <span class="p">[]),</span>
+            <span class="s2">"coverage"</span><span class="p">:</span> <span class="n">classification</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"coverage"</span><span class="p">,</span> <span class="p">{}),</span>
+            <span class="s2">"starttime"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">start</span><span class="p">),</span>
+            <span class="s2">"endtime"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">end</span><span class="p">),</span>
+            <span class="s2">"debug"</span><span class="p">:</span> <span class="n">ds_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"debug"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="s2">"matched_span"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"start"</span><span class="p">:</span> <span class="n">matched_span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="k">if</span> <span class="n">matched_span</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">"end"</span><span class="p">:</span> <span class="n">matched_span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"end"</span><span class="p">)</span> <span class="k">if</span> <span class="n">matched_span</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">"location"</span><span class="p">:</span> <span class="n">matched_span</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="k">if</span> <span class="n">matched_span</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">"psd_success"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_result</span><span class="p">[</span><span class="s2">"success"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_result</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_status"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_class</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_class</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_present"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_class</span><span class="p">[</span><span class="s2">"p_present"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_class</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_required"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_class</span><span class="p">[</span><span class="s2">"psd_required"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_class</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_consistent"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_class</span><span class="p">[</span><span class="s2">"consistent"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_class</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_url"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_result</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span> <span class="k">if</span> <span class="n">psd_result</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"psd_day_url"</span><span class="p">:</span> <span class="p">(</span><span class="n">psd_class</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"day_url"</span><span class="p">)</span> <span class="k">if</span> <span class="n">psd_class</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">psd_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"coverage"</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">][</span><span class="s2">"psd"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">e</span><span class="p">]</span> <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">_sr</span><span class="p">,</span> <span class="n">valid</span><span class="p">)</span> <span class="ow">in</span> <span class="n">psd_result</span><span class="p">[</span><span class="s2">"records"</span><span class="p">]</span> <span class="k">if</span> <span class="n">valid</span>
+            <span class="p">]</span>
+        <span class="k">return</span> <span class="n">log</span><span class="p">,</span> <span class="n">record</span>
+
+    <span class="n">args_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">available</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">loc_exact</span><span class="p">,</span> <span class="n">matched_span</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">avail_status</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"?"</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&amp;"</span><span class="p">)</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"network="</span><span class="p">))</span>
+            <span class="n">sta</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"station="</span><span class="p">))</span>
+            <span class="n">cha</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"channel="</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">net</span><span class="p">,</span> <span class="n">sta</span><span class="p">,</span> <span class="n">cha</span> <span class="o">=</span> <span class="s2">"?"</span><span class="p">,</span> <span class="s2">"?"</span><span class="p">,</span> <span class="s2">"?"</span>
+
+        <span class="n">match</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">c</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span>
+                <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"network"</span><span class="p">]</span> <span class="o">==</span> <span class="n">net</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">"station"</span><span class="p">]</span> <span class="o">==</span> <span class="n">sta</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">"channel"</span><span class="p">]</span> <span class="o">==</span> <span class="n">cha</span>
+            <span class="p">),</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+            <span class="n">args_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">available</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">loc_exact</span><span class="p">,</span> <span class="n">matched_span</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">avail_status</span><span class="p">),</span> <span class="n">match</span><span class="p">))</span>
+
+    <span class="n">pool_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_workers</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">args_list</span><span class="p">)))</span>
+    <span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">pool_size</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+        <span class="n">futures</span> <span class="o">=</span> <span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">args_list</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">fut</span> <span class="ow">in</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">as_completed</span><span class="p">(</span><span class="n">futures</span><span class="p">):</span>
+            <span class="n">log</span><span class="p">,</span> <span class="n">record</span> <span class="o">=</span> <span class="n">fut</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">log</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">all_logs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+            <span class="n">all_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Collected </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_records</span><span class="p">)</span><span class="si">}</span><span class="s2"> results."</span><span class="p">)</span>
+
+    <span class="c1"># --- Measure test duration ---</span>
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">test_duration</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+
+    <span class="c1"># --- Save reports into chosen report_dir ---</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="n">create_report_object</span><span class="p">(</span>
+        <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
+        <span class="n">epochs</span><span class="o">=</span><span class="n">epochs</span><span class="p">,</span>
+        <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span>
+        <span class="n">records</span><span class="o">=</span><span class="n">all_records</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">report</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>  <span class="c1"># merge candidate stats into summary</span>
+    <span class="n">report</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">][</span><span class="s2">"test_duration_sec"</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_duration</span>  <span class="c1"># ⬅️ add runtime here</span>
+
+    <span class="n">json_path</span> <span class="o">=</span> <span class="n">save_report_json</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">report_dir</span><span class="o">=</span><span class="n">report_dir</span><span class="p">)</span>
+    <span class="n">md_path</span> <span class="o">=</span> <span class="n">save_report_markdown</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">report_dir</span><span class="o">=</span><span class="n">report_dir</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Report saved to: </span><span class="si">{</span><span class="n">json_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Markdown saved to: </span><span class="si">{</span><span class="n">md_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Test duration: </span><span class="si">{</span><span class="n">test_duration</span><span class="si">}</span><span class="s2"> seconds"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">print_stdout</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">json_path</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.expand", "navigation.indexes", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
