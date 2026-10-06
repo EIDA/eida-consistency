@@ -18,9 +18,9 @@ REPORT_DIR = Path("reports")
 # Which service holds the data inside a mismatch gap -> display glyph + label.
 _DIRECTION_SYMBOL = {"availability": "▼", "dataselect": "▲", "psd": "▶"}
 _DIRECTION_LABEL = {
-    "availability": "Availability: data · Dataselect: NO DATA",
-    "dataselect": "Availability: NO DATA · Dataselect: data",
-    "psd": "Dataselect: data · PSD: NO DATA",
+    "availability": "listed as available, but no data came back",
+    "dataselect": "data came back, but it is not listed as available",
+    "psd": "data exists, but there is no PSD for that day",
 }
 
 _PRESENCE_GLYPH = {
@@ -28,6 +28,11 @@ _PRESENCE_GLYPH = {
     "dataselect": ("▲", "△"),
     "psd": ("▶", "▷"),
 }
+
+
+def _yn(v) -> str:
+    """True/False as yes/no — the report is read by people, not parsers."""
+    return "yes" if v else "no"
 
 
 def triad(a_present, d_present, p_present) -> str:
@@ -89,7 +94,7 @@ def build_inconsistencies_table(inconsistent_recs: List[Dict[str, Any]]) -> List
     blank on continuation rows, so multiple gaps in one window read as a group.
     """
     lines = [
-        "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |",
+        "| Channel | Window (UTC) | Problem window (UTC) | Length | What went wrong |",
         "| :--- | :--- | :--- | :---: | :--- |",
     ]
     for r in inconsistent_recs:
@@ -134,17 +139,30 @@ def _psd_bucket(rec: Dict[str, Any]) -> Optional[str]:
     return "violation" if rec.get("psd_required") else "pregap"
 
 
+def channel_epoch_state(record: Dict[str, Any]) -> str:
+    """"open" or "closed <date>", straight from the channel epoch metadata.
+
+    A statement of fact, deliberately not an interpretation: whether a closed
+    epoch's missing PSD matters is for the reader to judge against the
+    2024-01-01 requirement, which is reported separately.
+    """
+    end = record.get("channel_epoch_end")
+    if not end:
+        return "open"
+    return f"closed {str(end)[:10]}"
+
+
 def _psd_table(rows: List[Dict[str, Any]]) -> List[str]:
     """Channel / window / triangle table for a list of PSD records."""
     out = [
-        "| Channel | Window (UTC) | ▼ Avail · ▲ Data · ▶ PSD |",
-        "| :--- | :--- | :---: |",
+        "| Channel | Window (UTC) | Avail / Data / PSD | Channel epoch |",
+        "| :--- | :--- | :---: | :--- |",
     ]
     for r in rows:
         chan = f"{r['network']}.{r['station']}.{r['location']}.{r['channel']}"
         window = f"{r['starttime']} → {r['endtime']}"
         t = triad(r.get("available"), r.get("dataselect_success"), r.get("psd_present"))
-        out.append(f"| `{chan}` | `{window}` | {t} |")
+        out.append(f"| `{chan}` | `{window}` | {t} | {channel_epoch_state(r)} |")
     return out
 
 
@@ -177,73 +195,46 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
     sc = psd_scores(records)
     n_skipped = len(buckets.get("skipped", []))
     n_unsupported = len(buckets.get("unsupported", []))
-    _fmt = lambda v: f"{v:.1f}%" if v is not None else "N/A"
+    # Counts, not percentages: "2/3" says how much was actually looked at, where
+    # "66.7%" hides that it was three windows.
+    def _frac(have, total):
+        return f"`{have}/{total}`" if total else "N/A — nothing to check"
+
     _score_lines = [
         "",
-        f"- **PSD compliance (≥2024):** {_fmt(sc['psd_compliance_score'])} "
-        f"— over {sc['psd_evaluated_2024']} data-bearing window(s).",
-        f"- **PSD coverage (all dates):** {_fmt(sc['psd_coverage_score'])} "
-        f"— over {sc['psd_evaluated']} data-bearing window(s).",
+        f"- **PSD compliance (≥2024):** {_frac(sc['psd_present_2024'], sc['psd_evaluated_2024'])}",
+        f"- **PSD coverage (all dates):** {_frac(sc['psd_present'], sc['psd_evaluated'])}",
     ]
     if n_skipped or n_unsupported:
         _score_lines.append(
-            f"- **Network / service note:** {n_skipped} window(s) skipped "
-            f"(transient PSD error), {n_unsupported} unsupported (node has no PSD "
-            f"service) — excluded from the PSD scores."
+            f"- Not counted above: {n_skipped} skipped (PSD query failed), "
+            f"{n_unsupported} with no PSD service."
         )
 
     lines = [
-        "## PSD Consistency — Availability / Dataselect / PSD",
+        "## PSD",
         "",
-        "Each tested window is cross-checked across three EIDA services. "
-        "**Dataselect** (the actual waveform bytes) is the ground truth; each "
-        "window is compared against the **Availability** service and against the "
-        "**PSD** service (`eidaws/psd/1/coverage`). PSD is computed once per UTC "
-        "day, so \"PSD present\" means the window's day has a valid PSD record.",
+        "Three services per window: **▼** availability, **▲** dataselect, **▶** PSD. "
+        "A filled triangle means that service has the data; a hollow one (▽ △ ▷) "
+        "means it does not. Dataselect is the one to trust. PSD is made once a day, "
+        "and is only required from **2024-01-01** onwards.",
         "",
-        "Coverage is shown as three triangles per window — **▼ Availability**, "
-        "**▲ Dataselect**, **▶ PSD**. A *filled* triangle means that service has "
-        "data for the window; a *hollow* triangle (▽ △ ▷) means it does not.",
-        "",
-        "EIDA only **requires** PSD for data on or after **2024-01-01**, so a "
-        "missing PSD is judged differently by date:",
-        "",
-        "- **Violation** — a window on/after 2024-01-01 where dataselect has data "
-        "but PSD is missing (`▲ ▷`). The node is not meeting its PSD obligation.",
-        "- **Pre-2024 gap** — the same pattern before 2024-01-01. PSD was not "
-        "required then, so it is only informational and is **not** counted as a "
-        "fault.",
-        "",
-        f"**PSD summary:** {len(consistent)} consistent · "
-        f"{len(violations)} violation(s) — data ≥ 2024 without PSD · "
-        f"{len(pregaps)} pre-2024 gap(s) (informational) · "
-        f"{len(orphans)} PSD without data · "
-        f"{len(nodata)} window(s) with no data"
-        + (f" · {len(skipped)} skipped/unsupported" if skipped else "")
-        + ".",
-        "",
-        "### PSD Violations — data on/after 2024-01-01 but PSD missing",
-        "",
-        "These are genuine inconsistencies: the node holds the waveform data but "
-        "did not compute or serve the required PSD.",
+
+        "### Missing PSD — required (data from 2024 onwards)",
         "",
     ]
-    _i = next(i for i, l in enumerate(lines) if l.startswith("**PSD summary:**"))
+    _i = next(i for i, l in enumerate(lines) if l.startswith("Three services per window"))
     lines[_i + 1:_i + 1] = _score_lines
 
     if violations:
         lines += _psd_table(violations)
     else:
         lines.append(
-            "None — every window on/after 2024-01-01 that had waveform data also "
-            "had a valid PSD. ✅"
+            "None. Every window from 2024 onwards that had data also had a PSD."
         )
     lines += [
         "",
-        "### PSD gaps before 2024-01-01 (informational — PSD not yet required)",
-        "",
-        "Listed for completeness only; these are **not** violations because EIDA "
-        "did not require PSD before 2024-01-01.",
+        "### Missing PSD — not required (data before 2024)",
         "",
     ]
     if pregaps:
@@ -252,12 +243,7 @@ def build_psd_section(records: List[Dict[str, Any]]) -> List[str]:
         lines.append("None.")
     lines += [
         "",
-        "### PSD without data — PSD published for a day the archive cannot serve",
-        "",
-        "The reverse case: a valid PSD record exists, but neither the tested "
-        "window nor **any part of that UTC day** has waveform data. An ordinary "
-        "gap inside a covered day is not listed here — only days that are empty "
-        "end to end, checked against the availability service.",
+        "### PSD exists, but there is no data",
         "",
     ]
     if orphans:
@@ -382,9 +368,9 @@ def render_request_lines(r: Dict[str, Any]) -> List[str]:
         return []
     lines = []
     if r.get("url"):
-        lines.append(f"- Availability request: `{r['url']}` → HTTP {r.get('availability_status', '?')}")
+        lines.append(f"- Availability query: `{r['url']}` → HTTP {r.get('availability_status', '?')}")
     if r.get("dataselect_url"):
-        lines.append(f"- Dataselect request: `{r['dataselect_url']}` → {r.get('dataselect_status', '?')}")
+        lines.append(f"- Dataselect query: `{r['dataselect_url']}` → {r.get('dataselect_status', '?')}")
     return lines
 
 
@@ -407,7 +393,7 @@ def render_detail_gaps(r: Dict[str, Any]) -> List[str]:
         timeline,
         "▲ Data YES / Avail NO    ▼ Avail YES / Data NO    █ both    · none    | gap boundary",
         "```",
-        f"- Gaps ({len(gaps)}):",
+        f"- Problem windows ({len(gaps)}):",
     ]
     for m in gaps:
         dur = _gap_duration_seconds(m.get("start", ""), m.get("end", ""))
@@ -536,7 +522,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     md_lines = [f"# EIDA Consistency Report: `{summary['node']}`", ""]
 
     if inconsistent_recs:
-        md_lines.extend(["## Detected Inconsistencies", ""])
+        md_lines.extend(["## Problems found", ""])
         md_lines.extend(build_inconsistencies_table(inconsistent_recs))
         md_lines.append("")
     elif skipped_recs:
@@ -554,10 +540,10 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
     if skipped_recs:
         md_lines.extend(
             [
-                "## Service & Network Errors",
+                "## Could not be checked",
                 "",
-                "The following windows were skipped for scoring because Dataselect failed with a transient error (Connection, Timeout, 5xx).",
-                "While these are not counted as data inconsistencies, they may indicate service instability.",
+                "Dataselect failed here for a reason that is probably temporary — a timeout, a dropped connection, or a 5xx.",
+                "These windows are left out of the score. They are not data problems, but a lot of them may mean the service is struggling.",
                 "",
                 "| Channel | Window (UTC) | Avail | DS | Status |",
                 "| :--- | :--- | :---: | :---: | :--- |",
@@ -578,7 +564,7 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
         [
             "---",
             "",
-            "## Run Summary",
+            "## About this run",
             "",
             f"- Tool version: `{summary.get('version', '?')}`",
             f"- Time: `{summary['timestamp']}`",
@@ -595,20 +581,20 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             f"- Inconsistent: `{summary['total_inconsistent']}`",
             f"- Score: **{summary['score']} %**",
             "",
-            "### Quality Breakdown",
+            "### Totals",
             f"- Data Inconsistencies: `{summary['total_inconsistent']}`",
             f"- Service/Network Errors: `{summary.get('total_transient', 0)}`",
             "",
-            "### Inconsistency Breakdown",
+            "### What kind of problem",
             f"- Availability says YES, Dataselect says NO: `{summary['availability_yes_dataselect_no']}`",
             f"- Availability says NO, Dataselect says YES: `{summary['availability_no_dataselect_yes']}`",
             "",
-            "### Dataselect Response Types",
+            "### What dataselect returned",
             *(f"- **{key}**: `{value}`" for key, value in sorted(type_counts.items())),
             "",
             "---",
             "",
-            "## Detailed Results",
+            "## Every window checked",
             "",
         ]
     )
@@ -628,12 +614,12 @@ def save_report_markdown(report: Dict[str, Any], report_dir: Path = REPORT_DIR) 
             [
                 f"### `{r['network']}.{r['station']}.{r['location']}.{r['channel']}`",
                 f"- Window: `{r['starttime']} → {r['endtime']}`",
-                f"- Availability: `{r['available']}`",
-                f"- Dataselect: `{r['dataselect_success']}`",
-                f"- Type: `{r.get('dataselect_type', '?')}`",
+                f"- Listed as available: `{_yn(r['available'])}`",
+                f"- Data downloaded: `{_yn(r['dataselect_success'])}`",
+                f"- What came back: `{r.get('dataselect_type', '?')}`",
                 f"- Status: `{r['dataselect_status']}`",
-                f"- Scored: `{r.get('scoreable', True)}`",
-                f"- Consistent: `{consistency_text}`",
+                f"- Counted in the score: `{_yn(r.get('scoreable', True))}`",
+                f"- They agree: `{consistency_text}`",
             ]
         )
         md_lines.extend(render_request_lines(r))

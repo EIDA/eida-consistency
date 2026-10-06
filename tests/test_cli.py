@@ -39,7 +39,7 @@ def test_check_outputs_timeline_and_direction(monkeypatch, caplog):
     assert result.exit_code == 0, result.output
     out = caplog.text
     assert "INCONSISTENT" in out
-    assert "Availability: data · Dataselect: NO DATA" in out   # direction label on the gap
+    assert "listed as available, but no data came back" in out   # direction label on the gap
     assert "▼" in out                                          # down-triangle direction
     assert "█" in out                                          # timeline coverage block
     # PSD triangle surfaced in the check command

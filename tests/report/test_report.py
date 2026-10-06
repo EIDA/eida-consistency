@@ -112,16 +112,16 @@ def test_save_report_markdown_with_skipped(tmp_path):
     path = report.save_report_markdown(rep, report_dir=tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "# EIDA Consistency Report" in text
-    assert "## Detected Inconsistencies" in text
-    assert "## Service & Network Errors" in text
-    assert "Quality Breakdown" in text
+    assert "## Problems found" in text
+    assert "## Could not be checked" in text
+    assert "Totals" in text
     assert "Service/Network Errors: `1`" in text
     assert "Scored checks" in text
     import eida_consistency
     assert f"Tool version: `{eida_consistency.__version__}`" in text
     assert "Skipped checks" in text
     assert "TransientDataselectFailure" in text
-    assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
+    assert "| Channel | Window (UTC) | Problem window (UTC) | Length | What went wrong |" in text
 
 
 def test_render_gap_table_plaintext_aligned():
@@ -133,11 +133,11 @@ def test_render_gap_table_plaintext_aligned():
     ]
     lines = report.render_gap_table(gaps)
     text = "\n".join(lines)
-    assert "Mismatch (UTC)" in text and "Gap" in text and "Disagreement" in text
+    assert "Mismatch (UTC)" in text and "Gap" in text and "Disagreement" in text  # console table, unchanged
     assert "36.6 s" in text
     assert "90.0 s" in text
-    assert "▼ Availability: data · Dataselect: NO DATA" in text
-    assert "▲ Availability: NO DATA · Dataselect: data" in text
+    assert "▼ listed as available, but no data came back" in text
+    assert "▲ data came back, but it is not listed as available" in text
     # rows are column-aligned: the duration column starts at the same offset
     body = [l for l in lines if "▼" in l or "▲" in l]
     assert body[0].index("36.6 s") == body[1].index("90.0 s")
@@ -199,12 +199,12 @@ def test_detail_shows_requests_and_status_for_inconsistency(tmp_path):
     assert "availability/1/query?network=FR&station=MLS" in text
     assert "dataselect/1/query?network=FR&station=MLS" in text
     assert "HTTP 200" in text          # availability status
-    assert "Dataselect request" in text and "OK" in text
+    assert "Dataselect query" in text and "OK" in text
 
 
 def test_gap_direction_label():
-    assert report.gap_direction_label("availability") == "▼ Availability: data · Dataselect: NO DATA"
-    assert report.gap_direction_label("dataselect") == "▲ Availability: NO DATA · Dataselect: data"
+    assert report.gap_direction_label("availability") == "▼ listed as available, but no data came back"
+    assert report.gap_direction_label("dataselect") == "▲ data came back, but it is not listed as available"
 
 
 def test_inconsistencies_table_one_row_per_gap_with_direction():
@@ -214,8 +214,8 @@ def test_inconsistencies_table_one_row_per_gap_with_direction():
          "end": "2014-02-15T05:19:01.606900+00:00", "who": "availability"},
     ]
     text = "\n".join(report.build_inconsistencies_table([rec]))
-    assert "| Channel | Window (UTC) | Mismatch (UTC) | Gap | Disagreement |" in text
-    assert "Availability: data · Dataselect: NO DATA" in text
+    assert "| Channel | Window (UTC) | Problem window (UTC) | Length | What went wrong |" in text
+    assert "listed as available, but no data came back" in text
     assert "▼" in text
     assert "36.6 s" in text
 
@@ -226,7 +226,7 @@ def test_inconsistencies_table_dataselect_direction():
         {"start": "2020-01-01T00:04:00+00:00", "end": "2020-01-01T00:05:30+00:00", "who": "dataselect"},
     ]
     text = "\n".join(report.build_inconsistencies_table([rec]))
-    assert "Availability: NO DATA · Dataselect: data" in text
+    assert "data came back, but it is not listed as available" in text
     assert "▲" in text
 
 
@@ -421,16 +421,14 @@ def test_build_psd_section_separates_violations_from_pregaps():
     ]
     body = "\n".join(build_psd_section(recs))
     # explanatory prose is present
-    assert "## PSD Consistency" in body
-    assert "ground truth" in body
+    assert "## PSD" in body
+    assert "the one to trust" in body
     assert "2024-01-01" in body
     # summary counts
-    assert "1 consistent" in body
-    assert "1 violation(s)" in body
-    assert "1 pre-2024 gap(s)" in body
+    assert "PSD summary" not in body           # the long roll-up line was dropped
     # the violation is under the Violations heading, the gap under the gaps heading
-    v_head = body.index("### PSD Violations")
-    g_head = body.index("### PSD gaps before 2024")
+    v_head = body.index("### Missing PSD — required")
+    g_head = body.index("### Missing PSD — not required")
     assert v_head < body.index("HL.V..HNZ") < g_head        # violation in violations section
     assert body.index("HL.G..HNZ") > g_head                 # gap in gaps section
 
@@ -439,8 +437,8 @@ def test_build_psd_section_no_violations_shows_all_clear():
     recs = [_rec(station="C", dataselect_success=True, psd_present=True,
                  psd_required=True, psd_status="Consistent")]
     body = "\n".join(build_psd_section(recs))
-    assert "None — every window" in body   # no violations
-    assert "✅" in body
+    assert "None. Every window from 2024 onwards" in body   # no violations
+    assert "None. Every window from 2024 onwards" in body
 
 
 from eida_consistency.report.report import psd_scores
@@ -540,18 +538,18 @@ def test_psd_section_shows_scores_and_network_note():
                    psd_present=False, psd_consistent=None),         # unsupported
     ]
     body = "\n".join(build_psd_section(recs))
-    assert "**PSD compliance (≥2024):** 50.0% — over 2 data-bearing window(s)." in body
-    assert "**PSD coverage (all dates):** 50.0% — over 2 data-bearing window(s)." in body
-    assert "1 window(s) skipped" in body
-    assert "1 unsupported" in body
+    assert "**PSD compliance (≥2024):** `1/2`" in body
+    assert "**PSD coverage (all dates):** `1/2`" in body
+    assert "1 skipped (PSD query failed)" in body
+    assert "1 with no PSD service" in body
 
 
 def test_psd_section_na_and_no_note_when_clean():
     recs = [_rec_score(psd_status="Consistent", psd_present=True,
                        psd_required=False, psd_consistent=True)]   # pre-2024 hit only
     body = "\n".join(build_psd_section(recs))
-    assert "**PSD compliance (≥2024):** N/A — over 0 data-bearing window(s)." in body  # no >=2024 windows
-    assert "**PSD coverage (all dates):** 100.0% — over 1 data-bearing window(s)." in body
+    assert "**PSD compliance (≥2024):** N/A — nothing to check" in body  # no >=2024 windows
+    assert "**PSD coverage (all dates):** `1/1`" in body
     assert "skipped" not in body                     # note omitted when none
 
 
@@ -606,10 +604,10 @@ def test_build_psd_section_lists_orphans_separately():
              psd_required=True, psd_status="Inconsistent"),
     ]
     body = "\n".join(build_psd_section(recs))
-    assert "PSD without data" in body
+    assert "PSD exists, but there is no data" in body
     assert "`HL.O..HNZ`" in body
     # the orphan is not filed under the >=2024 violations
-    violations = body.split("### PSD without data")[0]
+    violations = body.split("### PSD exists, but there is no data")[0]
     assert "`HL.O..HNZ`" not in violations
 
 
@@ -617,4 +615,4 @@ def test_build_psd_section_orphan_section_says_none_when_clean():
     recs = [_rec(station="C", dataselect_success=True, psd_present=True,
                  psd_required=True, psd_status="Consistent")]
     body = "\n".join(build_psd_section(recs))
-    assert "PSD without data" in body
+    assert "PSD exists, but there is no data" in body
