@@ -344,7 +344,7 @@ test('renderDetail offers a dataselect run button for coverage-less reports', ()
 });
 
 // ── PSD triangle (Availability / Dataselect / PSD) ────────────────────────
-import { psdChecked, psdVerdict, psdTriad, psdCounts, psdBucket } from '../viewer.core.js';
+import { psdChecked, psdVerdict, psdTriad, psdCounts, psdBucket, channelEpochState } from '../viewer.core.js';
 
 const psdViolation = {
   index: 9, network: 'IV', station: 'CESX', location: '', channel: 'HHZ',
@@ -461,6 +461,31 @@ test('the PSD column sorts by urgency, not alphabetically', () => {
   const order = sortRecords([psdOk, psdUnsupported, psdPregap, psdViolation, psdOrphan], 'psd', 'asc');
   assert.deepEqual(order.map(r => psdVerdict(r).kind),
     ['violation', 'pregap', 'orphan', 'ok', 'unsupported']);
+});
+
+test('the channel-epoch column states the fact, open or closed <date>', () => {
+  // Deliberately not interpreted: no "expected" or "out of scope". Whether a
+  // closed epoch's missing PSD matters is the reader's call.
+  const f = { onlyInconsistent: false, direction: 'both', psd: 'all', search: '' };
+  const body = r => renderResultsTable([r], f).split('<tbody>')[1];
+  assert.equal(channelEpochState({}), 'open');
+  assert.equal(channelEpochState({ channel_epoch_end: null }), 'open');
+  assert.equal(channelEpochState({ channel_epoch_end: '2016-04-26T00:00:00' }), 'closed 2016-04-26');
+  assert.match(body({ ...psdViolation }), /epoch live[^>]*>open</);
+  assert.match(body({ ...psdViolation, channel_epoch_end: '2016-04-26T00:00:00' }),
+               /epoch ended[^>]*>closed 2016-04-26</);
+  // no interpretation leaks into the cell
+  assert.doesNotMatch(body({ ...psdViolation, channel_epoch_end: '2016-04-26T00:00:00' }),
+                      /expected|out of scope/i);
+});
+
+test('the channel-epoch column sorts open first, then newest-closed', () => {
+  const rows = [
+    { ...psdOk, index: 90, channel_epoch_end: '2011-01-01T00:00:00' },
+    { ...psdOk, index: 91, channel_epoch_end: null },
+    { ...psdOk, index: 92, channel_epoch_end: '2024-06-12T00:00:00' },
+  ];
+  assert.deepEqual(sortRecords(rows, 'epoch', 'asc').map(r => r.index), [91, 92, 90]);
 });
 
 test('psd=consistent selects only the clean rows', () => {

@@ -14,7 +14,7 @@ def make_fake_result():
     url = "http://fake/fdsnws/availability/1/query?network=N&station=S&channel=C"
     matched_span = {"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "location": ""}
     spans = [{"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T01:00:00Z", "samplerate": "100.0"}]
-    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", matched_span, spans, 200)], {"stat": 1}
+    return [(url, True, "2024-01-01T00:00:00Z", "2024-01-01T01:00:00Z", "", matched_span, spans, 200, None)], {"stat": 1}
 
 
 def patch_all(monkeypatch, tmp_path):
@@ -104,7 +104,7 @@ def _stub_pipeline(monkeypatch, check_calls):
     monkeypatch.setattr(runner_mod, "check_candidate", lambda *a, **k: (
         [("http://x?network=HL&station=ACHA&channel=HNZ", True,
           "2024-06-02T12:00:00", "2024-06-02T12:10:00", "00", {"start": None, "end": None, "location": "00"},
-          [], 200)], {"candidates_pool": 1}))
+          [], 200, None)], {"candidates_pool": 1}))
     monkeypatch.setattr(runner_mod, "dataselect", lambda *a, **k: {
         "success": True, "status": "OK", "type": "SingleTrace",
         "segments": [("2024-06-02T12:00:00", "2024-06-02T12:10:00", 200.0)], "url": "http://ds", "debug": ""})

@@ -120,7 +120,7 @@ def run_consistency_check(
     all_logs, all_records = [], []
 
     def worker(args):
-        idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status), match = args
+        idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status, epoch_end), match = args
         loc_final = loc_exact or match.get("location", "")
         ds_result = dataselect(
             base_url,
@@ -176,6 +176,9 @@ def run_consistency_check(
             "coverage": classification.get("coverage", {}),
             "starttime": str(start),
             "endtime": str(end),
+            # Channel epoch state, straight from station metadata -- None = the
+            # epoch was still open. Stated as a fact, not interpreted.
+            "channel_epoch_end": epoch_end,
             "debug": ds_result.get("debug", ""),
             "matched_span": {
                 "start": matched_span.get("start") if matched_span else None,
@@ -198,7 +201,7 @@ def run_consistency_check(
         return log, record
 
     args_list = []
-    for idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status) in enumerate(results, 1):
+    for idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status, epoch_end) in enumerate(results, 1):
         try:
             parts = url.split("?")[1].split("&")
             net = next(p.split("=")[1] for p in parts if p.startswith("network="))
@@ -216,7 +219,7 @@ def run_consistency_check(
             None,
         )
         if match:
-            args_list.append((idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status), match))
+            args_list.append((idx, (url, available, start, end, loc_exact, matched_span, spans, avail_status, epoch_end), match))
 
     pool_size = max(1, min(max_workers, len(args_list)))
     with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:

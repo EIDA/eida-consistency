@@ -103,7 +103,7 @@ def test_check_candidate_success(monkeypatch):
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
 
     assert len(results) == 1
-    url, available, s, e, loc, span, spans, status = results[0]
+    url, available, s, e, loc, span, spans, status, epoch_end = results[0]
     assert url.startswith("http://fake/availability/1/query?")
     assert available is True
     assert status == 200
@@ -131,7 +131,7 @@ def test_check_candidate_not_available(monkeypatch):
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
     
     assert len(results) == 1
-    url, available, s, e, loc, span, spans, status = results[0]
+    url, available, s, e, loc, span, spans, status, epoch_end = results[0]
     assert available is False
     assert status == 200
     assert span is None
@@ -155,3 +155,38 @@ def test_check_candidate_endtime_missing(monkeypatch):
     results, stats = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
     assert stats["candidates_generated"] == 1
     assert len(results) == 1
+
+
+def _stub_availability(monkeypatch):
+    monkeypatch.setattr(checker, "check_availability_query", lambda *a, **k: {
+        "ok": True, "matched_span": None, "spans": [], "status": 200,
+        "url": "http://fake/availability/1/query?network=XX&station=TEST&channel=BHZ",
+    })
+
+
+def test_check_candidate_reports_a_closed_epochs_own_end(monkeypatch):
+    """The epoch's end, not the sampled window's end.
+
+    The runner cannot recover this afterwards: it re-matches candidates by NSLC
+    and would take the first epoch of a channel that may have several.
+    """
+    _stub_availability(monkeypatch)
+    c = make_candidate()                      # endtime 2023-01-01T12:00:00
+    results, _ = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
+    _url, _av, s, e, _loc, _span, _spans, _st, epoch_end = results[0]
+    assert epoch_end == "2023-01-01T12:00:00"
+    assert e != epoch_end          # the window ends inside the epoch, not at it
+
+
+def test_check_candidate_reports_none_for_an_open_epoch(monkeypatch):
+    _stub_availability(monkeypatch)
+    for blank in ("", "   ", None):
+        c = make_candidate()
+        if blank is None:
+            c.pop("endtime")                  # key absent entirely
+        else:
+            c["endtime"] = blank
+        c["starttime"] = "2023-01-01T00:00:00"
+        results, _ = checker.check_candidate("http://fake/", c, epochs=1, duration=600)
+        assert results, f"no result for endtime={blank!r}"
+        assert results[0][8] is None, f"endtime={blank!r} should read as open"

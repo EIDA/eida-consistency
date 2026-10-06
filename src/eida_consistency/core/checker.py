@@ -15,7 +15,10 @@ results = [
         epoch_start_iso,     # slice start
         epoch_end_iso,       # slice end
         location_exact,      # location code (from matched span or StationXML)
-        matched_span         # the span dict that covered the slice (or None)
+        matched_span,        # the span dict that covered the slice (or None)
+        spans,               # all availability spans returned for the slice
+        availability_status, # HTTP status from the availability query
+        channel_epoch_end    # the sampled epoch's own end, or None if still open
       ),
       ...
 ]
@@ -78,7 +81,8 @@ def check_candidate(
     -------
     results : list of tuples
         (availability_url, availability_ok, epoch_start_iso, epoch_end_iso,
-         location_exact, matched_span)
+         location_exact, matched_span, spans, availability_status,
+         channel_epoch_end)
     stats : dict
         {"candidates_requested", "candidates_generated", "candidates_pool", "queries_performed"}
     """
@@ -151,7 +155,13 @@ def check_candidate(
         loc = matched_span["location"] if (matched_span and matched_span.get("location")) else sample.get("location", "")
         spans = av_res.get("spans", [])
 
-        results.append((av_res["url"], available, s, e, loc, matched_span, spans, av_res.get("status")))
+        # The sampled channel epoch's own end, verbatim from station metadata:
+        # empty/absent means the epoch is still open. Carried through because the
+        # runner cannot recover it later -- it re-matches candidates by NSLC, and
+        # a channel with several epochs would yield the wrong one.
+        epoch_end = (sample.get("endtime") or "").strip() or None
+        results.append((av_res["url"], available, s, e, loc, matched_span, spans,
+                        av_res.get("status"), epoch_end))
         used.add(key)
 
     # Final summary line

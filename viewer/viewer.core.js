@@ -283,6 +283,14 @@ export function psdBucket(record) {
   return _PSD_INCONSISTENT.has(v.kind) ? 'inconsistent' : null;
 }
 
+// "open" or "closed <date>", straight from the channel epoch metadata. A fact,
+// not an interpretation -- whether a closed epoch's missing PSD matters is for
+// the reader to weigh against the 2024-01-01 requirement, shown separately.
+export function channelEpochState(record) {
+  const end = record && record.channel_epoch_end;
+  return end ? `closed ${String(end).slice(0, 10)}` : 'open';
+}
+
 const _TRI = { av: ['▼', '▽'], ds: ['▲', '△'], psd: ['▶', '▷'] };
 // Filled/hollow triangle triad string: filled=present, hollow=absent, '?'=unknown.
 export function psdTriad(record) {
@@ -396,7 +404,8 @@ export function renderResultsTable(results, filter, sort) {
   const hasPsd = (results || []).some(psdChecked);
   // The PSD column is always present, so a pre-PSD report renders the same UI as
   // a current one; its cells read "▼ ▲ ?" instead of carrying a verdict.
-  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶', sort: null }, { label: 'PSD', sort: 'psd' }, ...COLUMNS.slice(3)];
+  const cols = [...COLUMNS.slice(0, 3), { label: '▼▲▶', sort: null }, { label: 'PSD', sort: 'psd' },
+    { label: 'Channel epoch', sort: 'epoch' }, ...COLUMNS.slice(3)];
   const head = cols.map(c => {
     if (!c.sort) return `<th>${c.label}</th>`;
     const active = c.sort === key;
@@ -416,8 +425,10 @@ export function renderResultsTable(results, filter, sort) {
     const pTitle = pv ? pv.text : 'PSD not checked in this report';
     const psdCells = `<td><span class="psd ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(psdTriad(r))}</span></td>`
       + `<td><span class="psd-word ${pv ? pv.cls : 'mut'}" title="${esc(pTitle)}">${esc(pv ? pv.short : 'not checked')}</span></td>`;
+    const epoch = channelEpochState(r);
+    const epochCell = `<td><span class="epoch ${epoch === 'open' ? 'live' : 'ended'}">${esc(epoch)}</span></td>`;
     return `<tr data-index="${esc(r.index)}"><td>${esc(nslc)}</td>
-      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCells}
+      <td class="win">${esc(r.starttime)} → ${esc(r.endtime)}</td><td>${tags}</td>${psdCells}${epochCell}
       <td>${badge}</td>
       <td><span class="verdict ${v.cls}">${esc(v.text)}</span></td></tr>`;
   }).join('');
@@ -459,6 +470,10 @@ export function sortRecords(results, key, dir) {
   else if (key === 'gap') cmp = (a, b) => gapStats(a).count - gapStats(b).count;
   else if (key === 'status') cmp = (a, b) => recordVerdict(a).text.localeCompare(recordVerdict(b).text);
   else if (key === 'psd') cmp = (a, b) => _psdRank(a) - _psdRank(b);
+  // Open epochs first, then closed ones newest-first: a channel that stopped
+  // recording last month is likelier to matter than one that stopped in 2011.
+  else if (key === 'epoch') cmp = (a, b) =>
+    String(a.channel_epoch_end || '9999').localeCompare(String(b.channel_epoch_end || '9999')) * -1;
   else cmp = (a, b) => String(a.starttime).localeCompare(String(b.starttime)); // 'time'
   arr.sort(cmp);
   const desc = dir === undefined ? key === 'gap' : dir === 'desc'; // gap defaults largest-first
