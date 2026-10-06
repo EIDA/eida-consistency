@@ -16,6 +16,7 @@ from typing import List, Optional
 import requests
 
 from eida_consistency.explorer import _check_window, _parse_iso
+from eida_consistency.services.psd import psd_coverage
 
 # Verdicts, keyed by (prior consistent state, current consistent state).
 # Prior is the row's ``consistent`` value in the report; current is the live
@@ -25,6 +26,45 @@ PERSISTS = "PERSISTS"      # was inconsistent, still inconsistent
 CONSISTENT = "CONSISTENT"  # was consistent, still consistent (only via --all/-i)
 REGRESSED = "REGRESSED"    # was consistent, now inconsistent (only via --all/-i)
 SKIPPED = "SKIPPED"        # dataselect failed transiently; no verdict possible
+
+
+def is_psd_finding(row: dict) -> bool:
+    """Was this row reported as data-present-but-PSD-missing?
+
+    Deliberately excludes Unsupported/Skipped (no verdict was reached) and
+    Orphan (the reverse case -- PSD without data -- which a PSD recompute does
+    not address).
+    """
+    return (
+        row.get("psd_status") not in (None, "Unsupported", "Skipped", "Orphan")
+        and bool(row.get("dataselect_success"))
+        and not row.get("psd_present")
+    )
+
+
+def reverify_psd_row(base_url: str, row: dict, verbose: bool = False) -> Optional[str]:
+    """Re-check whether the row's day has a PSD now.
+
+    Returns None when the row carries no PSD information at all (a pre-PSD
+    report), so the caller can leave the field off rather than invent a verdict.
+    Same vocabulary as the availability/dataselect verdicts.
+    """
+    if row.get("psd_status") is None:
+        return None
+    res = psd_coverage(
+        base_url, row["network"], row["station"], row["channel"],
+        str(row["starttime"]), str(row["endtime"]), row.get("location", ""),
+    )
+    if verbose:
+        logging.info(f"  PSD URL: {res.get('url')}")
+    # A failed or unsupported check is not evidence either way.
+    if not res.get("success") or res.get("status") in ("Unsupported",):
+        return SKIPPED
+    was_missing = is_psd_finding(row)
+    now_present = bool(res.get("day_covered"))
+    if was_missing:
+        return RESOLVED if now_present else PERSISTS
+    return CONSISTENT if now_present else REGRESSED
 
 
 def load_report(path_or_url: str) -> dict:
@@ -59,7 +99,10 @@ def select_targets(
         return [r for r in results if r["index"] in wanted]
     if include_consistent:
         return list(results)
-    return [r for r in results if r.get("consistent") is False]
+    # A row is worth re-running if either dimension was flagged. PSD findings
+    # sit on rows whose availability/dataselect verdict is usually fine, so
+    # selecting on `consistent` alone made them invisible to rerun.
+    return [r for r in results if r.get("consistent") is False or is_psd_finding(r)]
 
 
 def reverify_row(base_url: str, row: dict, verbose: bool = False) -> str:

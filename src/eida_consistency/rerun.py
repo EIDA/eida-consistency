@@ -15,10 +15,12 @@ from eida_consistency.reverify import (
     load_report,
     select_targets,
     reverify_row,
+    reverify_psd_row,
+    is_psd_finding,
 )
 from eida_consistency.utils.nodes import load_node_url
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"   # 1.1 adds the optional per-row psd_verdict
 
 
 def _label(row: dict) -> str:
@@ -62,16 +64,29 @@ def rerun_report(
     results: list[dict] = []
     for n, row in enumerate(targets, start=1):
         verdict = reverify_row(base_url, row, verbose)
-        logging.info(f"[{n}/{total}] {_label(row):<16} {_window(row)} ... {verdict}")
-        results.append(
-            {
-                "index": row["index"],
-                "label": _label(row),
-                "start": row["starttime"],
-                "end": row["endtime"],
-                "verdict": verdict,
-            }
-        )
+        psd_verdict = reverify_psd_row(base_url, row, verbose)
+        # Name the dimension only when the row was flagged on it, so a plain
+        # availability/dataselect finding still reads exactly as it used to.
+        shown = []
+        if row.get("consistent") is False or psd_verdict is None:
+            shown.append(verdict)
+        else:
+            shown.append(f"A/D {verdict}")
+        if psd_verdict is not None and (is_psd_finding(row) or row.get("consistent") is False):
+            shown.append(f"PSD {psd_verdict}")
+        elif psd_verdict is not None and not shown:
+            shown.append(f"PSD {psd_verdict}")
+        logging.info(f"[{n}/{total}] {_label(row):<16} {_window(row)} ... {'  '.join(shown)}")
+        entry = {
+            "index": row["index"],
+            "label": _label(row),
+            "start": row["starttime"],
+            "end": row["endtime"],
+            "verdict": verdict,
+        }
+        if psd_verdict is not None:
+            entry["psd_verdict"] = psd_verdict
+        results.append(entry)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -81,14 +96,23 @@ def rerun_report(
     }
 
 
+_ORDER = ["PERSISTS", "RESOLVED", "REGRESSED", "CONSISTENT", "SKIPPED"]
+
+
+def _tally(verdicts: list[str]) -> str:
+    counts = {k: 0 for k in _ORDER}
+    for v in verdicts:
+        counts[v] = counts.get(v, 0) + 1
+    return ", ".join(f"{counts[k]} {k.lower()}" for k in _ORDER if counts[k])
+
+
 def render_summary(result: dict) -> str:
-    """One-line tally, e.g. ``6 re-run — 3 persists, 2 resolved, 1 skipped``."""
+    """One-line tally, with a separate PSD clause when PSD was re-checked."""
     results = result["results"]
     if not results:
         return "0 re-run"
-    order = ["PERSISTS", "RESOLVED", "REGRESSED", "CONSISTENT", "SKIPPED"]
-    counts = {k: 0 for k in order}
-    for r in results:
-        counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
-    parts = [f"{counts[k]} {k.lower()}" for k in order if counts[k]]
-    return f"{len(results)} re-run — " + ", ".join(parts)
+    line = f"{len(results)} re-run — " + _tally([r["verdict"] for r in results])
+    psd = [r["psd_verdict"] for r in results if r.get("psd_verdict")]
+    if psd:
+        line += f" | PSD: {_tally(psd)}"
+    return line
