@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## 0.7.1 — 2026-10-07
+
+### Added — rerun re-verifies PSD findings — #51
+
+`rerun` selected rows on the availability/dataselect verdict alone, so a PSD
+finding — which sits on a row whose A/D verdict is usually fine — was invisible
+to it. A report with 0 A/D inconsistencies and 8 PSD findings printed "No rows
+to re-run".
+
+A row is now re-run if either dimension was flagged, and PSD findings get their
+own verdict from the same vocabulary by re-querying `/coverage`. `psd_verdict`
+is additive and absent on pre-PSD reports; `rerun`'s own `schema_version` goes
+to 1.1. `explore --json` is unchanged.
+
+### Added — channel epoch state on every result — #51
+
+Each result records `channel_epoch_end` (None = still recording), shown in the
+report and as a sortable column in the viewer as "open" or "closed <date>".
+A statement of fact, not an interpretation: whether a closed epoch's missing PSD
+matters is for the reader to weigh against the 2024-01-01 requirement.
+
+### Changed — the report is written in plain language — #51
+
+Headings, field labels and the disagreement wording say what they mean rather
+than naming internals: "Problems found", "Could not be checked", "Listed as
+available: no", "data came back, but it is not listed as available". The PSD
+section drops its explanatory prose, and its scores are fractions ("2/3") rather
+than percentages, which hid how few windows a score was based on.
+
+
 ### Changed — PSD is checked over the tested window's UTC day — #51
 
 SeedPSD can fail to compute one narrow time window and answer `204` for it even
