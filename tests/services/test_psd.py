@@ -87,7 +87,7 @@ def test_psd_coverage_queries_the_whole_utc_day(monkeypatch):
     monkeypatch.setattr(psd_mod.requests, "get", fake_get)
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T12:00:00", "2024-06-02T12:10:00", loc="00")
-    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["start"] == "2024-06-01T00:00:00"
     assert captured["params"]["end"] == "2024-06-04T00:00:00"
 
 
@@ -100,7 +100,7 @@ def test_psd_day_query_is_24h_wherever_the_window_sits(monkeypatch):
                         lambda url, params=None, **k: captured.update(params=params) or DummyResp(status=200, text=CSV))
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T23:50:00", "2024-06-02T23:59:00", loc="00")
-    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["start"] == "2024-06-01T00:00:00"
     assert captured["params"]["end"] == "2024-06-04T00:00:00"
 
 
@@ -119,9 +119,10 @@ def test_psd_day_query_end_clears_a_record_that_spills_past_midnight(monkeypatch
                          "2026-06-02T12:00:00", "2026-06-02T12:10:00")
     lo, hi = captured["params"]["start"], captured["params"]["end"]
     rec_start, rec_end = "2026-06-02T00:00:05", "2026-06-03T00:00:02"
-    assert lo <= rec_start and rec_end <= hi, "target day's record must be contained"
-    prev_start = "2026-06-01T00:00:01"
-    assert prev_start < lo, "previous day's record must still fall outside"
+    assert lo < rec_start and rec_end <= hi, "target day's record must be contained"
+    # The start must be strictly below a record beginning exactly at midnight --
+    # the service compares it strictly, so an equal start drops the record.
+    assert lo < "2026-06-02T00:00:00.000000", "a midnight-start record must not be excluded"
 
 
 def test_psd_day_query_spans_both_days_across_midnight(monkeypatch):
@@ -130,7 +131,7 @@ def test_psd_day_query_spans_both_days_across_midnight(monkeypatch):
                         lambda url, params=None, **k: captured.update(params=params) or DummyResp(status=200, text=CSV))
     psd_mod.psd_coverage("https://eida.example.org/fdsnws/", "HL", "ACHA", "HNZ",
                          "2024-06-02T23:55:00", "2024-06-03T00:05:00", loc="00")
-    assert captured["params"]["start"] == "2024-06-02T00:00:00"
+    assert captured["params"]["start"] == "2024-06-01T00:00:00"
     assert captured["params"]["end"] == "2024-06-05T00:00:00"
 
 
@@ -156,3 +157,35 @@ def test_psd_coverage_5xx_exhaustion_keeps_full_url_with_query(monkeypatch):
     assert res["status"] != "Unsupported"
     assert "net=" in res["url"]
     assert "coverage?" in res["url"]
+
+
+# --- a complete day's record starts exactly at midnight -------------------
+
+def test_day_covered_for_a_record_that_starts_exactly_at_midnight():
+    """The HT.SIGR..HHZ 2010-02-12 case.
+
+    A complete day's record spans [00:00:00.000000, 23:59:59.990000]. The
+    service compares the query start strictly, so a start of exactly midnight
+    dropped it: the day read as having no PSD no matter how often it was
+    repaired, and rerun reported PERSISTS forever.
+    """
+    rows = [("2010-02-12T00:00:00.000000Z", "2010-02-12T23:59:59.990000Z", "100.0", True)]
+    assert psd._day_covered(rows, "2010-02-12T12:00:00", "2010-02-12T12:10:00") is True
+
+
+def test_day_bounds_start_is_below_a_midnight_start_record():
+    lo, _hi = psd._day_bounds("2010-02-12T12:00:00", "2010-02-12T12:10:00")
+    assert lo < "2010-02-12T00:00:00"
+
+
+def test_the_previous_days_spill_does_not_count_as_covering_this_day():
+    """Why the widened start needs start-date matching, not overlap.
+
+    Widening the query start pulls the previous day's record into the response,
+    and a day file runs past midnight -- so an overlap test would see 1.78 s of
+    2025-12-21 and call the day covered when it has no record of its own.
+    """
+    rows = [("2025-12-20T00:00:00.840000Z", "2025-12-21T00:00:01.780000Z", "100.0", True)]
+    assert psd._day_covered(rows, "2025-12-21T12:00:00", "2025-12-21T12:10:00") is False
+    # ...and it still covers the day it actually belongs to
+    assert psd._day_covered(rows, "2025-12-20T12:00:00", "2025-12-20T12:10:00") is True

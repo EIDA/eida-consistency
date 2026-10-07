@@ -37,17 +37,26 @@ def _parse_psd_csv(text: str) -> list[tuple[str, str, str, bool]]:
 
 
 def _day_covered(records, slice_start: str, slice_end: str) -> bool:
-    """True iff a valid record overlaps the UTC day(s) of [slice_start, slice_end]."""
+    """True iff a valid PSD record exists for the UTC day(s) of the slice.
+
+    A record belongs to the day its *start* falls on: the service emits one or
+    more per day, each beginning on that day. Matching on the start date rather
+    than on interval overlap matters because a day file runs a second or so past
+    midnight -- under an overlap test the previous day's record would spill into
+    this day and count as covering it.
+    """
     t0, t1 = parse_iso(slice_start), parse_iso(slice_end)
     if not t0 or not t1:
         return False
-    day_lo = t0.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    for s, e, _sr, is_valid in records:
+    days, d = set(), t0.date()
+    while d <= t1.date():
+        days.add(d)
+        d += timedelta(days=1)
+    for s, _e, _sr, is_valid in records:
         if not is_valid:
             continue
-        rs, re = parse_iso(s), parse_iso(e)
-        if rs and re and max(rs, day_lo) < min(re, day_hi):
+        rs = parse_iso(s)
+        if rs and rs.date() in days:
             return True
     return False
 
@@ -64,19 +73,22 @@ def _day_bounds(start: str, end: str) -> tuple[str, str]:
     """Query bounds for the UTC day(s) the window falls in.
 
     The service returns only records that fit ENTIRELY inside the requested
-    range -- containment, not overlap -- and a day file always runs a second or
-    so past midnight (Jun 12 00:00:00.04 -> Jun 13 00:00:01.45). So asking for
-    exactly [day, day+1) excludes the very record we want, and the day reads as
-    having no PSD when it plainly has one.
+    range, and compares the start strictly. Two consequences, both of which cost
+    us a real bug:
 
-    Hence +2 days at the end: the target day's record then fits. The start stays
-    at the day boundary, and that is what keeps the *previous* day's record out
-    -- it begins before the range, so containment excludes it. `_day_covered`
-    still checks what actually overlaps the day, so a wider ask cannot produce a
-    false positive.
+    * a day file runs a second or so past midnight (Jun 12 00:00:00.04 ->
+      Jun 13 00:00:01.45), so the end must clear the spill -- hence +2 days;
+    * a complete day's record starts at exactly 00:00:00.000000, and a start of
+      exactly that instant excludes it. Asking for [day, ...] therefore returned
+      day+1's records and the day read as having no PSD however often it was
+      repaired. Hence -1 day at the start.
+
+    Widening both ends is safe because `_day_covered` keys a record to the day
+    its start falls on, so neighbouring days' records are ignored rather than
+    miscounted.
     """
     t0, t1 = parse_iso(start), parse_iso(end)
-    lo = t0.replace(hour=0, minute=0, second=0, microsecond=0)
+    lo = t0.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
     hi = t1.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
     fmt = "%Y-%m-%dT%H:%M:%S"
     return lo.strftime(fmt), hi.strftime(fmt)
