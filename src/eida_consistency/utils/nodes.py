@@ -16,7 +16,7 @@ DEFAULT_NODES = [
     ("GFZ", "https://geofon.gfz.de/fdsnws/", True),
     ("ODC", "https://orfeus-eu.org/fdsnws/", True),
     ("ETHZ", "https://eida.ethz.ch/fdsnws/", True),
-    ("EPOSFR", "https://seisdata.epos-france.fr/fdsnws", True),
+    ("EPOSFR", "https://seisdata.epos-france.fr/fdsnws/", True),
     ("INGV", "https://webservices.ingv.it/fdsnws/", True),
     ("LMU", "https://erde.geophysik.uni-muenchen.de/fdsnws/", True),
     ("ICGC", "https://ws.icgc.cat/fdsnws/", True),
