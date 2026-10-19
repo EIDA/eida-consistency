@@ -2,7 +2,26 @@
 
 ## Unreleased
 
-## 0.7.1 — 2026-10-07
+## 0.7.1 — 2026-10-19
+
+### Fixed — a day whose PSD record starts at midnight read as having no PSD — #51
+
+`/coverage` compares the query start strictly, so asking for a start of exactly
+the target day's midnight excluded that day's own record — a complete day's
+record begins at `00:00:00.000000`. The response carried the *next* day's records
+instead, and the day reported no PSD however often it was reprocessed, so `rerun`
+answered PERSISTS for days that were already repaired.
+
+The query start now goes back a day, matching the `day + 2` treatment the end
+already had. That pulls the previous day's record into the response, and a day
+file normally runs past midnight — 185 of 224 NOA records sampled do — so an
+overlap test would then have called almost every genuine hole covered.
+`_day_covered` therefore keys a record to the day its *start* falls on rather
+than testing interval overlap.
+
+Measured against 21 repaired channel-windows at NOA (572 days): 48 days had been
+masked by this, concentrated on two streams — one 30-day window was masked on
+every single day, so a wholly successful repair read as a total failure.
 
 ### Added — rerun re-verifies PSD findings — #51
 
