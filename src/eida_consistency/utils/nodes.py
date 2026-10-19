@@ -1,4 +1,5 @@
 """Node utilities for managing EIDA node information."""
+
 from __future__ import annotations
 
 import json
@@ -7,9 +8,7 @@ from urllib.parse import urlparse
 
 from appdirs import user_cache_dir
 
-ROUTING_URL = (
-    "https://www.orfeus-eu.org/eidaws/routing/1/globalconfig?format=fdsn"
-)
+ROUTING_URL = "https://www.orfeus-eu.org/eidaws/routing/1/globalconfig?format=fdsn"
 CACHE_FILE = Path(user_cache_dir("eida_consistency")) / "nodes_cache.json"
 
 DEFAULT_NODES = [
@@ -36,7 +35,6 @@ def ensure_cache_dir() -> None:
 
 def refresh_cache_from_routing() -> list[tuple[str, str, bool]]:
     """Fetch node list from routing service and cache it."""
-    import logging
     import requests
 
     try:
