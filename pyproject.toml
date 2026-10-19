@@ -1,13 +1,13 @@
 [project]
 name = "eida-consistency"
-version = "0.7.1"
+version = "0.7.2"
 description = "EIDA consistency checker: compare availability vs dataselect services and generate reports."
 readme = "README.md"
 authors = [
     { name = "Nikos Sokos", email = "nsokos@noa.gr" }
 ]
 license = { file = "LICENSE" }
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 
 dependencies = [
     "appdirs>=1.4.4",
