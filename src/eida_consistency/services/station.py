@@ -18,14 +18,26 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from eida_consistency.utils.constants import USER_AGENT
 
 
-def _fetch_text(url: str, timeout: int = 60) -> list[str]:
-    """Fetch a station service URL in text format and return non-comment lines."""
+class NodeUnreachableError(RuntimeError):
+    """The node's station service could not be queried at all (network or HTTP error)."""
+
+
+def _fetch_text(url: str, timeout: int = 60, strict: bool = False) -> list[str]:
+    """Fetch a station service URL in text format and return non-comment lines.
+
+    With ``strict``, a connection failure or an HTTP error other than "no data"
+    (204/404) raises NodeUnreachableError instead of reading as an empty result.
+    """
     try:
         resp = requests.get(url, timeout=timeout, headers={"User-Agent": USER_AGENT})
+        if strict and resp.status_code in (204, 404):
+            return []
         resp.raise_for_status()
         lines = resp.text.strip().splitlines()
         return [line for line in lines if line and not line.startswith("#")]
     except Exception as e:
+        if strict:
+            raise NodeUnreachableError(f"Station service query failed: {url}\n  {e}") from e
         logging.debug(f"[station] Fetch text failed {url}: {e}")
         return []
 
@@ -52,7 +64,8 @@ def fetch_candidates(base_url: str, max_candidates: int = 30, percentage: float 
     """
     # --- Step 1: Fetch networks ---
     url = f"{base_url}station/1/query?level=network&format=text&includerestricted=false&nodata=404"
-    net_lines = _fetch_text(url)
+    # Strict: an unreachable node must not pass for one that has no networks.
+    net_lines = _fetch_text(url, strict=True)
     networks = [line.split("|", 1)[0] for line in net_lines if "|" in line]
     if not networks:
         logging.warning("No networks found.")

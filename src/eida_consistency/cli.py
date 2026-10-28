@@ -8,6 +8,7 @@ $ uv run eida-consistency consistency --delete-old
 $ uv run eida-consistency explore --index 7 --index 8
 $ uv run eida-consistency reload-nodes
 $ uv run eida-consistency list-nodes
+$ uv run eida-consistency add-node AFAD https://example.afad.gov.tr/fdsnws/
 """
 
 import json
@@ -20,6 +21,7 @@ load_dotenv()
 
 import click
 from eida_consistency.runner import run_consistency_check
+from eida_consistency.services.station import NodeUnreachableError
 from eida_consistency.report.compare import compare_reports
 from eida_consistency.report.report import delete_old_reports, REPORT_DIR
 from eida_consistency.explorer import explore_boundaries
@@ -131,7 +133,15 @@ def consistency(ctx, node, epochs, duration, check_psd, delete_old, print_stdout
         )
     except ValueError as e:
         raise click.BadParameter(str(e))
+    except NodeUnreachableError as e:
+        raise click.ClickException(
+            f"Node {node} is unreachable - no report generated.\n{e}\n"
+            "Check the endpoint (list-nodes) and the node's status."
+        )
 
+    if report_path is None:
+        click.echo("No report generated (no candidates found on this node).")
+        return
 
     # Upload if requested
     if upload:
@@ -173,7 +183,10 @@ def check(ctx, node, net, sta, cha, loc, start, end):
     from eida_consistency.services.dataselect import dataselect
     from eida_consistency.utils.nodes import load_node_url
     
-    base_url = load_node_url(node)
+    try:
+        base_url = load_node_url(node)
+    except ValueError as e:
+        raise click.BadParameter(str(e), param_hint="--node")
     
     # 1. Check Availability
     logging.info(f"Checking Availability for {net}.{sta}.{loc}.{cha}...")
@@ -367,11 +380,71 @@ def reload_nodes():
 # ----------------------------------------------------------------------
 @cli.command(name="list-nodes")
 def list_nodes():
-    """List currently cached EIDA nodes."""
+    """List currently cached EIDA nodes and user-defined nodes."""
     nodes_list = nodes.load_or_refresh_cache()
     logging.info(f"{len(nodes_list)} nodes currently cached:")
     for name, url, _ in nodes_list:
         logging.info(f"  {name}: {url}")
+
+    try:
+        custom = nodes.load_custom_nodes()
+    except ValueError as exc:
+        raise click.ClickException(str(exc))
+    if custom:
+        routing = {name.upper(): url for name, url, _ in nodes_list}
+        logging.info(f"{len(custom)} user-defined nodes (take precedence):")
+        for name, url, _ in custom:
+            if name in routing and routing[name] != url:
+                logging.warning(f"  {name}: {url}  (OVERRIDES routing {routing[name]})")
+            elif name in routing:
+                logging.info(f"  {name}: {url}  (now also in routing - can be removed)")
+            else:
+                logging.info(f"  {name}: {url}")
+
+
+# ----------------------------------------------------------------------
+# add-node / remove-node commands
+# ----------------------------------------------------------------------
+@cli.command(name="add-node")
+@click.argument("name")
+@click.argument("url")
+@click.option("--no-check", is_flag=True, help="Save without probing the endpoint's services.")
+def add_node(name, url, no_check):
+    """Define a node by NAME and endpoint URL (e.g. one not yet in EIDA routing)."""
+    try:
+        stored_name, base = nodes.add_custom_node(name, url)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc))
+    click.echo(f"Defined node {stored_name}: {base} (saved to {nodes.CUSTOM_NODES_FILE})")
+
+    routing_url = nodes.routing_node_url(stored_name)
+    if routing_url and routing_url != base:
+        click.echo(
+            f"WARNING: {stored_name} is already in EIDA routing as {routing_url}; "
+            f"your definition overrides it. Undo with: remove-node {stored_name}"
+        )
+
+    if no_check:
+        return
+    click.echo(f"Probing {base} ...")
+    results = nodes.probe_node(base)
+    for service, problem in results.items():
+        click.echo(f"  {'OK  ' if problem is None else 'FAIL'} {service:<12} {problem or ''}".rstrip())
+    failed = [s for s, problem in results.items() if problem]
+    if failed:
+        click.echo(
+            f"WARNING: {', '.join(failed)} did not answer. The node is saved, but "
+            "`consistency` will fail or under-report until the URL or the node is fixed."
+        )
+
+
+@cli.command(name="remove-node")
+@click.argument("name")
+def remove_node(name):
+    """Remove a user-defined node."""
+    if not nodes.remove_custom_node(name):
+        raise click.ClickException(f"No user-defined node named {name.upper()}")
+    click.echo(f"Removed node {name.upper()}")
 
 
 if __name__ == "__main__":

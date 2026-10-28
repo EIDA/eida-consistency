@@ -472,3 +472,89 @@ def test_consistency_defaults_check_psd_true(monkeypatch):
     assert res.exit_code == 0
     assert captured["check_psd"] is True
 
+
+# -----------------
+# add-node / remove-node / list-nodes (issue #64)
+# -----------------
+
+@pytest.fixture
+def custom_nodes(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli.nodes, "CUSTOM_NODES_FILE", tmp_path / "custom_nodes.json")
+    monkeypatch.delenv(cli.nodes.CUSTOM_NODES_ENV, raising=False)
+    monkeypatch.setattr(cli.nodes, "load_or_refresh_cache", lambda: [("NOA", "https://noa/fdsnws/", True)])
+    monkeypatch.setattr(cli.nodes, "probe_node", lambda base: {s: None for s in cli.nodes.PROBE_SERVICES})
+    return tmp_path
+
+
+def test_add_node_then_list_and_remove(custom_nodes, caplog):
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["add-node", "afad", "https://afad.example.org"])
+    assert res.exit_code == 0, res.output
+    assert "AFAD: https://afad.example.org/fdsnws/" in res.output
+    assert cli.nodes.load_node_url("AFAD") == "https://afad.example.org/fdsnws/"
+
+    with caplog.at_level(logging.INFO):
+        res = runner.invoke(cli.cli, ["list-nodes"])
+    assert res.exit_code == 0, res.output
+    assert "AFAD: https://afad.example.org/fdsnws/" in caplog.text
+    assert "user-defined" in caplog.text
+
+    res = runner.invoke(cli.cli, ["remove-node", "AFAD"])
+    assert res.exit_code == 0, res.output
+    res = runner.invoke(cli.cli, ["remove-node", "AFAD"])
+    assert res.exit_code != 0
+    assert "No user-defined node named AFAD" in res.output
+
+
+def test_add_node_invalid_url(custom_nodes):
+    res = CliRunner().invoke(cli.cli, ["add-node", "AFAD", "afad.example.org"])
+    assert res.exit_code != 0
+    assert "Invalid node URL" in res.output
+
+
+def test_add_node_reports_probe_failures(custom_nodes, monkeypatch):
+    monkeypatch.setattr(
+        cli.nodes, "probe_node",
+        lambda base: {"station": None, "dataselect": "HTTP 503", "availability": "ConnectionError"},
+    )
+    res = CliRunner().invoke(cli.cli, ["add-node", "AFAD", "https://afad.example.org"])
+    assert res.exit_code == 0, res.output  # saved anyway: a node can be down temporarily
+    assert "FAIL dataselect   HTTP 503" in res.output
+    assert "WARNING: dataselect, availability did not answer" in res.output
+    assert cli.nodes.load_node_url("AFAD") == "https://afad.example.org/fdsnws/"
+
+
+def test_add_node_no_check_skips_probe(custom_nodes, monkeypatch):
+    monkeypatch.setattr(cli.nodes, "probe_node", lambda base: pytest.fail("probed"))
+    res = CliRunner().invoke(cli.cli, ["add-node", "AFAD", "https://afad.example.org", "--no-check"])
+    assert res.exit_code == 0, res.output
+    assert "Probing" not in res.output
+
+
+def test_add_node_warns_when_overriding_routing(custom_nodes, caplog):
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["add-node", "NOA", "https://other.example.org"])
+    assert res.exit_code == 0, res.output
+    assert "WARNING: NOA is already in EIDA routing as https://noa/fdsnws/" in res.output
+
+    with caplog.at_level(logging.INFO):
+        runner.invoke(cli.cli, ["list-nodes"])
+    assert "OVERRIDES routing https://noa/fdsnws/" in caplog.text
+
+
+def test_consistency_unreachable_node_fails_loudly(monkeypatch, tmp_path):
+    def unreachable(**kw):
+        raise cli.NodeUnreachableError("Station service query failed: https://afad/x\n  boom")
+    monkeypatch.setattr(cli, "run_consistency_check", unreachable)
+    res = CliRunner().invoke(cli.cli, ["consistency", "--node", "AFAD"], obj={"report_dir": tmp_path})
+    assert res.exit_code == 1
+    assert "Node AFAD is unreachable - no report generated." in res.output
+    assert "boom" in res.output
+
+
+def test_consistency_no_report_says_so(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_consistency_check", lambda **kw: None)
+    res = CliRunner().invoke(cli.cli, ["consistency", "--node", "NOA"], obj={"report_dir": tmp_path})
+    assert res.exit_code == 0
+    assert "No report generated" in res.output
+    assert "saved locally at: None" not in res.output

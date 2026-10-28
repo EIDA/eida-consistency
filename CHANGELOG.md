@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Added — user-defined nodes — #64
+
+A node missing from EIDA routing (e.g. AFAD, which is also unknown to ObsPy's
+built-in node list) can now be defined by name and endpoint with `add-node`
+/ `remove-node`, or via the `EIDA_CUSTOM_NODES` environment variable
+(`NAME=URL,...`). User-defined nodes are kept apart from the routing cache, take
+precedence over routing, and are shown by `list-nodes`. All services already
+talk to the node's URL directly, so no ObsPy registration is needed. `check` now
+reports an unknown node as a usage error rather than a traceback.
+
+Alerting around it: `add-node` probes the station/dataselect/availability
+services and warns on any that do not answer (`--no-check` skips this); overriding
+a routing node is warned about in `add-node`, `list-nodes` and every run; an
+unknown node's error lists the known ones; and `consistency` against an
+unreachable node now exits 1 with the connection/HTTP error, instead of "No
+networks found" and "Report saved locally at: None" with exit 0.
+
 ## 0.7.1 — 2026-10-19
 
 ### Fixed — a day whose PSD record starts at midnight read as having no PSD — #51

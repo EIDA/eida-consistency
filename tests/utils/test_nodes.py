@@ -1,4 +1,5 @@
 import json
+import logging
 import pytest
 from eida_consistency.utils import nodes
 
@@ -106,3 +107,149 @@ def test_get_obspy_url():
 
     # fallback: if no hostname, return same
     assert nodes.get_obspy_url("not-a-url") == "not-a-url"
+
+
+# ----------------------------------------------------------------------
+# user-defined nodes (issue #64: e.g. AFAD, not yet in routing / obspy)
+# ----------------------------------------------------------------------
+@pytest.fixture
+def custom_env(monkeypatch, tmp_path):
+    """Isolate custom-node file, env var and routing cache."""
+    monkeypatch.setattr(nodes, "CUSTOM_NODES_FILE", tmp_path / "custom_nodes.json")
+    monkeypatch.delenv(nodes.CUSTOM_NODES_ENV, raising=False)
+    monkeypatch.setattr(
+        nodes, "load_or_refresh_cache", lambda: [("NOA", "https://eida.gein.noa.gr/fdsnws/", True)]
+    )
+    return tmp_path
+
+
+@pytest.mark.parametrize("url", [
+    "https://afad.example.org",
+    "https://afad.example.org/",
+    "https://afad.example.org/fdsnws",
+    "https://afad.example.org/fdsnws/station/1/query",
+    "  https://afad.example.org/fdsnws/  ",
+])
+def test_normalize_node_url(url):
+    assert nodes.normalize_node_url(url) == "https://afad.example.org/fdsnws/"
+
+
+def test_normalize_node_url_keeps_port_and_http():
+    assert nodes.normalize_node_url("http://host:8080/fdsnws/") == "http://host:8080/fdsnws/"
+
+
+@pytest.mark.parametrize("url", ["afad.example.org", "ftp://afad.example.org", "https://", ""])
+def test_normalize_node_url_rejects_invalid(url):
+    with pytest.raises(ValueError):
+        nodes.normalize_node_url(url)
+
+
+def test_add_custom_node_resolves(custom_env):
+    assert nodes.add_custom_node("afad", "https://afad.example.org") == (
+        "AFAD", "https://afad.example.org/fdsnws/"
+    )
+    assert nodes.load_node_url("AFAD") == "https://afad.example.org/fdsnws/"
+    assert nodes.load_node_url("afad") == "https://afad.example.org/fdsnws/"
+    # routing nodes still resolve
+    assert nodes.load_node_url("NOA") == "https://eida.gein.noa.gr/fdsnws/"
+
+
+def test_custom_node_overrides_routing(custom_env):
+    nodes.add_custom_node("NOA", "https://mirror.example.org/")
+    assert nodes.load_node_url("NOA") == "https://mirror.example.org/fdsnws/"
+
+
+def test_custom_nodes_survive_routing_reload(custom_env, monkeypatch):
+    nodes.add_custom_node("AFAD", "https://afad.example.org")
+    monkeypatch.setattr(nodes, "CACHE_FILE", custom_env / "nodes_cache.json")
+    nodes.CACHE_FILE.write_text(json.dumps({"nodes": []}), encoding="utf-8")
+    assert nodes.load_node_url("AFAD") == "https://afad.example.org/fdsnws/"
+
+
+def test_remove_custom_node(custom_env):
+    nodes.add_custom_node("AFAD", "https://afad.example.org")
+    assert nodes.remove_custom_node("afad") is True
+    assert nodes.remove_custom_node("AFAD") is False
+    with pytest.raises(ValueError, match="add-node AFAD"):
+        nodes.load_node_url("AFAD")
+
+
+def test_custom_nodes_from_env(custom_env, monkeypatch):
+    monkeypatch.setenv(
+        nodes.CUSTOM_NODES_ENV, "afad=https://afad.example.org, FOO=http://foo.org/fdsnws/ ,"
+    )
+    assert nodes.load_node_url("AFAD") == "https://afad.example.org/fdsnws/"
+    assert nodes.load_node_url("FOO") == "http://foo.org/fdsnws/"
+
+
+def test_env_overrides_file(custom_env, monkeypatch):
+    nodes.add_custom_node("AFAD", "https://file.example.org")
+    monkeypatch.setenv(nodes.CUSTOM_NODES_ENV, "AFAD=https://env.example.org")
+    assert nodes.load_node_url("AFAD") == "https://env.example.org/fdsnws/"
+
+
+@pytest.mark.parametrize("raw", ["AFAD", "=https://x.org", "AFAD=not-a-url"])
+def test_custom_nodes_env_invalid(custom_env, monkeypatch, raw):
+    monkeypatch.setenv(nodes.CUSTOM_NODES_ENV, raw)
+    with pytest.raises(ValueError):
+        nodes.load_custom_nodes()
+
+
+def test_corrupt_custom_nodes_file(custom_env):
+    nodes.CUSTOM_NODES_FILE.write_text("not-json", encoding="utf-8")
+    with pytest.raises(ValueError, match="Corrupt custom nodes file"):
+        nodes.load_custom_nodes()
+
+
+def test_load_node_url_warns_on_routing_override(custom_env, caplog):
+    nodes.add_custom_node("NOA", "https://mirror.example.org")
+    with caplog.at_level(logging.INFO):
+        assert nodes.load_node_url("noa") == "https://mirror.example.org/fdsnws/"
+    assert any(
+        r.levelno == logging.WARNING and "INSTEAD OF the EIDA routing endpoint" in r.message
+        for r in caplog.records
+    )
+
+
+def test_load_node_url_flags_redundant_custom_node(custom_env, caplog):
+    nodes.add_custom_node("NOA", "https://eida.gein.noa.gr/fdsnws/")
+    with caplog.at_level(logging.INFO):
+        nodes.load_node_url("NOA")
+    assert "can be removed (remove-node NOA)" in caplog.text
+
+
+def test_unknown_node_lists_known_nodes(custom_env):
+    nodes.add_custom_node("AFAD", "https://afad.example.org")
+    with pytest.raises(ValueError, match=r"Known nodes: AFAD, NOA\..*add-node XYZ <url>"):
+        nodes.load_node_url("xyz")
+
+
+def test_probe_node(monkeypatch):
+    import requests
+
+    class Resp:
+        def __init__(self, status, text="1.1.2\n"):
+            self.status_code = status
+            self.ok = status < 400
+            self.text = text
+
+    def fake_get(url, **k):
+        if "dataselect" in url:
+            return Resp(503)
+        if "availability" in url:
+            raise requests.ConnectionError("no route")
+        return Resp(200)
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    assert nodes.probe_node("https://afad.example.org/fdsnws/") == {
+        "station": None,
+        "dataselect": "HTTP 503",
+        "availability": "ConnectionError",
+    }
+
+    # A host that serves its website (200 + HTML) for every path is not FDSN.
+    monkeypatch.setattr(requests, "get", lambda url, **k: Resp(200, "<!DOCTYPE html><html>..."))
+    assert all(
+        problem.startswith("not an FDSN service")
+        for problem in nodes.probe_node("https://afad.example.org/fdsnws/").values()
+    )
