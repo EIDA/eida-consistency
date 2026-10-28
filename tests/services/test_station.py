@@ -163,3 +163,35 @@ def test_percentage_candidates(monkeypatch):
     # Test very small percentage -> should min at 1
     res_small = station.fetch_candidates("http://fake/", max_candidates=30, percentage=0.01)
     assert len(res_small) == 1
+
+
+# ----------------------------------------------------------------------
+# unreachable node (strict network query)
+# ----------------------------------------------------------------------
+def test_fetch_candidates_unreachable_raises(monkeypatch):
+    def boom(*a, **k):
+        raise requests.ConnectionError("Name or service not known")
+    monkeypatch.setattr(requests, "get", boom)
+    with pytest.raises(station.NodeUnreachableError, match="Name or service not known"):
+        station.fetch_candidates("https://afad.invalid/fdsnws/")
+
+
+@pytest.mark.parametrize("status", [500, 503, 403])
+def test_fetch_text_strict_raises_on_http_error(monkeypatch, status):
+    class Resp:
+        status_code = status
+        text = ""
+        def raise_for_status(self):
+            raise requests.HTTPError(f"{status} Server Error")
+    monkeypatch.setattr(requests, "get", lambda *a, **k: Resp())
+    with pytest.raises(station.NodeUnreachableError, match=str(status)):
+        station._fetch_text("http://fake/", strict=True)
+
+
+@pytest.mark.parametrize("status", [204, 404])
+def test_fetch_text_strict_no_data_is_empty(monkeypatch, status):
+    class Resp:
+        status_code = status
+        text = ""
+    monkeypatch.setattr(requests, "get", lambda *a, **k: Resp())
+    assert station._fetch_text("http://fake/", strict=True) == []

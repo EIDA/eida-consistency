@@ -102,3 +102,31 @@ List all configured EIDA nodes.
 ```bash
 eida-consistency list-nodes
 ```
+
+### add-node / remove-node
+
+Define a node by name and endpoint when it is not (yet) in the EIDA routing
+service — e.g. a newly joined node such as AFAD. User-defined nodes are stored in
+your user config dir, survive `reload-nodes`, and take precedence over routing
+(so they can also override a node's endpoint). The URL may be the host, the
+`/fdsnws/` base, or any service URL below it.
+
+```bash
+eida-consistency add-node AFAD https://<afad-host>/fdsnws/
+eida-consistency consistency --node AFAD
+eida-consistency remove-node AFAD
+```
+
+`add-node` probes the node's station, dataselect and availability `/version`
+endpoints and prints `OK`/`FAIL` for each; a failing node is still saved, with a
+warning (use `--no-check` to skip the probe, e.g. offline). Overriding a node that
+routing already lists is flagged by `add-node`, `list-nodes`, and at the start of
+every run that uses it. `consistency` against an unreachable node exits with code 1
+and the connection/HTTP error, instead of producing an empty run.
+
+For Docker/CI, set `EIDA_CUSTOM_NODES` instead (comma-separated `NAME=URL`; it
+overrides file entries of the same name):
+
+```bash
+EIDA_CUSTOM_NODES="AFAD=https://<afad-host>/fdsnws/" eida-consistency consistency --node AFAD
+```

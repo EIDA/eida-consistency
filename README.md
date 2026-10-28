@@ -100,6 +100,13 @@ List currently cached nodes:
 uvx eida-consistency list-nodes
 ```
 
+Node not in EIDA routing yet (e.g. AFAD)? Define it yourself:
+
+```bash
+uvx eida-consistency add-node AFAD https://<afad-host>/fdsnws/
+# or, for Docker/CI: EIDA_CUSTOM_NODES="AFAD=https://<afad-host>/fdsnws/"
+```
+
 ---
 
 ## 📂 Reports
