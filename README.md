@@ -163,12 +163,6 @@ report_path = run_consistency_check(
 print(f"Report generated at: {report_path}")
 ```
 
-For full API documentation, please visit our [Documentation Site](https://EIDA.github.io/eida-consistency/) or run:
-
-```bash
-uv run mkdocs serve
-```
-
 ---
 
 ## 🔁 Re-run & Re-verify
