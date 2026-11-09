@@ -34,5 +34,6 @@ plugins:
 
 nav:
   - Home: index.md
-  - Usage: user/usage.md
+  - Installation: operator/install.md
+  - Usage: operator/usage.md
   - Development: developer/development.md

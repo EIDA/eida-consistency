@@ -1,35 +1,24 @@
 ---
+author: Nikos Sokos
+created: 2025-12-19
+service: eida-consistency
 tags:
-  - user
+  - operator
 ---
 
 # Usage
 
-## Installation
-
-```bash
-pip install eida-consistency
-```
-
-Or using `uv` / `poetry`:
-
-```bash
-uv add eida-consistency
-```
-
-## CLI Reference
-
 The `eida-consistency` tool can be used directly from the command line.
 
-### Basic Usage
+## Basic usage
 
 ```bash
 eida-consistency --help
 ```
 
-### commands
+## Commands
 
-#### consistency
+### consistency
 
 Run the main consistency check.
 
@@ -48,7 +37,7 @@ eida-consistency consistency --node NOA --epochs 10 --duration 600
     (`eida-consistency consistency … --report-dir DIR`). [Default: `reports/`]
 *   `--upload`: Upload the report to the configured S3 bucket.
 
-#### compare
+### compare
 
 Compare two existing JSON reports.
 
@@ -56,7 +45,7 @@ Compare two existing JSON reports.
 eida-consistency compare report_A.json report_B.json
 ```
 
-#### explore
+### explore
 
 Re-check **only the inconsistencies** of a report, drilling down day-by-day to
 find their exact boundaries. Pass a report file, or omit it to use the newest
@@ -78,7 +67,7 @@ eida-consistency explore reports/noa_20260621_140111_113496.json --index 0 --ind
 *   `--json`: Emit discovered fixes as JSON on stdout (logs stay on stderr).
 *   `--report-dir PATH`: Directory to load reports from (same placement rules as above).
 
-#### rerun
+### rerun
 
 Re-verify the inconsistencies of a report against the live services — no
 boundary walk, no dmtri commands. Reports a verdict per row: `PERSISTS` (still
@@ -101,20 +90,15 @@ eida-consistency rerun --json reports/noa_latest.json # machine-readable stdout
 *   `--json`: Emit verdicts as JSON to stdout (logs stay on stderr).
 *   `--verbose`: Print query URLs while re-running.
 
-### Re-run & Re-verify
+### reload-nodes
 
-There are three ways to "run it again", depending on intent:
+Reload routing cache:
 
-*   **Re-verify a report's findings** — replay each recorded inconsistency's exact
-    window: `eida-consistency rerun <report.json>` (plain re-check), or
-    `eida-consistency explore <report.json>` (drills day-by-day to the boundary).
-    Use `--index` to target specific findings.
-*   **Re-check a single stream/window** — `eida-consistency check --node … --net …
-    --sta … --cha … --start … --end …`.
-*   **Fresh sampled run** — `eida-consistency consistency --node …` (samples new
-    windows; does not reproduce a specific past finding).
+```bash
+uvx eida-consistency reload-nodes
+```
 
-#### list-nodes
+### list-nodes
 
 List all configured EIDA nodes.
 
@@ -122,7 +106,7 @@ List all configured EIDA nodes.
 eida-consistency list-nodes
 ```
 
-#### add-node / remove-node
+### add-node / remove-node
 
 Define a node by name and endpoint when it is not (yet) in the EIDA routing
 service — e.g. a newly joined node such as AFAD. User-defined nodes are stored in
@@ -148,4 +132,42 @@ overrides file entries of the same name):
 
 ```bash
 EIDA_CUSTOM_NODES="AFAD=https://<afad-host>/fdsnws/" eida-consistency consistency --node AFAD
+```
+
+## Re-run & Re-verify
+
+There are three ways to "run it again", depending on intent:
+
+*   **Re-verify a report's findings** — replay each recorded inconsistency's exact
+    window: `eida-consistency rerun <report.json>` (plain re-check), or
+    `eida-consistency explore <report.json>` (drills day-by-day to the boundary).
+    Use `--index` to target specific findings.
+*   **Re-check a single stream/window** — `eida-consistency check --node … --net …
+    --sta … --cha … --start … --end …`.
+*   **Fresh sampled run** — `eida-consistency consistency --node …` (samples new
+    windows; does not reproduce a specific past finding).
+
+## Reports
+
+Reports are stored in `./reports/` by default, or in a custom folder using `--report-dir`.
+
+- JSON reports: `reports/<node>_<YYYYMMDD>_<HHMMSS>_<microseconds>.json`
+- Markdown reports: `reports/<node>_<YYYYMMDD>_<HHMMSS>_<microseconds>.md`
+- Global summary: [`summary.md`](https://github.com/EIDA/eida-consistency/blob/main/reports/summary.md)
+
+## Example workflow
+
+```bash
+# 1. Run a check (reports land in reports/test_noa/)
+uvx eida-consistency consistency --node NOA --epochs 20 --report-dir reports/test_noa
+
+# 2. Re-check the inconsistencies it found (day-by-day boundaries)
+uvx eida-consistency explore --report-dir reports/test_noa
+
+# 3. Fix them at node level, then re-verify by replaying the exact windows
+#    (verdict per row: PERSISTS / RESOLVED / SKIPPED; add --all for CONSISTENT/REGRESSED)
+uvx eida-consistency rerun reports/test_noa/<report>.json
+
+# 4. Compare before/after
+uvx eida-consistency compare reports/test_noa/old.json reports/test_noa/new.json
 ```

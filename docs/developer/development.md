@@ -1,4 +1,7 @@
 ---
+author: Nikos Sokos
+created: 2025-12-19
+service: eida-consistency
 tags:
   - developer
 ---
@@ -26,7 +29,7 @@ candidate = {
 
 # Run the check
 results, stats = check_candidate(
-    base_url="http://node.eida.eu/ fdsnws", # Replace with actual node URL
+    base_url="http://node.eida.eu/fdsnws", # Replace with actual node URL
     candidate=candidate,
     epochs=5,
     duration=600
@@ -51,7 +54,3 @@ report_path = run_consistency_check(
 
 print(f"Report generated at: {report_path}")
 ```
-
-## Source
-
-The code, including the docstrings of `eida_consistency.core.checker` and `eida_consistency.runner`, is at https://github.com/EIDA/eida-consistency.
