@@ -73,9 +73,17 @@ what it finds, newest first:
 ] }
 ```
 
+The listed reports appear in a sidebar that stays visible while a report is
+open, one folder per node (from each entry's `node`, or the folder in its
+`url`), newest first. The report on screen is highlighted. Above the list, a
+node and a month dropdown (both built from the reports themselves) and a text
+search narrow it down; every word typed must appear in the node, file name or
+date. The choices are kept while moving between reports. No node names are
+hardcoded.
+
 `url` is fetched relative to `viewer.html`. A bare array instead of
 `{"reports": [...]}` also works. With no `index.json` the landing page still
 works - it just shows its load-by-URL and drag-drop form alone.
 
 `dev/make-index.mjs <reports-dir> <url-prefix> <out-file>` generates one from a
-directory of reports.
+directory of reports, including per-node subfolders such as `reports/NOA/`.

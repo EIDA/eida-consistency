@@ -1,5 +1,5 @@
 // viewer/viewer.js
-import { renderSummary, renderResultsTable, renderDetail, renderIndex, runRequest, sortRecords } from './viewer.core.js';
+import { renderSummary, renderResultsTable, renderDetail, renderIndex, filterIndex, indexNodes, indexMonths, fmtMonth, runRequest, sortRecords } from './viewer.core.js';
 
 const $ = sel => document.querySelector(sel);
 const state = { report: null, filter: { onlyInconsistent: true, direction: 'both', psd: 'all', search: '' }, sort: { key: 'gap', dir: 'desc' } };
@@ -132,23 +132,59 @@ function wireDragAndDrop() {
   });
 }
 
-async function showLanding() {
-  $('#toolbar').style.display = 'none';
-  $('#summary').innerHTML = '';
-  let list = '';
+async function loadIndex() {
   try {
     const idx = await (await fetch('index.json')).json();
-    const entries = Array.isArray(idx) ? idx : (idx.reports || []);
-    if (entries.length) list = renderIndex(entries);
-  } catch { /* no manifest yet — Oculus may publish one later */ }
-  $('#results').innerHTML = list + loaderHTML(list ? 'Or load another report:' : 'No reports listed yet. Load one by URL or file, or open one from Oculus.');
+    return Array.isArray(idx) ? idx : (idx.reports || []);
+  } catch { return []; } // no manifest yet: no sidebar, the loader still works
+}
+
+// Sidebar filter choices survive moving between reports (best effort: storage may be blocked).
+const SIDE_KEY = 'viewer.sidebarFilter';
+function loadSideFilter() { try { return JSON.parse(sessionStorage.getItem(SIDE_KEY)) || {}; } catch { return {}; } }
+function saveSideFilter(f) { try { sessionStorage.setItem(SIDE_KEY, JSON.stringify(f)); } catch { /* ignore */ } }
+
+function showSidebar(entries, current) {
+  const side = $('#side');
+  side.hidden = false;
+  side.innerHTML = `<h2>Consistency reports</h2>
+    <label>Node <select id="idxNode"><option value="">all nodes</option></select></label>
+    <label>Month <select id="idxMonth"><option value="">all months</option></select></label>
+    <label>Search <input id="idxSearch" type="search" placeholder="date or file name"></label>
+    <div id="idxList"></div>`;
+  indexNodes(entries).forEach(v => $('#idxNode').add(new Option(v, v)));
+  indexMonths(entries).forEach(v => $('#idxMonth').add(new Option(fmtMonth(v), v)));
+  const f = loadSideFilter();
+  $('#idxNode').value = f.node || ''; $('#idxMonth').value = f.month || ''; $('#idxSearch').value = f.text || '';
+  const refilter = () => {
+    const filter = { node: $('#idxNode').value, month: $('#idxMonth').value, text: $('#idxSearch').value };
+    saveSideFilter(filter);
+    $('#idxList').innerHTML = renderIndex(filterIndex(entries, filter), current);
+  };
+  ['#idxNode', '#idxMonth', '#idxSearch'].forEach(s => $(s).addEventListener('input', refilter));
+  $('#idxList').addEventListener('click', e => {
+    if (!e.target.closest('#idxClear')) return;
+    ['#idxNode', '#idxMonth', '#idxSearch'].forEach(s => { $(s).value = ''; });
+    refilter();
+  });
+  refilter();
+}
+
+function showLanding(entries) {
+  $('#toolbar').style.display = 'none';
+  $('#summary').innerHTML = '';
+  $('#results').innerHTML = loaderHTML(entries.length
+    ? 'Pick a report from the list, or load another one:'
+    : 'No reports listed yet. Load one by URL or file, or open one from Oculus.');
   wireLoader();
 }
 
 async function main() {
   wireDragAndDrop();
   const url = new URLSearchParams(location.search).get('report');
-  if (!url) { await showLanding(); return; }
+  const entries = await loadIndex();
+  if (entries.length) showSidebar(entries, url);
+  if (!url) { showLanding(entries); return; }
   let report;
   try { report = await (await fetch(url)).json(); }
   catch { showError('Could not load that report. Check the URL (and CORS if it is on another host).'); return; }

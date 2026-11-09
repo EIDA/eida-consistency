@@ -543,15 +543,74 @@ export function renderDetail(record) {
   return `<section class="detail">${parts.join('')}</section>`;
 }
 
-export function renderIndex(entries) {
-  const items = (entries || []).map(e => {
-    const u = String(e.url ?? e.report ?? '');
-    const href = `?report=${encodeURIComponent(u)}`;
-    const cls = e.score == null ? '' : e.score >= 95 ? ' ok' : e.score >= 80 ? ' warn' : ' bad';
-    const score = e.score == null ? '' : `<span class="iscore${cls}">${esc(e.score)}%</span>`;
-    const meta = [e.node, e.timestamp, e.inconsistent != null ? `${esc(e.inconsistent)} inconsistent` : '']
-      .filter(Boolean).map(x => esc(x)).join(' · ');
-    return `<li><a href="${esc(href)}">${esc(e.name || u)}</a> ${score}<span class="imeta">${meta}</span></li>`;
+// '2026-10-08T19:16:58.51+00:00' -> '2026-10-08 19:16' (reports are stamped in UTC).
+export function fmtStamp(iso) {
+  return iso ? String(iso).slice(0, 16).replace('T', ' ') : '';
+}
+
+// Choices for the sidebar dropdowns, taken from the reports themselves.
+export function indexNodes(entries) {
+  return [...new Set((entries || []).map(e => e.node).filter(Boolean))].sort();
+}
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// '2026-10' -> 'October 2026' for the month dropdown; anything else is shown as is.
+export function fmtMonth(ym) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(ym || ''));
+  return m && MONTHS[+m[2] - 1] ? `${MONTHS[+m[2] - 1]} ${m[1]}` : String(ym || '');
+}
+export function indexMonths(entries) {
+  return [...new Set((entries || []).map(e => String(e.timestamp || '').slice(0, 7)).filter(Boolean))].sort().reverse();
+}
+
+// filter = { node, month: 'YYYY-MM', text }; empty values match everything.
+// Text: every word must appear in the node, file name, URL or date.
+export function filterIndex(entries, filter = {}) {
+  const { node, month, text } = filter;
+  const words = String(text || '').toLowerCase().split(/\s+/).filter(Boolean);
+  return (entries || []).filter(e => {
+    if (node && e.node !== node) return false;
+    if (month && !String(e.timestamp || '').startsWith(month)) return false;
+    const hay = [e.node, e.name, e.url, e.timestamp].join(' ').toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+}
+
+// One group per node, like the reports/<NODE>/ folders. Falls back to the report's folder
+// in its URL, so nothing about node names is hardcoded. Groups are sorted by name.
+export function groupIndex(entries) {
+  const groups = new Map();
+  for (const e of entries || []) {
+    const parts = String(e.url ?? e.report ?? '').split('/');
+    const key = e.node || (parts.length > 1 ? parts[parts.length - 2] : '') || 'other';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  }
+  const newestFirst = (a, b) => String(b.timestamp ?? '').localeCompare(String(a.timestamp ?? ''));
+  return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([k, list]) => [k, list.sort(newestFirst)]);
+}
+
+function indexItem(e, current) {
+  const u = String(e.url ?? e.report ?? '');
+  const href = `?report=${encodeURIComponent(u)}`;
+  const cls = e.score == null ? '' : e.score >= 95 ? ' ok' : e.score >= 80 ? ' warn' : ' bad';
+  const score = e.score == null ? '' : `<span class="iscore${cls}">${esc(e.score)}%</span>`;
+  const inc = e.inconsistent != null ? `<span class="imeta">${esc(e.inconsistent)} inconsistent</span>` : '';
+  return `<li${u === current ? ' class="cur"' : ''}><a href="${esc(href)}" title="${esc(e.name || u)}">`
+    + `${esc(fmtStamp(e.timestamp) || e.name || u)}</a> ${score} ${inc}</li>`;
+}
+
+// Outline folder (Phosphor-style), decorative: the node name beside it carries the meaning.
+const FOLDER_ICON = '<svg class="ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>';
+
+// Entries arrive newest first; each folder keeps that order. `current` is the URL of the
+// report on screen: it is highlighted and its folder opened.
+export function renderIndex(entries, current) {
+  const groups = groupIndex(entries);
+  if (!groups.length) return '<p class="iempty">No reports match this filter. <button type="button" id="idxClear">Clear filters</button></p>';
+  return groups.map(([key, list]) => {
+    const open = groups.length === 1 || list.some(e => String(e.url ?? e.report ?? '') === current) ? ' open' : '';
+    return `<details class="ifolder"${open}><summary><span class="ifname">${FOLDER_ICON}${esc(key)}</span>`
+      + ` <span class="imeta">${list.length} report${list.length === 1 ? '' : 's'}</span></summary>`
+      + `<ul class="ilist">${list.map(e => indexItem(e, current)).join('')}</ul></details>`;
   }).join('');
-  return `<section class="index"><h1>Latest consistency reports</h1><ul class="ilist">${items}</ul></section>`;
 }
