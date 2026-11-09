@@ -6,7 +6,7 @@ on:
     - main
     paths:
     - 'Dockerfile.viewer'
-    - '.github/workflows/docker-publish-eida-viewer.yml'
+    - '.github/workflows/docker-publish-viewer.yml'
     - 'viewer/**'
   pull_request:
     branches:
