@@ -1,6 +1,7 @@
 // make-index.mjs — build a viewer manifest (index.json) from a directory of report JSONs.
 // Usage: node make-index.mjs <reportsDir> <urlPrefix> <outFile>
-//   reportsDir  directory containing *.json reports
+//   reportsDir  directory containing *.json reports, directly or one folder down (reports/NOA/*.json).
+//               Deeper folders are ignored, so copies such as MkDocs' export/NOA/2026/ are not listed twice.
 //   urlPrefix   prepended to each filename to form the URL the viewer fetches
 //               (e.g. "reports/" or "../reports/" or "https://host/path/")
 //   outFile     where to write the manifest
@@ -11,14 +12,19 @@ import path from 'node:path';
 const [, , dir = 'reports', prefix = 'reports/', out = 'index.json'] = process.argv;
 
 const entries = [];
-for (const file of fs.readdirSync(dir)) {
-  if (!file.endsWith('.json') || file === 'index.json') continue;
+const top = fs.readdirSync(dir, { withFileTypes: true });
+const files = [
+  ...top.filter(d => d.isFile()).map(d => d.name),
+  ...top.filter(d => d.isDirectory()).flatMap(d => fs.readdirSync(path.join(dir, d.name)).map(f => `${d.name}/${f}`)),
+];
+for (const file of files) {
+  if (!file.endsWith('.json') || path.basename(file) === 'index.json') continue;
   const full = path.join(dir, file);
   let summary = {};
   try { summary = (JSON.parse(fs.readFileSync(full, 'utf8')).summary) || {}; }
   catch { continue; } // skip unreadable / non-report JSON
   entries.push({
-    name: file.replace(/\.json$/, ''),
+    name: path.basename(file, '.json'),
     url: prefix + file,
     node: summary.node ?? null,
     score: summary.score ?? null,

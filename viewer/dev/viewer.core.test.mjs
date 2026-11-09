@@ -682,3 +682,94 @@ test('renderDetail formats gap timestamps like the rest of the panel', () => {
   assert.match(html, /2014-02-15 05:18:25 → 2014-02-15 05:19:01/);
   assert.doesNotMatch(html, /05:18:25\+00:00/);
 });
+
+import { filterIndex, groupIndex, fmtStamp, indexNodes, indexMonths } from '../viewer.core.js';
+
+const idx = [
+  { name: 'noa_20261101_140310', url: 'NOA/noa_20261101_140310.json', node: 'NOA', timestamp: '2026-11-01T14:03:10+00:00' },
+  { name: 'bgr_20261025_140150', url: 'BGR/bgr_20261025_140150.json', node: 'BGR', timestamp: '2026-10-25T14:01:50+00:00' },
+  { name: 'noa_20260913_145603', url: 'NOA/noa_20260913_145603.json', node: 'NOA', timestamp: '2026-09-13T14:56:03+00:00' },
+];
+
+test('indexNodes and indexMonths come from the data, not a hardcoded list', () => {
+  assert.deepEqual(indexNodes(idx), ['BGR', 'NOA']);
+  assert.deepEqual(indexMonths(idx), ['2026-11', '2026-10', '2026-09']);   // newest first
+});
+
+test('filterIndex with no filter keeps everything', () => {
+  assert.equal(filterIndex(idx, {}).length, 3);
+  assert.equal(filterIndex(idx, { text: '   ', node: '', month: '' }).length, 3);
+});
+
+test('filterIndex by node and by month', () => {
+  assert.deepEqual(filterIndex(idx, { node: 'NOA' }).map(e => e.name), ['noa_20261101_140310', 'noa_20260913_145603']);
+  assert.deepEqual(filterIndex(idx, { month: '2026-10' }).map(e => e.node), ['BGR']);
+});
+
+test('filterIndex text matches node, date or file name, case-insensitively, every word', () => {
+  assert.deepEqual(filterIndex(idx, { text: 'noa' }).map(e => e.node), ['NOA', 'NOA']);
+  assert.deepEqual(filterIndex(idx, { text: '145603' }).map(e => e.node), ['NOA']);
+  assert.deepEqual(filterIndex(idx, { text: 'noa 2026-11' }).map(e => e.name), ['noa_20261101_140310']);
+  assert.equal(filterIndex(idx, { text: 'zzz' }).length, 0);
+});
+
+test('filterIndex combines node, month and text', () => {
+  assert.equal(filterIndex(idx, { node: 'NOA', month: '2026-10' }).length, 0);
+  assert.deepEqual(filterIndex(idx, { node: 'NOA', month: '2026-09', text: '1456' }).map(e => e.name), ['noa_20260913_145603']);
+});
+
+test('fmtStamp gives a short UTC date and time', () => {
+  assert.equal(fmtStamp('2026-10-08T19:16:58.510441+00:00'), '2026-10-08 19:16');
+  assert.equal(fmtStamp(null), '');
+});
+
+test('groupIndex groups by node, falling back to the report folder, then "other"', () => {
+  const g = groupIndex([
+    { url: 'NOA/a.json', node: 'NOA' },
+    { url: 'BGR/b.json', node: null },
+    { url: 'c.json', node: null },
+    { url: 'NOA/d.json', node: 'NOA' },
+  ]);
+  assert.deepEqual(g.map(([k, v]) => [k, v.length]), [['BGR', 1], ['NOA', 2], ['other', 1]]);
+});
+
+test('groupIndex lists each folder newest first, whatever the index order', () => {
+  const g = groupIndex([
+    { url: 'NOA/old.json', node: 'NOA', timestamp: '2026-03-01T14:00:00+00:00' },
+    { url: 'NOA/new.json', node: 'NOA', timestamp: '2026-11-01T14:00:00+00:00' },
+    { url: 'NOA/mid.json', node: 'NOA', timestamp: '2026-07-01T14:00:00+00:00' },
+  ]);
+  assert.deepEqual(g[0][1].map(e => e.url), ['NOA/new.json', 'NOA/mid.json', 'NOA/old.json']);
+});
+
+test('renderIndex shows one folder per node with its report count', () => {
+  const html = renderIndex(idx);
+  assert.match(html, /<details class="ifolder"[^>]*>\s*<summary>[^]*BGR[^]*1 report</);
+  assert.match(html, /NOA[^]*2 reports/);
+  assert.match(html, /2026-11-01 14:03/);
+});
+
+test('renderIndex opens the folder when only one is shown', () => {
+  assert.match(renderIndex(filterIndex(idx, { node: 'NOA' })), /<details class="ifolder" open>/);
+  assert.doesNotMatch(renderIndex(idx), / open>/);
+});
+
+test('renderIndex highlights the open report and opens its folder', () => {
+  const html = renderIndex(idx, 'BGR/bgr_20261025_140150.json');
+  assert.match(html, /<details class="ifolder" open><summary><span class="ifname"><svg[^>]*aria-hidden="true"[^]*?<\/svg>BGR/);
+  assert.match(html, /<li class="cur">[^]*2026-10-25/);
+  assert.equal((html.match(/ open>/g) || []).length, 1);
+});
+
+test('renderIndex says so when the filter leaves nothing', () => {
+  const html = renderIndex([]);
+  assert.match(html, /No reports match/);
+  assert.match(html, /<button type="button" id="idxClear">Clear filters<\/button>/);
+});
+
+import { fmtMonth } from '../viewer.core.js';
+test('fmtMonth turns YYYY-MM into a readable month', () => {
+  assert.equal(fmtMonth('2026-10'), 'October 2026');
+  assert.equal(fmtMonth('2026-01'), 'January 2026');
+  assert.equal(fmtMonth('junk'), 'junk');
+});
